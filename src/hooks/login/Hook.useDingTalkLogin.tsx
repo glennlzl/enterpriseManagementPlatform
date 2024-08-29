@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { loginWithAuth } from '@/services/ant-design-pro/api';
+import { loginWithAuth } from '@/api/usermanagement';
 import { useModel } from '@@/exports';
 import { useNavigate } from '@umijs/max';
 import { message } from 'antd';

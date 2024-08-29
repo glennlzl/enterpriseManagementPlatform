@@ -1,5 +1,5 @@
 import { Footer } from '@/components';
-import { hookUseDingTalkLogin } from '@/hooks/Hook.useDingTalkLogin';
+import { hookUseDingTalkLogin } from '@/hooks/login/Hook.useDingTalkLogin';
 import { LoginForm } from '@ant-design/pro-components';
 import { Helmet, SelectLang, useIntl } from '@umijs/max';
 import { createStyles } from 'antd-style';

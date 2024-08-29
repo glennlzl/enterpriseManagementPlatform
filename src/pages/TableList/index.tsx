@@ -1,4 +1,4 @@
-import { addRule, getUsers, isLogin, removeRule, updateRule } from '@/services/ant-design-pro/api';
+import { addRule, getUsers, isLogin, removeRule, updateRule } from '@/api/usermanagement';
 import { useModel } from '@@/exports';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ActionType, ProColumns, ProDescriptionsItemProps } from '@ant-design/pro-components';

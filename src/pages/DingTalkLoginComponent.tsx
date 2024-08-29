@@ -1,4 +1,4 @@
-import { hookUseDingTalkLogin } from '@/hooks/Hook.useDingTalkLogin';
+import { hookUseDingTalkLogin } from '@/hooks/login/Hook.useDingTalkLogin';
 import { history, useModel } from '@umijs/max';
 import { Button, message } from 'antd';
 import { useEffect } from 'react';
