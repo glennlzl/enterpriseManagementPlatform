@@ -65,7 +65,7 @@ export interface EmployeeInfoAddOrUpdateRequest {
   isIncumbent?: number;
 }
 
-export const GENERAL_API_BASE_URL = 'http://47.93.51.8:8081';
+export const GENERAL_API_BASE_URL = 'http://47.93.51.8:8081/api';
 export const API_BASE_URL = `${GENERAL_API_BASE_URL}`;
 
 export interface OssStsAccessInfo {
