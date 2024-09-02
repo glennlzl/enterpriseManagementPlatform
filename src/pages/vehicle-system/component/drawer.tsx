@@ -42,12 +42,12 @@ interface VehicleDrawerProps {
 }
 
 const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
-  visible,
-  onClose,
-  vehicleInfo,
-  usageInfoList,
-  loading,
-}) => {
+                                                       visible,
+                                                       onClose,
+                                                       vehicleInfo,
+                                                       usageInfoList,
+                                                       loading,
+                                                     }) => {
   const [showMore, setShowMore] = useState(false);
   const [filteredUsageList, setFilteredUsageList] = useState<VehicleUsageInfo[]>(usageInfoList);
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
@@ -208,7 +208,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       const filteredList = usageInfoList.filter((item) => {
         const recordTime = moment(item.recordTime, 'YYYY-MM-DD'); // 根据格式解析
         if (recordTime.isValid()) {
-          return recordTime.isBetween(start, end, 'days', '[]');
+          return recordTime.isSameOrAfter(start, 'day') && recordTime.isSameOrBefore(end, 'day');
         }
         return false;
       });
