@@ -1,31 +1,24 @@
-import { useModel } from '@@/exports';
+import {useModel} from '@@/exports';
 import {PlusOutlined, UploadOutlined} from '@ant-design/icons';
-import type { ProColumns } from '@ant-design/pro-components';
-import {
-  ModalForm,
-  PageContainer,
-  ProFormText,
-  ProFormTextArea,
-  ProTable,
-} from '@ant-design/pro-components';
-import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, Select, Tabs, Upload} from 'antd';
+import type {ProColumns} from '@ant-design/pro-components';
+import {ModalForm, PageContainer, ProFormSelect, ProFormText, ProTable,} from '@ant-design/pro-components';
+import {FormattedMessage, useIntl} from '@umijs/max';
+import {Button, Input, Select, Tabs, Upload} from 'antd';
 import React from 'react';
 import {AddApprovalInfoRequest, ApprovalInfoVO} from "@/model/approvalsystem";
-import { useApprovalPage } from "@/hooks/approval/Hook.useApprovalPage";
-import {isLogin} from "@/api/usermanagement";
+import {useApprovalPage} from "@/hooks/approval/Hook.useApprovalPage";
 
 const { TabPane } = Tabs;
 
 export const approvalStatusConfig = {
-  0: { text: '待审批', status: 'Default' },
+  3: { text: '待审批', status: 'Default' },
   1: { text: '已批准', status: 'Success' },
   2: { text: '已拒绝', status: 'Error' },
 };
 
 const ApprovalSystem: React.FC = () => {
   const { initialState } = useModel('@@initialState');
-  const { state, handleModalOpen, handleFileUpload, handleApprovalChange, handleAddApproval, actionRef } = useApprovalPage(initialState.currentUser.userId);
+  const { state, handleModalOpen, handleFileUpload, handleApprovalChange, handleAddApproval, downloadFromOSS, actionRef } = useApprovalPage(initialState.currentUser?.id || '');
 
   const intl = useIntl();
 
@@ -50,8 +43,15 @@ const ApprovalSystem: React.FC = () => {
       dataIndex: 'approvalFileUrl',
       valueType: 'text',
       render: (_, record) => (
-        <a href={record.approvalFileUrl} target="_blank" rel="noopener noreferrer">
-          {record.approvalFileUrl}
+        <a
+          href="#"
+          onClick={async (e) => {
+            e.preventDefault(); // 阻止默认的<a>标签行为
+            await downloadFromOSS(record.approvalFileUrl); // 调用模拟的下载函数
+          }}
+          style={{ marginRight: 8 }}
+        >
+          下载文件
         </a>
       ),
     },
@@ -66,21 +66,54 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'dateTime',
     },
     {
-      title: '操作',
+      title: '审批状态',
       dataIndex: 'approvalStatus',
       valueType: 'select',
       valueEnum: approvalStatusConfig,
-      renderFormItem: (_, { record }) => (
-        <Select
-          defaultValue={record?.approvalStatus ?? 0} // 使用可选链和空值合并运算符
-          onChange={(value) => handleApprovalChange(record, value)} // 使用 handleApprovalChange 处理状态更改
-        >
-          <Select.Option value={0}>待审批</Select.Option>
-          <Select.Option value={1}>通过</Select.Option>
-          <Select.Option value={2}>拒绝</Select.Option>
-        </Select>
-      ),
     },
+    {
+      title: '操作',
+      dataIndex: 'approvalStatus',
+      render: (_, record) => {
+        const isApproved = record?.approvalStatus === 1; // 已批准
+        const isRejected = record?.approvalStatus === 2; // 已拒绝
+
+        return (
+          <div>
+            <Button
+              type="primary"
+              disabled={isApproved || isRejected} // 如果已批准或已拒绝，则按钮不可点击
+              onClick={() => handleApprovalChange(record, 1)} // 点击批准
+            >
+              批准
+            </Button>
+            <Button
+              type="default"
+              disabled={isApproved || isRejected} // 如果已批准或已拒绝，则按钮不可点击
+              onClick={() => handleApprovalChange(record, 2)} // 点击拒绝
+              style={{ marginLeft: 8 }} // 添加间距
+            >
+              拒绝
+            </Button>
+          </div>
+        );
+      },
+    },
+    // {
+    //   title: '评论',
+    //   dataIndex: 'comment',
+    //   render: (_, record) => (
+    //     <Input
+    //       placeholder="输入评论"
+    //       defaultValue={record.comment} // 如果有默认值，可以设置
+    //       onBlur={(e) => {
+    //         const comment = e.target.value;
+    //         // 在这里处理评论保存逻辑，比如发送API请求
+    //         console.log(`Comment for record ${record.id}: ${comment}`);
+    //       }}
+    //     />
+    //   ),
+    // }
   ];
 
   const columns: ProColumns<ApprovalInfoVO>[] = [
@@ -100,19 +133,42 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'digit',
     },
     {
-      title: '审批状态',
-      dataIndex: 'approvalStatus',
-      valueType: 'select',
-      valueEnum: approvalStatusConfig,
-    },
-    {
       title: <FormattedMessage id="文件链接" />,
       dataIndex: 'approvalFileUrl',
       valueType: 'text',
       render: (_, record) => (
-        <a href={record.approvalFileUrl} target="_blank" rel="noopener noreferrer">
-          {record.approvalFileUrl}
-        </a>
+        <div>
+          <a
+            href="#"
+            onClick={async (e) => {
+              e.preventDefault(); // 阻止默认的<a>标签行为
+              await downloadFromOSS(record.approvalFileUrl); // 调用模拟的下载函数
+            }}
+            style={{ marginRight: 8 }}
+          >
+            下载文件
+          </a>
+        </div>
+      ),
+    },
+    {
+      title: <FormattedMessage id="上传文件" />,
+      dataIndex: 'approvalFileUrl',
+      valueType: 'text',
+      render: (_, record) => (
+        <div>
+          <Upload
+            name="file"
+            showUploadList={false}
+            beforeUpload={async (file) => {
+              record.approvalFileUrl = await handleFileUpload(file, record.id);
+              actionRef.current?.reload();
+              return false; // 阻止自动上传，使用自定义上传逻辑
+            }}
+          >
+            <Button icon={<UploadOutlined />}>重新上传</Button>
+          </Upload>
+        </div>
       ),
     },
     {
@@ -125,16 +181,22 @@ const ApprovalSystem: React.FC = () => {
       dataIndex: 'updateTime',
       valueType: 'dateTime',
     },
+    {
+      title: '审批状态',
+      dataIndex: 'approvalStatus',
+      valueType: 'select',
+      valueEnum: approvalStatusConfig,
+    },
   ];
 
   return (
     <PageContainer>
       <Tabs defaultActiveKey="1">
-        <TabPane tab="阅读审批" key="1">
+        <TabPane tab="我发起的" key="1">
           <ProTable<ApprovalInfoVO, API.PageParams>
             headerTitle={intl.formatMessage({
-              id: 'pages.searchTable.title',
-              defaultMessage: 'Enquiry form',
+              id: '审批管理',
+              defaultMessage: '审批管理',
             })}
             actionRef={actionRef}
             rowKey="key"
@@ -152,19 +214,16 @@ const ApprovalSystem: React.FC = () => {
                 <PlusOutlined /> <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
               </Button>,
             ]}
-            request={async () => {
-              await isLogin();
-              return {};
-              // return getUsers(initialState.currentUser?.userId || '');
-            }}
+            loading={state.loadingInitiator} // Spinner for Initiator data
+            dataSource={state.initiatorData} // Use fetched data
             columns={columns}
           />
         </TabPane>
-        <TabPane tab="待处理审批" key="2">
+        <TabPane tab="我受理的" key="2">
           <ProTable<ApprovalInfoVO, API.PageParams>
             headerTitle={intl.formatMessage({
-              id: 'pages.searchTable.title',
-              defaultMessage: 'Enquiry form',
+              id: '审批管理',
+              defaultMessage: '审批管理',
             })}
             actionRef={actionRef}
             rowKey="key"
@@ -182,11 +241,8 @@ const ApprovalSystem: React.FC = () => {
                 <PlusOutlined /> <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
               </Button>,
             ]}
-            request={async () => {
-              await isLogin();
-              return {};
-               //return getUsers(initialState.currentUser?.userId || '');
-            }}
+            loading={state.loadingReceiver} // Spinner for Receiver data
+            dataSource={state.receiverData} // Use fetched data
             columns={approvalColumns}
           />
         </TabPane>
@@ -198,9 +254,14 @@ const ApprovalSystem: React.FC = () => {
         open={state.createModalOpen}
         onOpenChange={(isOpen) => handleModalOpen('createModalOpen', isOpen)}
         onFinish={async (values) => {
+          const initiator = state.employeeList.find(emp => emp.name === values.approvalInitiatorName);
+          const receiver = state.employeeList.find(emp => emp.name === values.approvalReceiverName);
+
           const data: AddApprovalInfoRequest = {
             ...values,
-            approvalFileUrl: state.fileUrl, // 使用上传后的文件URL
+            approvalInitiatorId: initiator?.id || 0, // 使用选中的发起人ID
+            approvalReceiverId: receiver?.id || 0,   // 使用选中的接收人ID
+            approvalFileUrl: state.fileUrl,          // 使用上传后的文件URL
           };
           await handleAddApproval(data);
         }}
@@ -208,14 +269,20 @@ const ApprovalSystem: React.FC = () => {
         <ProFormText
           name="approvalInitiatorName"
           label="审批发起人"
-          rules={[{ required: true, message: '请输入审批发起人' }]}
+          initialValue={initialState.currentUser?.name}
+          readonly
         />
-        <ProFormText
+        <ProFormSelect
           name="approvalReceiverName"
           label="审批接收人"
-          rules={[{ required: true, message: '请输入审批接收人' }]}
+          options={state.employeeList.map(emp => ({ label: emp.name, value: emp.name }))}
+          rules={[{ required: true, message: '请选择审批接收人' }]}
         />
-        <ProFormTextArea name="approvalDesc" label="审批描述" />
+        <ProFormText
+          name="approvalType"
+          label="审批类型"
+          rules={[{ required: true, message: '请输入审批类型' }]}
+        />
 
         <Upload
           name="file"
@@ -228,6 +295,7 @@ const ApprovalSystem: React.FC = () => {
           <Button icon={<UploadOutlined />}>点击上传文件</Button>
         </Upload>
       </ModalForm>
+
     </PageContainer>
   );
 };

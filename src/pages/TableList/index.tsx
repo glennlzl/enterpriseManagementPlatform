@@ -1,115 +1,26 @@
-import { addRule, getUsers, isLogin, removeRule, updateRule } from '@/api/usermanagement';
-import { useModel } from '@@/exports';
+import React from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import type { ActionType, ProColumns, ProDescriptionsItemProps } from '@ant-design/pro-components';
+import { Button } from 'antd';
 import {
   FooterToolbar,
-  ModalForm,
   PageContainer,
-  ProDescriptions,
-  ProFormText,
-  ProFormTextArea,
   ProTable,
 } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import { Button, Drawer, message } from 'antd';
-import React, { useRef, useState } from 'react';
-import type { FormValueType } from './components/UpdateForm';
+import { useModel } from '@@/exports';
 import UpdateForm from './components/UpdateForm';
-
-/**
- * @en-US Add node
- * @zh-CN 添加节点
- * @param fields
- */
-const handleAdd = async (fields: API.EmployeeList) => {
-  const hide = message.loading('正在添加');
-  try {
-    await addRule({ ...fields });
-    hide();
-    message.success('Added successfully');
-    return true;
-  } catch (error) {
-    hide();
-    message.error('Adding failed, please try again!');
-    return false;
-  }
-};
-
-/**
- * @en-US Update node
- * @zh-CN 更新节点
- *
- * @param fields
- */
-const handleUpdate = async (fields: FormValueType) => {
-  const hide = message.loading('Configuring');
-  try {
-    await updateRule({
-      name: fields.name,
-      desc: fields.desc,
-      key: fields.key,
-    });
-    hide();
-
-    message.success('Configuration is successful');
-    return true;
-  } catch (error) {
-    hide();
-    message.error('Configuration failed, please try again!');
-    return false;
-  }
-};
-
-/**
- *  Delete node
- * @zh-CN 删除节点
- *
- * @param selectedRows
- */
-const handleRemove = async (selectedRows: API.EmployeeList[]) => {
-  const hide = message.loading('正在删除');
-  if (!selectedRows) return true;
-  try {
-    await removeRule({
-      key: selectedRows.map((row) => row.key),
-    });
-    hide();
-    message.success('Deleted successfully and will refresh soon');
-    return true;
-  } catch (error) {
-    hide();
-    message.error('Delete failed, please try again');
-    return false;
-  }
-};
+import { useEmployeeManagement } from "@/hooks/user-management/Hook.useEmployeeManagement";
+import { EmployeeInfoAddOrUpdateRequest } from "@/api/usermanagement"; // 更新表单组件路径
 
 const TableList: React.FC = () => {
-  /**
-   * @en-US Pop-up window of new window
-   * @zh-CN 新建窗口的弹窗
-   *  */
-  const [createModalOpen, handleModalOpen] = useState<boolean>(false);
-  /**
-   * @en-US The pop-up window of the distribution update window
-   * @zh-CN 分布更新窗口的弹窗
-   * */
-  const [updateModalOpen, handleUpdateModalOpen] = useState<boolean>(false);
-
-  const [showDetail, setShowDetail] = useState<boolean>(false);
-
-  const actionRef = useRef<ActionType>();
-  const [currentRow, setCurrentRow] = useState<API.EmployeeList>();
-  const [selectedRowsState, setSelectedRows] = useState<API.EmployeeList[]>([]);
   const { initialState } = useModel('@@initialState');
+  const { state, setState, actionRef, handleModalOpen, handleAdd, handleUpdate, fetchUsers, handleSyncSingle, handleSyncAll} = useEmployeeManagement(
+    initialState.currentUser?.id || ''
+  );
 
-  /**
-   * @en-US International configuration
-   * @zh-CN 国际化配置
-   * */
   const intl = useIntl();
 
-  const columns: ProColumns<API.EmployeeList>[] = [
+  const columns = [
     {
       title: <FormattedMessage id="姓名" />,
       dataIndex: 'name',
@@ -117,7 +28,7 @@ const TableList: React.FC = () => {
     },
     {
       title: <FormattedMessage id="上级" />,
-      dataIndex: 'managerId',
+      dataIndex: 'managerName',
       valueType: 'textarea',
     },
     {
@@ -155,47 +66,6 @@ const TableList: React.FC = () => {
       dataIndex: 'orgEmail',
       valueType: 'textarea',
     },
-    // {
-    //   title: (
-    //     <FormattedMessage
-    //       id="pages.searchTable.updateForm.ruleName.nameLabel"
-    //       defaultMessage="Rule name"
-    //     />
-    //   ),
-    //   dataIndex: 'name',
-    //   valueType: 'textarea',
-    // },
-    // {
-    //   title: (
-    //     <FormattedMessage
-    //       id="pages.searchTable.updateForm.ruleName.nameLabel"
-    //       defaultMessage="Rule name"
-    //     />
-    //   ),
-    //   dataIndex: 'name',
-    //   valueType: 'textarea',
-    // },
-    // {
-    //   title: <FormattedMessage id="pages.searchTable.titleDesc" defaultMessage="Description" />,
-    //   dataIndex: 'desc',
-    //   valueType: 'textarea',
-    // },
-    // {
-    //   title: (
-    //     <FormattedMessage
-    //       id="pages.searchTable.titleCallNo"
-    //       defaultMessage="Number of service calls"
-    //     />
-    //   ),
-    //   dataIndex: 'callNo',
-    //   sorter: true,
-    //   hideInForm: true,
-    //   renderText: (val: string) =>
-    //     `${val}${intl.formatMessage({
-    //       id: 'pages.searchTable.tenThousand',
-    //       defaultMessage: ' 万 ',
-    //     })}`,
-    // },
     {
       title: <FormattedMessage id="状态" />,
       dataIndex: 'isIncumbent',
@@ -211,35 +81,6 @@ const TableList: React.FC = () => {
         },
       },
     },
-    // {
-    //   title: (
-    //     <FormattedMessage
-    //       id="pages.searchTable.titleUpdatedAt"
-    //       defaultMessage="Last scheduled time"
-    //     />
-    //   ),
-    //   sorter: true,
-    //   dataIndex: 'updatedAt',
-    //   valueType: 'dateTime',
-    //   renderFormItem: (item, { defaultRender, ...rest }, form) => {
-    //     const status = form.getFieldValue('status');
-    //     if (`${status}` === '0') {
-    //       return false;
-    //     }
-    //     if (`${status}` === '3') {
-    //       return (
-    //         <Input
-    //           {...rest}
-    //           placeholder={intl.formatMessage({
-    //             id: 'pages.searchTable.exception',
-    //             defaultMessage: 'Please enter the reason for the exception!',
-    //           })}
-    //         />
-    //       );
-    //     }
-    //     return defaultRender(item);
-    //   },
-    // },
     {
       title: <FormattedMessage id="操作" />,
       dataIndex: 'option',
@@ -248,25 +89,44 @@ const TableList: React.FC = () => {
         <a
           key="config"
           onClick={() => {
-            handleUpdateModalOpen(true);
-            setCurrentRow(record);
+            handleModalOpen('updateModalOpen', true);
+            setState((prevState) => ({
+              ...prevState,
+              currentRow: record,
+            }));
           }}
         >
           <FormattedMessage id="更新" />
         </a>,
       ],
     },
+    {
+      title: <FormattedMessage id="钉钉同步" />,
+      dataIndex: 'dingdingSync',
+      valueType: 'dingdingSync',
+      render: (_, record) => [
+        record.isUpdated && record.role >= 1 ? (
+          <a
+            key="sync"
+            onClick={() => handleSyncSingle(record.userId)}
+            style={{ marginLeft: 8 }}
+          >
+            <FormattedMessage id="同步钉钉" />
+          </a>
+        ) : null,
+      ],
+    },
   ];
 
   return (
     <PageContainer>
-      <ProTable<API.EmployeeList, API.PageParams>
+      <ProTable
         headerTitle={intl.formatMessage({
           id: 'pages.searchTable.title',
           defaultMessage: 'Enquiry form',
         })}
         actionRef={actionRef}
-        rowKey="key"
+        rowKey="id"
         search={{
           labelWidth: 'auto',
           filterType: 'query',
@@ -276,30 +136,37 @@ const TableList: React.FC = () => {
           <Button
             type="primary"
             key="primary"
+            onClick={async() => {
+              await handleSyncAll();
+            }}
+          >
+            <FormattedMessage id='同步钉钉' defaultMessage="同步钉钉" />
+          </Button>,
+          <Button
+            type="primary"
+            key="primary"
             onClick={() => {
-              handleModalOpen(true);
+              handleModalOpen('createModalOpen', true);
             }}
           >
             <PlusOutlined /> <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
           </Button>,
         ]}
         request={async () => {
-          await isLogin();
-          return getUsers(initialState.currentUser?.userId || '');
+          const data = await fetchUsers();
+          return {
+            data,
+            success: true,
+          };
         }}
         columns={columns}
-        // rowSelection={{
-        //   onChange: (_, selectedRows) => {
-        //     setSelectedRows(selectedRows);
-        //   },
-        // }}
       />
-      {selectedRowsState?.length > 0 && (
+      {state.selectedRowsState?.length > 0 && (
         <FooterToolbar
           extra={
             <div>
               <FormattedMessage id="pages.searchTable.chosen" defaultMessage="Chosen" />{' '}
-              <a style={{ fontWeight: 600 }}>{selectedRowsState.length}</a>{' '}
+              <a style={{ fontWeight: 600 }}>{state.selectedRowsState.length}</a>{' '}
               <FormattedMessage id="pages.searchTable.item" defaultMessage="项" />
               &nbsp;&nbsp;
               <span>
@@ -307,7 +174,7 @@ const TableList: React.FC = () => {
                   id="pages.searchTable.totalServiceCalls"
                   defaultMessage="Total number of service calls"
                 />{' '}
-                {selectedRowsState.reduce((pre, item) => pre + item.callNo!, 0)}{' '}
+                {state.selectedRowsState.reduce((pre, item) => pre + item.callNo!, 0)}{' '}
                 <FormattedMessage id="pages.searchTable.tenThousand" defaultMessage="万" />
               </span>
             </div>
@@ -315,102 +182,73 @@ const TableList: React.FC = () => {
         >
           <Button
             onClick={async () => {
-              await handleRemove(selectedRowsState);
-              setSelectedRows([]);
+              setState((prevState) => ({
+                ...prevState,
+                selectedRowsState: [],
+              }));
               actionRef.current?.reloadAndRest?.();
             }}
           >
-            <FormattedMessage
-              id="pages.searchTable.batchDeletion"
-              defaultMessage="Batch deletion"
-            />
+            <FormattedMessage id="pages.searchTable.batchDeletion" defaultMessage="Batch deletion" />
           </Button>
           <Button type="primary">
-            <FormattedMessage
-              id="pages.searchTable.batchApproval"
-              defaultMessage="Batch approval"
-            />
+            <FormattedMessage id="pages.searchTable.batchApproval" defaultMessage="Batch approval" />
           </Button>
         </FooterToolbar>
       )}
-      <ModalForm
-        title={intl.formatMessage({
-          id: '新加入人员',
-        })}
-        width="400px"
-        open={createModalOpen}
-        onOpenChange={handleModalOpen}
-        onFinish={async (value) => {
-          const success = await handleAdd(value as API.EmployeeList);
-          if (success) {
-            handleModalOpen(false);
-            if (actionRef.current) {
-              actionRef.current.reload();
-            }
-          }
-        }}
-      >
-        <ProFormText
-          rules={[
-            {
-              required: true,
-              message: (
-                <FormattedMessage
-                  id="pages.searchTable.ruleName"
-                  defaultMessage="Rule name is required"
-                />
-              ),
-            },
-          ]}
-          width="md"
-          name="name"
-        />
-        <ProFormTextArea width="md" name="desc" />
-      </ModalForm>
       <UpdateForm
         onSubmit={async (value) => {
-          const success = await handleUpdate(value);
+          const selectedManager = state.employeeList.find(emp => emp.id === value.managerId);
+          const fullData: EmployeeInfoAddOrUpdateRequest = {
+            ...value, // 这里没有 state.currentRow，因为是创建操作
+            managerName: selectedManager?.name || '',
+          } as EmployeeInfoAddOrUpdateRequest;
+          const success = await handleAdd(fullData);
           if (success) {
-            handleUpdateModalOpen(false);
-            setCurrentRow(undefined);
-            if (actionRef.current) {
-              actionRef.current.reload();
-            }
+            handleModalOpen('createModalOpen', false);
+            actionRef.current?.reload();
           }
         }}
         onCancel={() => {
-          handleUpdateModalOpen(false);
-          if (!showDetail) {
-            setCurrentRow(undefined);
-          }
+          handleModalOpen('createModalOpen', false);
         }}
-        updateModalOpen={updateModalOpen}
-        values={currentRow || {}}
+        updateModalOpen={state.createModalOpen} // 使用 createModalOpen 控制 modal 的打开状态
+        values={{}} // 创建操作时没有初始值
+        employeeList={state.employeeList} // 传递 employeeList
+        type={'create'} // 传递 type 为 update
       />
 
-      <Drawer
-        width={600}
-        open={showDetail}
-        onClose={() => {
-          setCurrentRow(undefined);
-          setShowDetail(false);
+      {/* 更新表单 */}
+      <UpdateForm
+        onSubmit={async (value) => {
+          const selectedManager = state.employeeList.find(emp => emp.id === value.managerId);
+          const fullData: EmployeeInfoAddOrUpdateRequest = {
+            ...state.currentRow,
+            ...value,
+            managerName: selectedManager?.name || '',
+          } as EmployeeInfoAddOrUpdateRequest;
+          const success = await handleUpdate(fullData);
+          if (success) {
+            handleModalOpen('updateModalOpen', false);
+            setState((prevState) => ({
+              ...prevState,
+              currentRow: undefined,
+            }));
+            actionRef.current?.reload();
+          }
         }}
-        closable={false}
-      >
-        {currentRow?.name && (
-          <ProDescriptions<API.EmployeeList>
-            column={2}
-            title={currentRow?.name}
-            request={async () => ({
-              data: currentRow || {},
-            })}
-            params={{
-              id: currentRow?.name,
-            }}
-            columns={columns as ProDescriptionsItemProps<API.EmployeeList>[]}
-          />
-        )}
-      </Drawer>
+        onCancel={() => {
+          handleModalOpen('updateModalOpen', false);
+          setState((prevState) => ({
+            ...prevState,
+            currentRow: undefined,
+          }));
+        }}
+        updateModalOpen={state.updateModalOpen} // 使用 updateModalOpen 控制 modal 的打开状态
+        values={state.currentRow || {}} // 更新操作时使用 currentRow 作为初始值
+        employeeList={state.employeeList} // 传递 employeeList
+        type={'update'} // 传递 type 为 update
+      />
     </PageContainer>
   );
 };

@@ -63,6 +63,24 @@ export default [
     component: './ApprovalSystem',
   },
   {
+    path: '/vehicle',
+    name: 'vehicle.table-list',
+    icon: 'table',
+    // component: './vehicle-system',
+    routes: [
+      {
+        path: '/vehicle/vehicle-management',
+        name: '车辆管理',
+        component: './vehicle-system',
+      },
+      {
+        path: '/vehicle/vehicle-type=management',
+        name: '车辆类型管理',
+        component: './vehicle-type-system',
+      },
+    ],
+  },
+  {
     path: '/',
     redirect: '/welcome',
   },

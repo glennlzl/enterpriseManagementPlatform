@@ -1,5 +1,5 @@
 import { AvatarDropdown, AvatarName, Footer, Question, SelectLang } from '@/components';
-import { EmployeeInfo, getUser } from '@/api/usermanagement';
+import {EmployeeInfo, getUser, isLogin} from '@/api/usermanagement';
 import { LinkOutlined } from '@ant-design/icons';
 import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
@@ -18,29 +18,14 @@ export async function getInitialState(): Promise<{
   settings?: Partial<LayoutSettings>;
   currentUser?: EmployeeInfo;
   loading?: boolean;
-  fetchUserInfo?: (userId: string) => Promise<EmployeeInfo | undefined>;
 }> {
-  const fetchUserInfo = async (userId: string) => {
-    try {
-      console.log('Fetching user info for userId:', userId);
-      return await getUser(userId);
-    } catch (error) {
-      // history.push(loginPath);
-    }
-    return undefined;
-  };
-
   const { location } = history;
   if (location.pathname !== loginPath) {
-    const currentUser = await fetchUserInfo('012701251367-718893350'); // Example userId
     return {
-      fetchUserInfo,
-      currentUser,
       settings: defaultSettings as Partial<LayoutSettings>,
     };
   }
   return {
-    fetchUserInfo,
     settings: defaultSettings as Partial<LayoutSettings>,
   };
 }
@@ -63,7 +48,7 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
     onPageChange: () => {
       const { location } = history;
       // 如果没有登录，重定向到 login
-      if (!initialState?.currentUser && location.pathname !== loginPath) {
+      if ((!initialState?.currentUser && location.pathname !== loginPath) || isLogin() === false) {
         history.push(loginPath);
       }
     },

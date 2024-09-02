@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { loginWithAuth } from '@/api/usermanagement';
+import {isLogin, loginWithAuth} from '@/api/usermanagement';
 import { useModel } from '@@/exports';
 import { useNavigate } from '@umijs/max';
 import { message } from 'antd';
@@ -23,16 +23,12 @@ export const hookUseDingTalkLogin = () => {
     const code = urlParams.searchParams.get('authCode');
     if (code) {
       loginWithAuth(code)
-        // .then((authentication) => {
-        //   return initialState?.fetchUserInfo?.(authentication.userId);
-        // })
-        .then((userInfo) => {
-          console.log('Fetched userInfo:', userInfo);
-          if (userInfo) {
+        .then((authentication) => {
+          if (authentication) {
             flushSync(() => {
               setInitialState((s) => ({
                 ...s,
-                currentUser: userInfo,
+                currentUser: authentication,
               }));
             });
             message.success('登录成功！');

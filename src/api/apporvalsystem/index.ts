@@ -5,8 +5,10 @@ import {
   UplodaFileUrlRequest
 } from "@/model/approvalsystem";
 import {request} from "@umijs/max";
+import {GENERAL_API_BASE_URL} from "@/api/usermanagement";
 
-const API_BASE_URL = 'http://localhost:8081/api';
+export const API_BASE_URL = `${GENERAL_API_BASE_URL}/business/approval-info`;
+
 
 export interface ApiResponse<T> {
   code: number;
@@ -26,7 +28,7 @@ export async function fetchInitiatorData(userId: string) {
     headers: {
       Accept: 'application/json',
     },
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
     if (response.isSuccess) {
       return response.data; // 访问返回的 `data` 字段
@@ -45,7 +47,7 @@ export async function fetchReceiverData(userId: string) {
     headers: {
       Accept: 'application/json',
     },
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
     if (response.isSuccess) {
       return response.data; // 访问返回的 `data` 字段
@@ -64,7 +66,7 @@ export async function addApproval(addApprovalInfoRequest: AddApprovalInfoRequest
     headers: {
       Accept: 'application/json',
     },
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
     if (response.isSuccess) {
       return response.data; // 访问返回的 `data` 字段
@@ -83,7 +85,7 @@ export async function uploadFile(uplodaFileUrlRequest: UplodaFileUrlRequest) {
     headers: {
       Accept: 'application/json',
     },
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
     if (response.isSuccess) {
       return response.data; // 访问返回的 `data` 字段
@@ -102,7 +104,7 @@ export async function updateApprovalDecision(updateDecisionRequest: UpdateDecisi
     headers: {
       Accept: 'application/json',
     },
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
     if (response.isSuccess) {
       return response.data; // 访问返回的 `data` 字段

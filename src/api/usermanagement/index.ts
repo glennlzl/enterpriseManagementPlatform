@@ -2,6 +2,7 @@
 /* eslint-disable */
 import { request } from '@umijs/max';
 
+
 export interface EmployeeInfo {
   id?: number;
   name?: string;
@@ -41,151 +42,187 @@ export interface ApiResponse<T> {
   dataType?: number;
 }
 
-/** 获取当前的用户 GET /api/currentUser */
-export async function getUser(userId: string) {
-  const url = new URL('http://localhost:8081/system/login/getUserInfo');
-  return request<ApiResponse<EmployeeInfo>>(url.toString(), {
+export interface EmployeeSimpleInfoResponse {
+  id: number;
+  name: string;
+  jobNumber: string;
+}
+
+export interface EmployeeInfoAddOrUpdateRequest {
+  id?: number;
+  name: string;
+  stateCode?: string;
+  managerId?: number;
+  managerName?: string;
+  managerUserId?: string;
+  mobile?: string;
+  telephone?: string;
+  jobNumber?: string;
+  title?: string;
+  email?: string;
+  deptIdList?: number[];
+  role?: number;
+  isIncumbent?: number;
+}
+
+export const GENERAL_API_BASE_URL = 'http://47.93.51.8:8081';
+export const API_BASE_URL = `${GENERAL_API_BASE_URL}`;
+
+export interface OssStsAccessInfo {
+  accessKeyId: string;
+  accessKeySecret: string;
+  securityToken: string;
+  expiration: string;
+}
+
+export async function fetchOssStsAccessInfo() {
+  const url = new URL(`${API_BASE_URL}/system/oss/generateStsAccessInfo`);
+  return request<ApiResponse<OssStsAccessInfo>>(url.toString(), {
     method: 'GET',
-    params: {
-      userId,
-    },
     headers: {
       Accept: 'application/json',
     },
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true,
   }).then((response) => {
-    console.log(response);
     if (response.isSuccess) {
-      return response.data; // 访问返回的 `data` 字段
+      return response.data;
     } else {
-      return response.msg;
+      return Promise.reject(response.msg);
     }
   });
 }
 
+/** 通过授权码登录 GET /api/loginWithAuth */
 export async function loginWithAuth(authCode: string) {
-  const url = new URL('http://localhost:8081/system/login/auth');
-  return request<ApiResponse<EmployeeInfo>>(url.toString(), {
+  const url = `${API_BASE_URL}/system/login/auth`;
+  return request<ApiResponse<EmployeeInfo>>(url, {
     method: 'GET',
-    params: {
-      authCode,
-    },
+    params: { authCode },
     headers: {
       Accept: 'application/json',
     },
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
     if (response.isSuccess) {
-      return response.data; // 访问返回的 `data` 字段
+      return response.data;
     } else {
-      return response.msg;
+      throw new Error(response.msg);
     }
   });
 }
 
+/** 获取员工列表 GET /system/employee-info/queryEmployeeList */
 export async function getUsers(id: string, options?: { [key: string]: any }) {
-  return request<API.EmployeeList>('http://localhost:8081/system/employee-info/queryEmployeeList', {
+  const url = `${API_BASE_URL}/system/employee-info/queryEmployeeList`;
+  return request<ApiResponse<EmployeeInfo[]>>(url, {
     method: 'GET',
-    params: {
-      id,
-    },
+    params: { id },
     ...(options || {}),
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
-    console.log(response);
     if (response.isSuccess) {
-      return response.data; // 访问返回的 `data` 字段
+      return response.data;
     } else {
-      return response.msg;
+      throw new Error(response.msg);
     }
   });
 }
 
+/** 检查是否登录 GET /system/login/isLogin */
 export async function isLogin(options?: { [key: string]: any }) {
-  return request<API.EmployeeList>('http://localhost:8081/system/login/isLogin', {
+  const url = `${API_BASE_URL}/system/login/isLogin`;
+  return request<ApiResponse<boolean>>(url, {
     method: 'GET',
     ...(options || {}),
-    credentials: true, // 确保携带 Cookies
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
-    console.log(response);
     if (response.isSuccess) {
-      return response.data; // 访问返回的 `data` 字段
+      return response.data;
     } else {
-      return response.msg;
+      throw new Error(response.msg);
     }
   });
 }
 
-export async function addEmployee(options?: { [key: string]: any }) {
-  return request<API.EmployeeList>('http://localhost:8081/system/login/isLogin', {
-    method: 'GET',
+/** 添加员工 POST /system/employee-info/addEmployee */
+export async function addEmployee(employeeData: EmployeeInfoAddOrUpdateRequest, options?: { [key: string]: any }) {
+  const url = `${API_BASE_URL}/system/employee-info/addEmployee`;
+  return request<ApiResponse<boolean>>(url, {
+    method: 'POST',
+    data: employeeData,
     ...(options || {}),
+    withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
-    console.log(response);
     if (response.isSuccess) {
-      return response.data; // 访问返回的 `data` 字段
+      return response.data;
     } else {
-      return response.msg;
+      throw new Error(response.msg);
     }
   });
 }
 
-/** 退出登录接口 POST /api/login/outLogin */
-export async function outLogin(options?: { [key: string]: any }) {
-  return request<Record<string, any>>('/api/login/outLogin', {
+/** 更新员工信息 POST /system/employee-info/updateEmployee */
+export async function updateEmployee(employeeData: EmployeeInfoAddOrUpdateRequest, options?: { [key: string]: any }) {
+  const url = `${API_BASE_URL}/system/employee-info/updateEmployee`;
+  return request<ApiResponse<boolean>>(url, {
     method: 'POST',
+    data: employeeData,
     ...(options || {}),
+    withCredentials: true, // 确保携带 Cookies
+  }).then((response) => {
+    if (response.isSuccess) {
+      return response.data;
+    } else {
+      throw new Error(response.msg);
+    }
   });
 }
 
-/** 登录接口 POST /api/login/account */
-export async function login(body: API.LoginParams, options?: { [key: string]: any }) {
-  return request<API.LoginResult>('/api/login/account', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    data: body,
-    ...(options || {}),
-  });
-}
-
-/** 此处后端没有提供注释 GET /api/notices */
-export async function getNotices(options?: { [key: string]: any }) {
-  return request<API.NoticeIconList>('/api/notices', {
+/** 同步钉钉员工信息 GET /system/employee-info/syncDingtalkEmployeeInfo */
+export async function syncDingtalkEmployeeInfo(options?: { [key: string]: any }) {
+  const url = `${API_BASE_URL}/system/employee-info/syncDingtalkEmployeeInfo`;
+  return request<ApiResponse<boolean>>(url, {
     method: 'GET',
     ...(options || {}),
+    withCredentials: true, // 确保携带 Cookies
+  }).then((response) => {
+    if (response.isSuccess) {
+      return response.data;
+    } else {
+      throw new Error(response.msg);
+    }
   });
 }
 
-/** 更新规则 PUT /api/rule */
-export async function updateRule(options?: { [key: string]: any }) {
-  return request<API.EmployeeList>('/api/rule', {
-    method: 'POST',
-    data: {
-      method: 'update',
-      ...(options || {}),
-    },
+/** 同步单个钉钉员工信息 GET /system/employee-info/syncDingtalkSingleEmployeeInfo */
+export async function syncDingtalkSingleEmployeeInfo(userId: string, options?: { [key: string]: any }) {
+  const url = `${API_BASE_URL}/system/employee-info/syncDingtalkSingleEmployeeInfo`;
+  return request<ApiResponse<boolean>>(url, {
+    method: 'GET',
+    params: { userId },
+    ...(options || {}),
+    withCredentials: true, // 确保携带 Cookies
+  }).then((response) => {
+    if (response.isSuccess) {
+      return response.data;
+    } else {
+      throw new Error(response.msg);
+    }
   });
 }
 
-/** 新建规则 POST /api/rule */
-export async function addRule(options?: { [key: string]: any }) {
-  return request<API.EmployeeList>('/api/rule', {
-    method: 'POST',
-    data: {
-      method: 'post',
-      ...(options || {}),
-    },
+export async function queryAllEmployeeSimpleInfo() {
+  const url = `${API_BASE_URL}/system/employee-info/queryAllEmployeeSimpleInfo`;
+  return request<ApiResponse<EmployeeSimpleInfoResponse[]>>(url, {
+    method: 'GET',
+    withCredentials: true, // 如果需要传递凭证（如 Cookies）
+  }).then((response) => {
+    if (response.isSuccess) {
+      return response.data;
+    } else {
+      throw new Error(response.msg);
+    }
   });
 }
 
-/** 删除规则 DELETE /api/rule */
-export async function removeRule(options?: { [key: string]: any }) {
-  return request<Record<string, any>>('/api/rule', {
-    method: 'POST',
-    data: {
-      method: 'delete',
-      ...(options || {}),
-    },
-  });
-}
+

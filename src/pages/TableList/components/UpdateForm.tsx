@@ -1,7 +1,9 @@
+import React from 'react';
 import { ProFormSelect, ProFormText, StepsForm } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Modal } from 'antd';
-import React from 'react';
+import ManagerSelect from './ManagerSelect'; // 引入 ManagerSelect 组件
+import { EmployeeSimpleInfoVO } from "@/api/usermanagement";
 
 export type FormValueType = {
   target?: string;
@@ -16,10 +18,13 @@ export type UpdateFormProps = {
   onSubmit: (values: FormValueType) => Promise<void>;
   updateModalOpen: boolean;
   values: Partial<API.EmployeeList>;
+  employeeList: EmployeeSimpleInfoVO[]; // 传入 employeeList
+  type: 'create'  | 'update';
 };
 
 const UpdateForm: React.FC<UpdateFormProps> = (props) => {
   const intl = useIntl();
+
   return (
     <StepsForm
       stepsProps={{
@@ -36,7 +41,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             }}
             destroyOnClose
             title={intl.formatMessage({
-              id: '人员更新',
+              id: props.type === 'create' ? '人员添加' : '人员更新',
             })}
             open={props.updateModalOpen}
             footer={submitter}
@@ -52,7 +57,15 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
     >
       <StepsForm.StepForm
         initialValues={{
-          name: props.values.name,
+          name: props.values.name || '',
+          managerId: props.values.managerId || '',
+          mobile: props.values.mobile || '',
+          telephone: props.values.telephone || '',
+          jobNumber: props.values.jobNumber || '',
+          title: props.values.title || '',
+          workPlace: props.values.workPlace || '',
+          orgEmail: props.values.orgEmail || '',
+          email: props.values.email || '',
         }}
         title={intl.formatMessage({
           id: 'pages.searchTable.updateForm.basicConfig',
@@ -65,7 +78,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             id: 'pages.searchTable.updateForm.ruleName.nameLabel',
             defaultMessage: '人员',
           })}
-          width="md"
+          width="xl"
           rules={[
             {
               required: true,
@@ -78,23 +91,20 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
               type: 'string',
             },
           ]}
+          readonly={props.type === 'update'}
         />
-        <ProFormText
+        <ManagerSelect
+          employeeList={props.employeeList}
           name="managerId"
-          width="md"
           label={intl.formatMessage({
             id: '上级',
             defaultMessage: '上级',
           })}
-          rules={[
-            {
-              type: 'string',
-            },
-          ]}
+          required={true}
         />
         <ProFormText
           name="mobile"
-          width="md"
+          width="xl"
           label={intl.formatMessage({
             id: '手机',
             defaultMessage: '手机',
@@ -102,7 +112,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
         />
         <ProFormText
           name="telephone"
-          width="md"
+          width="xl"
           label={intl.formatMessage({
             id: '座机',
             defaultMessage: '座机',
@@ -110,7 +120,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
         />
         <ProFormText
           name="jobNumber"
-          width="md"
+          width="xl"
           label={intl.formatMessage({
             id: '工号',
             defaultMessage: '工号',
@@ -118,7 +128,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
         />
         <ProFormText
           name="title"
-          width="md"
+          width="xl"
           label={intl.formatMessage({
             id: '职位',
             defaultMessage: '职位',
@@ -126,7 +136,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
         />
         <ProFormText
           name="workPlace"
-          width="md"
+          width="xl"
           label={intl.formatMessage({
             id: '办公地点',
             defaultMessage: '办公地点',
@@ -134,7 +144,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
         />
         <ProFormText
           name="orgEmail"
-          width="md"
+          width="xl"
           label={intl.formatMessage({
             id: '组织邮箱',
             defaultMessage: '组织邮箱',
@@ -142,7 +152,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
         />
         <ProFormText
           name="email"
-          width="md"
+          width="xl"
           label={intl.formatMessage({
             id: '邮箱',
             defaultMessage: '邮箱',
@@ -151,8 +161,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
       </StepsForm.StepForm>
       <StepsForm.StepForm
         initialValues={{
-          target: '0',
-          template: '0',
+          isIncumbent: props.values.isIncumbent ?? '',
         }}
         title={intl.formatMessage({
           id: '更新状态',
@@ -164,10 +173,10 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
           label={intl.formatMessage({
             id: '员工状态',
           })}
-          valueEnum={{
-            0: '在职',
-            1: '离职',
-          }}
+          options={[
+            { label: '在职', value: 1 },
+            { label: '离职', value: 0 },
+          ]}
         />
       </StepsForm.StepForm>
     </StepsForm>
