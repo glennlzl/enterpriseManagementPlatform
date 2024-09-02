@@ -1,9 +1,9 @@
-import React from 'react';
+import { EmployeeSimpleInfoVO } from '@/api/usermanagement';
 import { ProFormSelect, ProFormText, StepsForm } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Modal } from 'antd';
+import React from 'react';
 import ManagerSelect from './ManagerSelect'; // 引入 ManagerSelect 组件
-import { EmployeeSimpleInfoVO } from "@/api/usermanagement";
 
 export type FormValueType = {
   target?: string;
@@ -19,7 +19,7 @@ export type UpdateFormProps = {
   updateModalOpen: boolean;
   values: Partial<API.EmployeeList>;
   employeeList: EmployeeSimpleInfoVO[]; // 传入 employeeList
-  type: 'create'  | 'update';
+  type: 'create' | 'update';
 };
 
 const UpdateForm: React.FC<UpdateFormProps> = (props) => {
@@ -135,22 +135,6 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
           })}
         />
         <ProFormText
-          name="workPlace"
-          width="xl"
-          label={intl.formatMessage({
-            id: '办公地点',
-            defaultMessage: '办公地点',
-          })}
-        />
-        <ProFormText
-          name="orgEmail"
-          width="xl"
-          label={intl.formatMessage({
-            id: '组织邮箱',
-            defaultMessage: '组织邮箱',
-          })}
-        />
-        <ProFormText
           name="email"
           width="xl"
           label={intl.formatMessage({
@@ -158,6 +142,26 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             defaultMessage: '邮箱',
           })}
         />
+        {props.type === 'create' && (
+          <>
+            <ProFormText
+              name="orgEmail"
+              width="xl"
+              label={intl.formatMessage({
+                id: '组织邮箱',
+                defaultMessage: '组织邮箱',
+              })}
+            />
+            <ProFormText
+              name="workPlace"
+              width="xl"
+              label={intl.formatMessage({
+                id: '办公地点',
+                defaultMessage: '办公地点',
+              })}
+            />
+          </>
+        )}
       </StepsForm.StepForm>
       <StepsForm.StepForm
         initialValues={{

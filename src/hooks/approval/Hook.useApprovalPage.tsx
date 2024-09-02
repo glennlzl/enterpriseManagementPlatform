@@ -1,24 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
-import OSS from 'ali-oss';
-import { v4 as uuidv4 } from 'uuid';
-import { message } from 'antd';
-import type { ActionType } from '@ant-design/pro-components';
 import {
   addApproval,
   fetchInitiatorData,
   fetchReceiverData,
   updateApprovalDecision,
-  uploadFile
-} from "@/api/apporvalsystem";
-import { AddApprovalInfoRequest, ApprovalInfoVO, UplodaFileUrlRequest } from "@/model/approvalsystem";
-import {EmployeeSimpleInfoResponse, queryAllEmployeeSimpleInfo} from "@/api/usermanagement";
-
-// const client = new OSS({
-//   region: '<your-region>',
-//   accessKeyId: '<your-access-key-id>',
-//   accessKeySecret: '<your-access-key-secret>',
-//   bucket: 'my-bucket123' // 使用符合规则的 Bucket 名称
-// });
+  updateComment,
+  uploadFile,
+} from '@/api/apporvalsystem';
+import {
+  EmployeeSimpleInfoResponse,
+  fetchOssStsAccessInfo,
+  queryAllEmployeeSimpleInfo,
+} from '@/api/usermanagement';
+import {
+  AddApprovalInfoRequest,
+  ApprovalInfoVO,
+  UplodaFileUrlRequest,
+} from '@/model/approvalsystem';
+import type { ActionType } from '@ant-design/pro-components';
+import OSS from 'ali-oss';
+import { message } from 'antd';
+import { useEffect, useRef, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 export const useApprovalPage = (userId: string) => {
   const actionRef = useRef<ActionType>();
@@ -30,7 +32,7 @@ export const useApprovalPage = (userId: string) => {
     updateModalOpen: false,
     fileUrl: '', // 存储文件上传后的URL
     loadingInitiator: true, // Initiator data loading state
-    loadingReceiver: true,  // Receiver data loading state
+    loadingReceiver: true, // Receiver data loading state
     employeeList: [] as EmployeeSimpleInfoResponse[],
   });
 
@@ -40,7 +42,7 @@ export const useApprovalPage = (userId: string) => {
         const [initiatorResponse, receiverResponse, employeeList] = await Promise.all([
           fetchInitiatorData(userId),
           fetchReceiverData(userId),
-          queryAllEmployeeSimpleInfo()
+          queryAllEmployeeSimpleInfo(),
         ]);
 
         setState((prevState) => ({
@@ -48,15 +50,15 @@ export const useApprovalPage = (userId: string) => {
           initiatorData: initiatorResponse,
           receiverData: receiverResponse,
           loadingInitiator: false, // Data loaded, stop spinner
-          loadingReceiver: false,  // Data loaded, stop spinner
-          employeeList
+          loadingReceiver: false, // Data loaded, stop spinner
+          employeeList,
         }));
       } catch (error) {
         message.error(`获取数据失败: ${error}`);
         setState((prevState) => ({
           ...prevState,
           loadingInitiator: false, // Stop spinner even if there's an error
-          loadingReceiver: false,  // Stop spinner even if there's an error
+          loadingReceiver: false, // Stop spinner even if there's an error
         }));
       }
     };
@@ -72,7 +74,7 @@ export const useApprovalPage = (userId: string) => {
         message.success('审批状态已更新');
         const [initiatorResponse, receiverResponse] = await Promise.all([
           fetchInitiatorData(userId),
-          fetchReceiverData(userId)
+          fetchReceiverData(userId),
         ]);
 
         setState((prevState) => ({
@@ -80,7 +82,7 @@ export const useApprovalPage = (userId: string) => {
           initiatorData: initiatorResponse,
           receiverData: receiverResponse,
           loadingInitiator: false, // Data loaded, stop spinner
-          loadingReceiver: false,  // Data loaded, stop spinner
+          loadingReceiver: false, // Data loaded, stop spinner
         }));
         actionRef.current?.reload();
       } else {
@@ -91,64 +93,15 @@ export const useApprovalPage = (userId: string) => {
     }
   };
 
-  const handleModalOpen = (modalName: 'createModalOpen' | 'updateModalOpen', isOpen: boolean) => {
-    setState((prevState) => ({
-      ...prevState,
-      [modalName]: isOpen,
-    }));
-  };
-
-  // export const uploadToOSS = async (file) => {
-  //   try {
-  //     // 生成文件路径
-  //     const filePath = `uploads/${file.name}`;
-  //
-  //     // 上传文件
-  //     const result = await client.put(filePath, file);
-  //
-  //     return result.url; // 返回文件的 URL
-  //   } catch (error) {
-  //     console.error('文件上传到 OSS 失败:', error);
-  //     throw error;
-  //   }
-  // };
-
-   const uploadToOSS = async (file) => {
-    // 模拟 OSS 上传的延迟
-    await new Promise((resolve) => {setTimeout(resolve, 1000)});
-
-    // 模拟 OSS 返回的 URL
-    return `https://mock-oss-url.com/${file.name}`;
-  };
-
-  // 模拟从 OSS 下载文件
-   const downloadFromOSS = async (fileUrl: string) => {
-     try {
-       // 模拟文件内容
-       const fileContent = 'This is a mock file content for testing purposes.';
-       const blob = new Blob([fileContent], { type: 'text/plain' });
-
-       // 使用 `File` 构造函数创建一个 File 对象
-       const file = new File([blob], fileUrl, { type: 'text/plain' });
-
-       console.log('Mock downloaded file:', file);
-       return file;
-     } catch (err) {
-       console.error('Error downloading file:', err);
-       throw err;
-     }
-  };
-
-  const handleFileUpload = async (file: File, recordId?: number) => {
+  const handleUpdateComment = async (record: ApprovalInfoVO, value: string) => {
     try {
-      const fileUrl = await uploadToOSS(file); // 假设有一个上传到 OSS 的函数
-
-      const response = await uploadFile({ id: recordId ?? uuidv4(), fileUrl: 'https://mock-oss-url.com/mock.txt' } as UplodaFileUrlRequest);
-      if (response) {
-        message.success('文件上传成功');
+      console.log(record);
+      const success = await updateComment({ id: record.id, comment: value });
+      if (success) {
+        message.success('已上传评论');
         const [initiatorResponse, receiverResponse] = await Promise.all([
           fetchInitiatorData(userId),
-          fetchReceiverData(userId)
+          fetchReceiverData(userId),
         ]);
 
         setState((prevState) => ({
@@ -156,10 +109,85 @@ export const useApprovalPage = (userId: string) => {
           initiatorData: initiatorResponse,
           receiverData: receiverResponse,
           loadingInitiator: false, // Data loaded, stop spinner
-          loadingReceiver: false,  // Data loaded, stop spinner
+          loadingReceiver: false, // Data loaded, stop spinner
         }));
         actionRef.current?.reload();
-        return 'https://mock-oss-url.com/mock.txt'; // 返回上传的文件URL
+      } else {
+        message.error(error);
+      }
+    } catch (error) {
+      message.error(error);
+    }
+  };
+
+  const handleModalOpen = (modalName: 'createModalOpen' | 'updateModalOpen', isOpen: boolean) => {
+    setState((prevState) => ({
+      ...prevState,
+      [modalName]: isOpen,
+    }));
+  };
+
+  // 初始化OSS客户端
+  const createOSSClient = async () => {
+    const ossStsAccessInfo = await fetchOssStsAccessInfo();
+    return new OSS({
+      region: 'oss-cn-beijing',
+      accessKeyId: ossStsAccessInfo.accessKeyId,
+      accessKeySecret: ossStsAccessInfo.accessKeySecret,
+      stsToken: ossStsAccessInfo.securityToken,
+      bucket: 'rohana-erp', // 替换为你的 bucket 名称
+    });
+  };
+
+  // 上传文件到OSS
+  const uploadToOSS = async (file: File) => {
+    try {
+      const client = await createOSSClient();
+      const result = await client.put(`files/${uuidv4()}_${file.name}`, file);
+      return result.url; // 返回文件的 URL
+    } catch (error) {
+      console.error('文件上传到 OSS 失败:', error);
+      throw error;
+    }
+  };
+
+  const downloadFromOSS = async (fileUrl: string) => {
+    try {
+      // 通过文件URL直接下载
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const fileName = fileUrl.split('/').pop();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = fileName || 'downloaded_file';
+      link.click();
+    } catch (err) {
+      console.error('文件下载失败:', err);
+      throw err;
+    }
+  };
+
+  const handleFileUpload = async (file: File, recordId?: number) => {
+    try {
+      const fileUrl = await uploadToOSS(file); // 使用OSS进行上传
+
+      const response = await uploadFile({ id: recordId, fileUrl } as UplodaFileUrlRequest);
+      if (response) {
+        message.success('文件上传成功');
+        const [initiatorResponse, receiverResponse] = await Promise.all([
+          fetchInitiatorData(userId),
+          fetchReceiverData(userId),
+        ]);
+
+        setState((prevState) => ({
+          ...prevState,
+          initiatorData: initiatorResponse,
+          receiverData: receiverResponse,
+          loadingInitiator: false, // Data loaded, stop spinner
+          loadingReceiver: false, // Data loaded, stop spinner
+        }));
+        actionRef.current?.reload();
+        return fileUrl; // 返回上传的文件URL
       } else {
         throw new Error('上传失败');
       }
@@ -176,7 +204,7 @@ export const useApprovalPage = (userId: string) => {
         message.success('审批信息添加成功');
         const [initiatorResponse, receiverResponse] = await Promise.all([
           fetchInitiatorData(userId),
-          fetchReceiverData(userId)
+          fetchReceiverData(userId),
         ]);
 
         setState((prevState) => ({
@@ -184,7 +212,7 @@ export const useApprovalPage = (userId: string) => {
           initiatorData: initiatorResponse,
           receiverData: receiverResponse,
           loadingInitiator: false, // Data loaded, stop spinner
-          loadingReceiver: false,  // Data loaded, stop spinner
+          loadingReceiver: false, // Data loaded, stop spinner
         }));
         handleModalOpen('createModalOpen', false);
         if (actionRef.current) {
@@ -205,5 +233,7 @@ export const useApprovalPage = (userId: string) => {
     handleAddApproval,
     downloadFromOSS,
     actionRef,
+    uploadToOSS,
+    handleUpdateComment,
   };
 };

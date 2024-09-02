@@ -1,3 +1,12 @@
+import { queryAllEmployeeSimpleInfo } from '@/api/usermanagement';
+import { queryVehicleTypes } from '@/api/vihicle-system';
+import { useVehicleSystem } from '@/hooks/vehicle-system/Hook.useVehicleSystem';
+import type {
+  AddVehicleInfoRequest,
+  UpdateVehicleInfoRequest,
+  VehicleInfo,
+} from '@/model/vehicle-management-system';
+import VehicleDrawer from '@/pages/vehicle-system/component/drawer';
 import { useModel } from '@@/exports';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
@@ -8,21 +17,11 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { FormattedMessage, useIntl } from '@umijs/max';
-import { Button, Switch, Space, message } from 'antd';
-import React, { useEffect, useState } from 'react';
-import type {
-  AddVehicleInfoRequest,
-  VehicleInfo,
-  UpdateVehicleInfoRequest,
-} from '@/model/vehicle-management-system';
-import { useVehicleSystem } from '@/hooks/vehicle-system/Hook.useVehicleSystem';
-import VehicleDrawer from '@/pages/vehicle-system/component/drawer';
-import '../../global.less';
-import _ from 'lodash';
 import { ProFormDatePicker, ProFormDigit } from '@ant-design/pro-form/lib';
-import { queryAllEmployeeSimpleInfo } from '@/api/usermanagement';
-import { queryVehicleTypes } from '@/api/vihicle-system';
+import { FormattedMessage, useIntl } from '@umijs/max';
+import { Button, Space, Switch, message } from 'antd';
+import _ from 'lodash';
+import React, { useEffect, useState } from 'react';
 
 const VehicleManagement: React.FC = () => {
   const { initialState } = useModel('@@initialState');

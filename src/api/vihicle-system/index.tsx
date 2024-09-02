@@ -1,17 +1,18 @@
-import { request } from "@umijs/max";
+import { GENERAL_API_BASE_URL } from '@/api/usermanagement';
 import {
   AddOrUpdateVehicleUsageInfoRequest,
   AddVehicleInfoRequest,
   AddVehicleTypeRequest,
-  UpdateVehicleInfoRequest, VehicleInfo, VehicleType, VehicleUsageInfo
-} from "@/model/vehicle-management-system";
-import {GENERAL_API_BASE_URL} from "@/api/usermanagement";
-
+  UpdateVehicleInfoRequest,
+  VehicleInfo,
+  VehicleType,
+  VehicleUsageInfo,
+} from '@/model/vehicle-management-system';
+import { request } from '@umijs/max';
 
 const API_BASE_URL = `${GENERAL_API_BASE_URL}/business/vehicle-info`;
 const API_BASE_URL_USAGE = `${GENERAL_API_BASE_URL}/business/vehicle-usage-info`;
 const API_BASE_URL_TYPE = `${GENERAL_API_BASE_URL}/business/vehicle-type`;
-
 
 export interface ApiResponse<T> {
   code: number;
@@ -220,8 +221,27 @@ export async function queryVehicleUsageInfoList(vehicleId: number) {
 }
 
 /** 添加或更新车辆使用信息 */
-export async function addOrUpdateVehicleUsageInfo(data: AddOrUpdateVehicleUsageInfoRequest) {
+export async function addVehicleUsageInfo(data: AddOrUpdateVehicleUsageInfoRequest) {
   const url = new URL(`${API_BASE_URL_USAGE}/addVehicleUsageInfo`);
+  return request<ApiResponse<boolean>>(url.toString(), {
+    method: 'POST',
+    data,
+    headers: {
+      Accept: 'application/json',
+    },
+    withCredentials: true,
+  }).then((response) => {
+    if (response.isSuccess) {
+      return response.data;
+    } else {
+      return Promise.reject(response.msg);
+    }
+  });
+}
+
+/** 添加或更新车辆使用信息 */
+export async function updateVehicleUsageInfo(data: AddOrUpdateVehicleUsageInfoRequest) {
+  const url = new URL(`${API_BASE_URL_USAGE}/updateVehicleUsageInfo`);
   return request<ApiResponse<boolean>>(url.toString(), {
     method: 'POST',
     data,

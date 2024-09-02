@@ -1,5 +1,6 @@
 export interface ApprovalInfoVO {
   id: number;
+  comment?: string;
   approvalInitiatorId: number;
   approvalInitiatorName: string;
   approvalReceiverId: number;
@@ -26,6 +27,11 @@ export interface AddApprovalInfoRequest {
 export interface UplodaFileUrlRequest {
   id: number;
   fileUrl: string;
+}
+
+export interface UpdateCommentRequest {
+  id: number;
+  comment: string;
 }
 
 // 对应于 UpdateDecisionRequest DO

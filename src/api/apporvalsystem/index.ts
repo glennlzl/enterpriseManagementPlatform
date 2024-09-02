@@ -1,14 +1,14 @@
+import { GENERAL_API_BASE_URL } from '@/api/usermanagement';
 import {
   AddApprovalInfoRequest,
   ApprovalInfoVO,
+  UpdateCommentRequest,
   UpdateDecisionRequest,
-  UplodaFileUrlRequest
-} from "@/model/approvalsystem";
-import {request} from "@umijs/max";
-import {GENERAL_API_BASE_URL} from "@/api/usermanagement";
+  UplodaFileUrlRequest,
+} from '@/model/approvalsystem';
+import { request } from '@umijs/max';
 
 export const API_BASE_URL = `${GENERAL_API_BASE_URL}/business/approval-info`;
-
 
 export interface ApiResponse<T> {
   code: number;
@@ -82,6 +82,25 @@ export async function uploadFile(uplodaFileUrlRequest: UplodaFileUrlRequest) {
   return request<ApiResponse<boolean>>(url.toString(), {
     method: 'POST',
     data: uplodaFileUrlRequest,
+    headers: {
+      Accept: 'application/json',
+    },
+    withCredentials: true, // 确保携带 Cookies
+  }).then((response) => {
+    if (response.isSuccess) {
+      return response.data; // 访问返回的 `data` 字段
+    } else {
+      return Promise.reject(response.msg);
+    }
+  });
+}
+
+/** 更新comment */
+export async function updateComment(updateCommentRequest: UpdateCommentRequest) {
+  const url = new URL(`${API_BASE_URL}/comment`);
+  return request<ApiResponse<boolean>>(url.toString(), {
+    method: 'POST',
+    data: updateCommentRequest,
     headers: {
       Accept: 'application/json',
     },

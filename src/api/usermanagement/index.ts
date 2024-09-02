@@ -2,7 +2,6 @@
 /* eslint-disable */
 import { request } from '@umijs/max';
 
-
 export interface EmployeeInfo {
   id?: number;
   name?: string;
@@ -64,7 +63,7 @@ export interface EmployeeInfoAddOrUpdateRequest {
   role?: number;
   isIncumbent?: number;
 }
-
+// http://47.93.51.8/user/login
 export const GENERAL_API_BASE_URL = 'http://47.93.51.8:8081/api';
 export const API_BASE_URL = `${GENERAL_API_BASE_URL}`;
 
@@ -145,7 +144,10 @@ export async function isLogin(options?: { [key: string]: any }) {
 }
 
 /** 添加员工 POST /system/employee-info/addEmployee */
-export async function addEmployee(employeeData: EmployeeInfoAddOrUpdateRequest, options?: { [key: string]: any }) {
+export async function addEmployee(
+  employeeData: EmployeeInfoAddOrUpdateRequest,
+  options?: { [key: string]: any },
+) {
   const url = `${API_BASE_URL}/system/employee-info/addEmployee`;
   return request<ApiResponse<boolean>>(url, {
     method: 'POST',
@@ -162,7 +164,10 @@ export async function addEmployee(employeeData: EmployeeInfoAddOrUpdateRequest, 
 }
 
 /** 更新员工信息 POST /system/employee-info/updateEmployee */
-export async function updateEmployee(employeeData: EmployeeInfoAddOrUpdateRequest, options?: { [key: string]: any }) {
+export async function updateEmployee(
+  employeeData: EmployeeInfoAddOrUpdateRequest,
+  options?: { [key: string]: any },
+) {
   const url = `${API_BASE_URL}/system/employee-info/updateEmployee`;
   return request<ApiResponse<boolean>>(url, {
     method: 'POST',
@@ -195,7 +200,10 @@ export async function syncDingtalkEmployeeInfo(options?: { [key: string]: any })
 }
 
 /** 同步单个钉钉员工信息 GET /system/employee-info/syncDingtalkSingleEmployeeInfo */
-export async function syncDingtalkSingleEmployeeInfo(userId: string, options?: { [key: string]: any }) {
+export async function syncDingtalkSingleEmployeeInfo(
+  userId: string,
+  options?: { [key: string]: any },
+) {
   const url = `${API_BASE_URL}/system/employee-info/syncDingtalkSingleEmployeeInfo`;
   return request<ApiResponse<boolean>>(url, {
     method: 'GET',
@@ -224,5 +232,3 @@ export async function queryAllEmployeeSimpleInfo() {
     }
   });
 }
-
-
