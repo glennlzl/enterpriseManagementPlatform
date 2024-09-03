@@ -33,10 +33,27 @@ export const useVehicleSystem = (userId: number) => {
     mechanicalBondFilters: []
   });
 
-  const fetchVehicleList = async (isWarning: boolean = false) => {
+  const fetchVehicleList = async (
+    isWarning: boolean = false,
+    generalQueryCondition?: string,
+    project?: string,
+    name?: string
+  ) => {
     setLoading(true);
     try {
-      const response = await queryVehicleInfoList({ userId, pageSize: 10, pageNum: 1, isWarning });
+      // 检查 generalQueryCondition 是否为空
+      const generalQueryConditionV2 = _.isEmpty(generalQueryCondition) ? undefined : generalQueryCondition;
+
+      const response = await queryVehicleInfoList({
+        userId,
+        pageSize: 10,
+        pageNum: 1,
+        isWarning: isWarning,
+        generalQueryCondition: generalQueryConditionV2, // 只在不为空时传递
+        project,
+        name,
+      });
+
       setVehicleList(response);
     } catch (error) {
       message.error('加载车辆信息失败，请重试');
@@ -241,6 +258,7 @@ export const useVehicleSystem = (userId: number) => {
     selectedRowKeys,
     handleRestoreVehicle,
     filters,
-    setFilters
+    setFilters,
+    fetchVehicleList
   };
 };

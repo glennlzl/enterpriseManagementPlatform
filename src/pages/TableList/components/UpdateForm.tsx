@@ -110,14 +110,14 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             defaultMessage: '手机',
           })}
         />
-        <ProFormText
-          name="telephone"
-          width="xl"
-          label={intl.formatMessage({
-            id: '座机',
-            defaultMessage: '座机',
-          })}
-        />
+        {/*<ProFormText*/}
+        {/*  name="telephone"*/}
+        {/*  width="xl"*/}
+        {/*  label={intl.formatMessage({*/}
+        {/*    id: '座机',*/}
+        {/*    defaultMessage: '座机',*/}
+        {/*  })}*/}
+        {/*/>*/}
         <ProFormText
           name="jobNumber"
           width="xl"
@@ -142,26 +142,26 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             defaultMessage: '邮箱',
           })}
         />
-        {props.type === 'create' && (
-          <>
-            <ProFormText
-              name="orgEmail"
-              width="xl"
-              label={intl.formatMessage({
-                id: '组织邮箱',
-                defaultMessage: '组织邮箱',
-              })}
-            />
-            <ProFormText
-              name="workPlace"
-              width="xl"
-              label={intl.formatMessage({
-                id: '办公地点',
-                defaultMessage: '办公地点',
-              })}
-            />
-          </>
-        )}
+        {/*{props.type === 'create' && (*/}
+        {/*  <>*/}
+        {/*    <ProFormText*/}
+        {/*      name="orgEmail"*/}
+        {/*      width="xl"*/}
+        {/*      label={intl.formatMessage({*/}
+        {/*        id: '组织邮箱',*/}
+        {/*        defaultMessage: '组织邮箱',*/}
+        {/*      })}*/}
+        {/*    />*/}
+        {/*    <ProFormText*/}
+        {/*      name="workPlace"*/}
+        {/*      width="xl"*/}
+        {/*      label={intl.formatMessage({*/}
+        {/*        id: '办公地点',*/}
+        {/*        defaultMessage: '办公地点',*/}
+        {/*      })}*/}
+        {/*    />*/}
+        {/*  </>*/}
+        {/*)}*/}
       </StepsForm.StepForm>
       <StepsForm.StepForm
         initialValues={{

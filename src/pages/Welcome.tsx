@@ -49,8 +49,6 @@ const InfoCard: React.FC<{
             padding: '8px 16px 16px 12px',
             color: '#FFF',
             fontWeight: 'bold',
-            backgroundImage:
-              "url('https://gw.alipayobjects.com/zos/bmw-prod/daaf8d50-8e6d-4251-905d-676a24ddfa12.svg')",
           }}
         >
           {index}
@@ -85,31 +83,14 @@ const InfoCard: React.FC<{
 
 const Welcome: React.FC = () => {
   const { token } = theme.useToken();
-  const { initialState } = useModel('@@initialState');
   return (
     <PageContainer>
       <Card
         style={{
           borderRadius: 8,
         }}
-        styles={{
-          body: {
-            backgroundImage:
-              initialState?.settings?.navTheme === 'realDark'
-                ? 'background-image: linear-gradient(75deg, #1A1B1F 0%, #191C1F 100%)'
-                : 'background-image: linear-gradient(75deg, #FBFDFF 0%, #F5F7FF 100%)',
-          },
-        }}
       >
-        <div
-          style={{
-            backgroundPosition: '100% -30%',
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: '274px auto',
-            backgroundImage:
-              "url('https://gw.alipayobjects.com/mdn/rms_a9745b/afts/img/A*BuFmQqsB2iAAAAAAAAAAAAAAARQnAQ')",
-          }}
-        >
+        <div>
           <div
             style={{
               fontSize: '20px',

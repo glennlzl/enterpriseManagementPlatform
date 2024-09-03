@@ -17,14 +17,20 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import { ProFormDatePicker, ProFormDigit } from '@ant-design/pro-form/lib';
+import {ProFormDatePicker, ProFormDigit, ProFormGroup} from '@ant-design/pro-form/lib';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import { Button, Space, Switch, message } from 'antd';
+import {Button, Space, Switch, message, Form, Input, Row, Col} from 'antd';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
-
+import { DateTime } from 'luxon';
+import {css} from "antd-style";
 const VehicleManagement: React.FC = () => {
   const { initialState } = useModel('@@initialState');
+
+  if (!initialState?.currentUser) {
+    return null; // 或者返回一个 loading 状态，或者重定向到登录页面
+  }
+
   const {
     vehicleList,
     loading,
@@ -44,6 +50,7 @@ const VehicleManagement: React.FC = () => {
     actionRef,
     handleBatchDelete,
     setSelectedRowKeys,
+    fetchVehicleList,
     selectedRowKeys,
     handleRestoreVehicle,
     filters,
@@ -51,13 +58,23 @@ const VehicleManagement: React.FC = () => {
 
   const intl = useIntl();
 
+  const [queryParams, setQueryParams] = useState({});
+
   const [employeeOptions, setEmployeeOptions] = useState<
-    { label: string; value: number; name: string }[]
+    { label: string; value: number; name: string, mobile: string }[]
   >([]);
 
   const [vehicleTypeOptions, setVehicleTypeOptions] = useState<{ label: string; value: string }[]>(
     [],
   );
+
+  // 处理表单输入变化
+  const handleFormChange = (changedValues: any) => {
+    const newQueryParams = { ...queryParams, ...changedValues };
+    setQueryParams(newQueryParams);
+
+    actionRef.current?.reload();
+  };
 
   useEffect(() => {
     // 加载车辆类型信息
@@ -88,6 +105,7 @@ const VehicleManagement: React.FC = () => {
           label: employee.name, // 显示的名字
           value: employee.id, // 实际选择的ID
           name: employee.name, // 保存的名字
+          mobile: employee.mobile // 保存电话
         }));
         setEmployeeOptions(options);
       } catch (error) {
@@ -104,23 +122,15 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'id',
       valueType: 'text',
       fixed: 'left',
-      width: 'auto',
+      width: '100px',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.id - b.id,
-    },
-    {
-      title: <FormattedMessage id="警告等级" />,
-      dataIndex: 'warningLevel',
-      valueType: 'text',
-      fixed: 'left',
-      width: 'auto',
-      sorter: (a: VehicleInfo, b: VehicleInfo) => a.warningLevel - b.warningLevel,
     },
     {
       title: <FormattedMessage id="工程车编号" />,
       dataIndex: 'engineeingVehicleNumber',
       valueType: 'text',
       fixed: 'left',
-      width: 'auto',
+      width: '120px',
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         a.engineeingVehicleNumber.localeCompare(b.engineeingVehicleNumber),
     },
@@ -129,13 +139,15 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'vehicleNumber',
       valueType: 'text',
       fixed: 'left',
-      width: 'auto',
+      width: '120px',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.vehicleNumber.localeCompare(b.vehicleNumber),
     },
     {
       title: <FormattedMessage id="车牌号码" />,
       dataIndex: 'licenseNumber',
       valueType: 'text',
+      width: '120px',
+      fixed: 'left',
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         _.isUndefined(a.licenseNumber) || _.isUndefined(b.licenseNumber)
           ? {}
@@ -146,6 +158,7 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'engineNumber',
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.engineNumber.localeCompare(b.engineNumber),
+      width: '150px',
     },
     {
       title: <FormattedMessage id="车辆类型" />,
@@ -154,6 +167,8 @@ const VehicleManagement: React.FC = () => {
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.vehicleType.localeCompare(b.vehicleType),
       filters: filters.vehicleTypeFilters,
       onFilter: (value, record) => record.vehicleType.includes(value as string),
+      width: 'auto',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="车辆型号" />,
@@ -161,11 +176,13 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         a.vehicleSerialNumber.localeCompare(b.vehicleSerialNumber),
+      width: '120px',
     },
     {
       title: <FormattedMessage id="车辆品牌" />,
       dataIndex: 'vehicleBrand',
       valueType: 'text',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="核定载质量" />,
@@ -175,29 +192,28 @@ const VehicleManagement: React.FC = () => {
         _.isUndefined(a.approvedLoadCapacity) || _.isUndefined(b.approvedLoadCapacity)
           ? {}
           : a.approvedLoadCapacity.localeCompare(b.approvedLoadCapacity),
+      width: '120px',
     },
     {
       title: <FormattedMessage id="登记人" />,
       dataIndex: 'registrant',
       valueType: 'text',
       onFilter: (value, record) => record.registrant.includes(value as string),
-    },
-    {
-      title: <FormattedMessage id="登记人ID" />,
-      dataIndex: 'registrantId',
-      valueType: 'text',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="购车日期" />,
       dataIndex: 'purchaseDate',
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.purchaseDate.localeCompare(b.purchaseDate),
+      width: '120px',
     },
     {
       title: <FormattedMessage id="年检月份" />,
       dataIndex: 'auditMonth',
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.auditMonth.localeCompare(b.auditMonth),
+      width: '120px',
     },
     {
       title: <FormattedMessage id="是否年检" />,
@@ -206,6 +222,7 @@ const VehicleManagement: React.FC = () => {
       render: (value: number) => (value === 1 ? '是' : '否'),
       filters: filters.isAuditedFilters,
       onFilter: (value, record) => record.isAudited === value,
+      width: '120px',
     },
     {
       title: <FormattedMessage id="是否有交强险" />,
@@ -213,6 +230,7 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       render: (value: number) => (value === 1 ? '是' : '否'),
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.trafficInsurance - b.trafficInsurance,
+      width: '120px',
     },
     {
       title: <FormattedMessage id="是否有商业险" />,
@@ -220,6 +238,7 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       render: (value: number) => (value === 1 ? '是' : '否'),
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.commercialInsurance - b.commercialInsurance,
+      width: '120px',
     },
     {
       title: <FormattedMessage id="是否安装GPS" />,
@@ -228,6 +247,7 @@ const VehicleManagement: React.FC = () => {
       render: (value: number) => (value === 1 ? '是' : '否'),
       filters: filters.gpsFilters,
       onFilter: (value, record) => record.gps === value,
+      width: '150px',
     },
     {
       title: <FormattedMessage id="机械邦" />,
@@ -235,16 +255,19 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       filters: filters.mechanicalBondFilters,
       onFilter: (value, record) => record.mechanicalBond.includes(value as string),
+      width: '120px',
     },
     {
       title: <FormattedMessage id="使用项目" />,
       dataIndex: 'usageProject',
       valueType: 'text',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="上次保养公里数" />,
       dataIndex: 'lastMaintenanceMileage',
       valueType: 'text',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="当前公里数" />,
@@ -254,6 +277,7 @@ const VehicleManagement: React.FC = () => {
         _.isUndefined(a.currentMileage) || _.isUndefined(b.currentMileage)
           ? {}
           : a.currentMileage - b.currentMileage,
+      width: '120px',
     },
     {
       title: <FormattedMessage id="下次保养公里数" />,
@@ -263,38 +287,39 @@ const VehicleManagement: React.FC = () => {
         _.isUndefined(a.nextMaintenanceMileage) || _.isUndefined(b.nextMaintenanceMileage)
           ? {}
           : a.nextMaintenanceMileage - b.nextMaintenanceMileage,
+      width: '150px',
     },
     {
       title: <FormattedMessage id="负责人姓名" />,
       dataIndex: 'responsiblePersonName',
       valueType: 'text',
-    },
-    {
-      title: <FormattedMessage id="负责人ID" />,
-      dataIndex: 'responsiblePersonId',
-      valueType: 'text',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="负责人联系电话" />,
       dataIndex: 'responsiblePersonMobile',
       valueType: 'text',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="其他备注信息" />,
       dataIndex: 'extend',
       valueType: 'text',
+      width: '120px',
     },
     {
       title: <FormattedMessage id="是否删除" />,
       dataIndex: 'isDeleted',
       valueType: 'text',
       render: (value: number) => (value === 1 ? '是' : '否'),
+      width: '120px',
     },
     {
       title: <FormattedMessage id="是否废弃" />,
       dataIndex: 'isDeprecated',
       valueType: 'text',
       render: (value: number) => (value === 1 ? '是' : '否'),
+      width: '120px',
     },
     {
       title: <FormattedMessage id="操作" />,
@@ -329,7 +354,33 @@ const VehicleManagement: React.FC = () => {
   };
 
   return (
-    <PageContainer>
+    <PageContainer breadcrumbRender={false}>
+      <Form
+        layout="vertical"  // 设置表单为垂直布局
+        onValuesChange={(changedValues) => {
+          const { generalQueryCondition, project, name } = changedValues;
+          fetchVehicleList(isWarning, generalQueryCondition, project, name);
+        }}
+        style={{ marginBottom: 16 }}  // 调整表单的下边距，确保与表格有足够的间距
+      >
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item label="查询" name="generalQueryCondition">
+              <Input placeholder="这里可以输入序号、工程车编号、车牌号码等内容" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item label="项目筛选" name="project">
+              <Input placeholder="这里输入项目的名称" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item label="负责人姓名筛选" name="name">
+              <Input placeholder="这里输入姓名" />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
       <ProTable<VehicleInfo, API.PageParams>
         headerTitle={
           <div>
@@ -346,11 +397,11 @@ const VehicleManagement: React.FC = () => {
                 批量导出
               </Button>
             )}
-            {selectedRowKeys.length > 0 && (
-              <Button onClick={handleBatchDelete} style={{ marginLeft: 16 }}>
-                批量删除
-              </Button>
-            )}
+            {/*{selectedRowKeys.length > 0 && (*/}
+            {/*  <Button onClick={handleBatchDelete} style={{ marginLeft: 16 }}>*/}
+            {/*    批量删除*/}
+            {/*  </Button>*/}
+            {/*)}*/}
           </div>
         }
         onRow={(record) => {
@@ -363,10 +414,7 @@ const VehicleManagement: React.FC = () => {
         scroll={{ x: 3000 }} // 设置横向滚动，宽度可以根据你的需要调整
         actionRef={actionRef}
         rowKey="id"
-        search={{
-          labelWidth: 'auto',
-          filterType: 'query',
-        }}
+        search={false}
         cardBordered
         rowSelection={{
           selectedRowKeys,
@@ -398,7 +446,10 @@ const VehicleManagement: React.FC = () => {
       {/* 新增车辆 Modal */}
       <ModalForm
         title="新加入车辆"
-        width="400px"
+        modalProps={{
+          destroyOnClose: true
+        }}
+        width="750px"
         open={createModalOpen}
         onOpenChange={(isOpen) => handleModalOpen('createModalOpen', isOpen)}
         onFinish={async (values) => {
@@ -406,123 +457,193 @@ const VehicleManagement: React.FC = () => {
             (emp) => emp.value === values.responsiblePersonId,
           );
           const selectedType = JSON.parse(values.vehicleTypeSelection);
-
+          console.log(selectedType);
           const data: AddVehicleInfoRequest = {
             ...values,
+            purchaseDate: DateTime.fromFormat(values.purchaseDate, "yyyy-MM-dd HH:mm:ss").toFormat("yyyy-MM-dd"),
             vehicleType: selectedType.vehicleType,
             vehicleSerialNumber: selectedType.vehicleSerialNumber,
             vehicleBrand: selectedType.vehicleBrand,
             approvedLoadCapacity: selectedType.approvedLoadCapacity,
             responsiblePersonName: selectedEmployee?.name || '',
             responsiblePersonId: selectedEmployee?.value || 0,
+            responsiblePersonMobile: selectedEmployee?.mobile || '',
             registrantId: initialState.currentUser?.id || 0,
             registrant: initialState.currentUser?.name || '',
           };
           await handleAddVehicle(data);
         }}
       >
-        <ProFormText
-          name="vehicleNumber"
-          label="车辆编号"
-          rules={[{ required: true, message: '请输入车辆编号' }]}
-        />
-        <ProFormText
-          name="engineeingVehicleNumber"
-          label="工程车编号"
-          rules={[{ required: true, message: '请输入工程车编号' }]}
-        />
-        <ProFormText
-          name="licenseNumber"
-          label="车牌号码"
-          rules={[{ required: true, message: '请输入车牌号码' }]}
-        />
-        <ProFormText
-          name="engineNumber"
-          label="发动机号后6位"
-          rules={[{ required: true, message: '请输入发动机号后6位' }]}
-        />
-        <ProFormSelect
-          name="vehicleTypeSelection"
-          label="车辆类型选择"
-          options={vehicleTypeOptions}
-          rules={[{ required: true, message: '请选择车辆类型' }]}
-        />
-        <ProFormDatePicker
-          name="purchaseDate"
-          label="购车日期"
-          rules={[{ required: true, message: '请选择购车日期' }]}
-        />
-        <ProFormText
-          name="auditMonth"
-          label="年检月份"
-          rules={[{ required: true, message: '请输入年检月份' }]}
-        />
-        <ProFormSelect
-          name="isAudited"
-          label="是否年检"
-          valueEnum={{ 1: '是', 0: '否' }}
-          rules={[{ required: true, message: '请输入是否年检' }]}
-        />
-        <ProFormSelect
-          name="trafficInsurance"
-          label="是否有交强险"
-          valueEnum={{ 1: '是', 0: '否' }}
-          rules={[{ required: true, message: '请输入是否有交强险' }]}
-        />
-        <ProFormSelect
-          name="commercialInsurance"
-          label="是否有商业险"
-          valueEnum={{ 1: '是', 0: '否' }}
-          rules={[{ required: true, message: '请输入是否有商业险' }]}
-        />
-        <ProFormSelect name="gps" label="是否安装GPS" valueEnum={{ 1: '是', 0: '否' }} />
-        <ProFormText
-          name="mechanicalBond"
-          label="机械邦"
-          rules={[{ required: true, message: '请输入机械邦信息' }]}
-        />
-        <ProFormText
-          name="usageProject"
-          label="使用项目"
-          rules={[{ required: true, message: '请输入使用项目' }]}
-        />
-        <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} />
-        <ProFormDigit name="currentMileage" label="当前公里数" min={0} />
-        <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} />
-        <ProFormSelect
-          name="responsiblePersonId"
-          label="负责人"
-          options={employeeOptions}
-          fieldProps={{
-            labelInValue: false, // 只显示label
-          }}
-          rules={[{ required: true, message: '请选择负责人' }]}
-        />
-        <ProFormText name="responsiblePersonMobile" label="负责人联系电话" />
-        <ProFormText name="extend" label="其他备注信息" />
+        <ProFormGroup>
+          <ProFormText
+            name="vehicleNumber"
+            label="车辆编号"
+            rules={[{ required: true, message: '请输入车辆编号' }]}
+            width="200px"
+          />
+          <ProFormText
+            name="engineeingVehicleNumber"
+            label="工程车编号"
+            rules={[{ required: true, message: '请输入工程车编号' }]}
+            width="200px"
+          />
+          <ProFormText
+            name="licenseNumber"
+            label="车牌号码"
+            rules={[{ required: true, message: '请输入车牌号码' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormText
+            name="engineNumber"
+            label="发动机号后6位"
+            rules={[{ required: true, message: '请输入发动机号后6位' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="vehicleTypeSelection"
+            label="车辆类型选择"
+            options={vehicleTypeOptions}
+            rules={[{ required: true, message: '请选择车辆类型' }]}
+            width="200px"
+          />
+          <ProFormDatePicker
+            name="purchaseDate"
+            label="购车日期"
+            rules={[{ required: true, message: '请选择购车日期' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormText
+            name="auditMonth"
+            label="年检月份"
+            rules={[{ required: true, message: '请输入年检月份' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="isAudited"
+            label="是否年检"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            rules={[{ required: true, message: '请输入是否年检' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="trafficInsurance"
+            label="是否有交强险"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            rules={[{ required: true, message: '请输入是否有交强险' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormSelect
+            name="commercialInsurance"
+            label="是否有商业险"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            rules={[{ required: true, message: '请输入是否有商业险' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="gps"
+            label="是否安装GPS"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            width="200px"
+          />
+          <ProFormText
+            name="mechanicalBond"
+            label="机械邦"
+            rules={[{ required: true, message: '请输入机械邦信息' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormText
+            name="usageProject"
+            label="使用项目"
+            rules={[{ required: true, message: '请输入使用项目' }]}
+            width="200px"
+          />
+          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px"/>
+          <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" />
+          <ProFormSelect
+            name="responsiblePersonId"
+            label="负责人"
+            options={employeeOptions}
+            fieldProps={{
+              labelInValue: false, // 只显示label
+            }}
+            rules={[{ required: true, message: '请选择负责人' }]}
+            width="200px"
+          />
+        </ProFormGroup>
       </ModalForm>
 
       {/* 编辑车辆信息 Modal */}
       <ModalForm
         title="编辑车辆信息"
-        width="400px"
+        width="750px"
+        modalProps={{
+          destroyOnClose: true
+        }}
         open={editModalOpen}
-        initialValues={currentVehicle} // 选中的车辆信息
+        key={currentVehicle?.id || 'new'}  // 使用 key 来强制重新渲染
+        initialValues={{
+          ...currentVehicle,
+          vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${
+            !(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+        }}
         onOpenChange={(isOpen) => handleModalOpen('editModalOpen', isOpen)}
         onFinish={async (values) => {
           const selectedEmployee = employeeOptions.find(
             (emp) => emp.value === values.responsiblePersonId,
           );
-          const selectedType = JSON.parse(values.vehicleTypeSelection);
+          let selectedType;
+
+          try {
+            // 尝试解析 `vehicleTypeSelection` 字段
+            selectedType = JSON.parse(values.vehicleTypeSelection);
+          } catch (error) {
+            // 如果解析失败，则使用初始值
+            selectedType = {
+              vehicleType: currentVehicle?.vehicleType || '',
+              vehicleSerialNumber: currentVehicle?.vehicleSerialNumber || '',
+              vehicleBrand: currentVehicle?.vehicleBrand || '',
+              approvedLoadCapacity: currentVehicle?.approvedLoadCapacity || '',
+            };
+          }
 
           const data: UpdateVehicleInfoRequest = {
             ...values,
+            purchaseDate: DateTime.fromFormat(values.purchaseDate, "yyyy-MM-dd HH:mm:ss").toFormat("yyyy-MM-dd"),
             vehicleType: selectedType.vehicleType,
             vehicleSerialNumber: selectedType.vehicleSerialNumber,
             vehicleBrand: selectedType.vehicleBrand,
             approvedLoadCapacity: selectedType.approvedLoadCapacity,
             responsiblePersonName: selectedEmployee?.name || '',
             responsiblePersonId: selectedEmployee?.value || 0,
+            responsiblePersonMobile: selectedEmployee?.mobile || '',
             registrantId: initialState.currentUser?.id || 0,
             registrant: initialState.currentUser?.name || '',
             id: currentVehicle?.id || 0, // 更新时需要车辆 ID
@@ -530,102 +651,135 @@ const VehicleManagement: React.FC = () => {
           await handleEditVehicle(data);
         }}
       >
-        <ProFormText
-          name="vehicleNumber"
-          label="车辆编号"
-          rules={[{ required: true, message: '请输入车辆编号' }]}
-        />
-        <ProFormText
-          name="engineeingVehicleNumber"
-          label="工程车编号"
-          rules={[{ required: true, message: '请输入工程车编号' }]}
-        />
-        <ProFormText
-          name="licenseNumber"
-          label="车牌号码"
-          rules={[{ required: true, message: '请输入车牌号码' }]}
-        />
-        <ProFormText
-          name="engineNumber"
-          label="发动机号后6位"
-          rules={[{ required: true, message: '请输入发动机号后6位' }]}
-        />
-        <ProFormSelect
-          name="vehicleTypeSelection"
-          label="车辆类型选择"
-          options={vehicleTypeOptions}
-          rules={[{ required: true, message: '请选择车辆类型' }]}
-        />
-        <ProFormDatePicker
-          name="purchaseDate"
-          label="购车日期"
-          rules={[{ required: true, message: '请选择购车日期' }]}
-        />
-        <ProFormText
-          name="auditMonth"
-          label="年检月份"
-          rules={[{ required: true, message: '请输入年检月份' }]}
-        />
-        <ProFormSelect
-          name="isAudited"
-          label="是否年检"
-          options={[
-            { label: '是', value: 1 },
-            { label: '否', value: 0 },
-          ]}
-          rules={[{ required: true, message: '请输入是否年检' }]}
-        />
-        <ProFormSelect
-          name="trafficInsurance"
-          label="是否有交强险"
-          options={[
-            { label: '是', value: 1 },
-            { label: '否', value: 0 },
-          ]}
-          rules={[{ required: true, message: '请输入是否有交强险' }]}
-        />
-        <ProFormSelect
-          name="commercialInsurance"
-          label="是否有商业险"
-          options={[
-            { label: '是', value: 1 },
-            { label: '否', value: 0 },
-          ]}
-          rules={[{ required: true, message: '请输入是否有商业险' }]}
-        />
-        <ProFormSelect
-          name="gps"
-          label="是否安装GPS"
-          options={[
-            { label: '是', value: 1 },
-            { label: '否', value: 0 },
-          ]}
-        />
-        <ProFormText
-          name="mechanicalBond"
-          label="机械邦"
-          rules={[{ required: true, message: '请输入机械邦信息' }]}
-        />
-        <ProFormText
-          name="usageProject"
-          label="使用项目"
-          rules={[{ required: true, message: '请输入使用项目' }]}
-        />
-        <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} />
-        <ProFormDigit name="currentMileage" label="当前公里数" min={0} />
-        <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} />
-        <ProFormSelect
-          name="responsiblePersonId"
-          label="负责人"
-          options={employeeOptions}
-          fieldProps={{
-            labelInValue: false, // 只显示label
-          }}
-          rules={[{ required: true, message: '请选择负责人' }]}
-        />
-        <ProFormText name="responsiblePersonMobile" label="负责人联系电话" />
-        <ProFormText name="extend" label="其他备注信息" />
-        <ProFormDigit name="warningLevel" label="警告等级" min={0} max={5} />
+        <ProFormGroup>
+          <ProFormText
+            name="vehicleNumber"
+            label="车辆编号"
+            rules={[{ required: true, message: '请输入车辆编号' }]}
+            width="200px"
+          />
+          <ProFormText
+            name="engineeingVehicleNumber"
+            label="工程车编号"
+            rules={[{ required: true, message: '请输入工程车编号' }]}
+            width="200px"
+          />
+          <ProFormText
+            name="licenseNumber"
+            label="车牌号码"
+            rules={[{ required: true, message: '请输入车牌号码' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormText
+            name="engineNumber"
+            label="发动机号后6位"
+            rules={[{ required: true, message: '请输入发动机号后6位' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="vehicleTypeSelection"
+            label="车辆类型选择"
+            options={vehicleTypeOptions}
+            rules={[{ required: true, message: '请选择车辆类型' }]}
+            width="200px"
+          />
+          <ProFormDatePicker
+            name="purchaseDate"
+            label="购车日期"
+            rules={[{ required: true, message: '请选择购车日期' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormText
+            name="auditMonth"
+            label="年检月份"
+            rules={[{ required: true, message: '请输入年检月份' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="isAudited"
+            label="是否年检"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            rules={[{ required: true, message: '请输入是否年检' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="trafficInsurance"
+            label="是否有交强险"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            rules={[{ required: true, message: '请输入是否有交强险' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormSelect
+            name="commercialInsurance"
+            label="是否有商业险"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            rules={[{ required: true, message: '请输入是否有商业险' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            name="gps"
+            label="是否安装GPS"
+            options={[
+              { label: '是', value: 1 },
+              { label: '否', value: 0 },
+            ]}
+            width="200px"
+          />
+          <ProFormText
+            name="mechanicalBond"
+            label="机械邦"
+            rules={[{ required: true, message: '请输入机械邦信息' }]}
+            width="200px"
+          />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormText
+            name="usageProject"
+            label="使用项目"
+            rules={[{ required: true, message: '请输入使用项目' }]}
+            width="200px"
+          />
+          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px"/>
+          <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" />
+          <ProFormSelect
+            name="responsiblePersonId"
+            label="负责人"
+            options={employeeOptions}
+            fieldProps={{
+              labelInValue: false, // 只显示label
+            }}
+            rules={[{ required: true, message: '请选择负责人' }]}
+            width="200px"
+          />
+          <ProFormText name="extend" label="其他备注信息" width="200px" />
+        </ProFormGroup>
+
+        <ProFormGroup>
+          <ProFormDigit name="warningLevel" label="警告等级" min={0} max={5} width="200px" />
+        </ProFormGroup>
       </ModalForm>
     </PageContainer>
   );

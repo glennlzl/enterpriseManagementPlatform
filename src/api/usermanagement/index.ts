@@ -44,6 +44,8 @@ export interface ApiResponse<T> {
 export interface EmployeeSimpleInfoResponse {
   id: number;
   name: string;
+  userId: string;
+  mobile: string;
   jobNumber: string;
 }
 
@@ -105,7 +107,7 @@ export async function loginWithAuth(authCode: string) {
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }
@@ -122,7 +124,7 @@ export async function getUsers(id: string, options?: { [key: string]: any }) {
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }
@@ -138,7 +140,7 @@ export async function isLogin(options?: { [key: string]: any }) {
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }
@@ -158,7 +160,7 @@ export async function addEmployee(
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }
@@ -178,7 +180,7 @@ export async function updateEmployee(
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }
@@ -194,7 +196,7 @@ export async function syncDingtalkEmployeeInfo(options?: { [key: string]: any })
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }
@@ -214,7 +216,7 @@ export async function syncDingtalkSingleEmployeeInfo(
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }
@@ -228,7 +230,7 @@ export async function queryAllEmployeeSimpleInfo() {
     if (response.isSuccess) {
       return response.data;
     } else {
-      throw new Error(response.msg);
+      return Promise.reject(response.msg);
     }
   });
 }

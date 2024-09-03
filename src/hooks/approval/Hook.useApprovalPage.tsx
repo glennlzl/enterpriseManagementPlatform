@@ -34,15 +34,26 @@ export const useApprovalPage = (userId: string) => {
     loadingInitiator: true, // Initiator data loading state
     loadingReceiver: true, // Receiver data loading state
     employeeList: [] as EmployeeSimpleInfoResponse[],
+    isLoading: false
   });
 
   useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const employeeList = await queryAllEmployeeSimpleInfo();
+        setState((prevState) => ({
+          ...prevState,
+          employeeList,
+        }));
+      } catch (error) {
+        message.error(error);
+      }
+    }
     const fetchData = async () => {
       try {
-        const [initiatorResponse, receiverResponse, employeeList] = await Promise.all([
+        const [initiatorResponse, receiverResponse] = await Promise.all([
           fetchInitiatorData(userId),
           fetchReceiverData(userId),
-          queryAllEmployeeSimpleInfo(),
         ]);
 
         setState((prevState) => ({
@@ -51,10 +62,11 @@ export const useApprovalPage = (userId: string) => {
           receiverData: receiverResponse,
           loadingInitiator: false, // Data loaded, stop spinner
           loadingReceiver: false, // Data loaded, stop spinner
-          employeeList,
         }));
       } catch (error) {
-        message.error(`获取数据失败: ${error}`);
+        if (error !== '该用户无审批记录') {
+          message.error(`获取数据失败: ${error}`);
+        }
         setState((prevState) => ({
           ...prevState,
           loadingInitiator: false, // Stop spinner even if there's an error
@@ -63,6 +75,7 @@ export const useApprovalPage = (userId: string) => {
       }
     };
 
+    fetchEmployees();
     fetchData();
   }, [userId]);
 
@@ -142,8 +155,16 @@ export const useApprovalPage = (userId: string) => {
   // 上传文件到OSS
   const uploadToOSS = async (file: File) => {
     try {
+      setState((prevState) => ({
+        ...prevState,
+        isLoading: true
+      }));
       const client = await createOSSClient();
       const result = await client.put(`files/${uuidv4()}_${file.name}`, file);
+      setState((prevState) => ({
+        ...prevState,
+        isLoading: false
+      }));
       return result.url; // 返回文件的 URL
     } catch (error) {
       console.error('文件上传到 OSS 失败:', error);
@@ -170,7 +191,6 @@ export const useApprovalPage = (userId: string) => {
   const handleFileUpload = async (file: File, recordId?: number) => {
     try {
       const fileUrl = await uploadToOSS(file); // 使用OSS进行上传
-
       const response = await uploadFile({ id: recordId, fileUrl } as UplodaFileUrlRequest);
       if (response) {
         message.success('文件上传成功');

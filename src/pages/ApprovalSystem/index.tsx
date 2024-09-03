@@ -11,8 +11,9 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import { Button, Input, Tabs, Upload } from 'antd';
+import {Button, Input, Tabs, Tooltip, Upload} from 'antd';
 import React, { useState } from 'react';
+import _ from 'lodash';
 
 const { TabPane } = Tabs;
 
@@ -30,6 +31,11 @@ const approvalTypeConfig = {
 
 const ApprovalSystem: React.FC = () => {
   const { initialState } = useModel('@@initialState');
+  // 检查用户是否已登录，如果未登录，返回 null 或者空组件
+  if (!initialState?.currentUser) {
+    return null; // 或者返回一个 loading 状态，或者重定向到登录页面
+  }
+
   const {
     state,
     handleModalOpen,
@@ -43,41 +49,73 @@ const ApprovalSystem: React.FC = () => {
   } = useApprovalPage(initialState.currentUser?.id || '');
   const intl = useIntl();
   const [uploadedFileUrl, setUploadedFileUrl] = useState('');
+  const initiator = _.uniqBy(state.initiatorData.map(item => ({ text: item.approvalInitiatorName, value: item.approvalInitiatorName })), 'value');
+  const receiver = _.uniqBy(state.initiatorData.map(item => ({ text: item.approvalReceiverName, value: item.approvalReceiverName })), 'value');
+  const fileType = _.uniqBy(state.initiatorData.map(item => ({ text: item.approvalType, value: item.approvalType })), 'value');
+  const initiatorToMe = _.uniqBy(state.receiverData.map(item => ({ text: item.approvalReceiverName, value: item.approvalReceiverName })), 'value');
+  const receiverToMe = _.uniqBy(state.receiverData.map(item => ({ text: item.approvalReceiverName, value: item.approvalReceiverName })), 'value');
+  const fileTypeToMe = _.uniqBy(state.receiverData.map(item => ({ text: item.approvalType, value: item.approvalType })), 'value');
+  const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
+
+
+  const renderApprovalFileLink = (_, record) => {
+    // 处理后的文件名
+    const fileName = record.approvalFileUrl && record.approvalFileUrl.startsWith(prefix)
+      ? record.approvalFileUrl.replace(prefix, '').slice(0, 20) + '...' // 只显示前20个字符，并加上省略号
+      : '未知文件';
+
+    return record.approvalFileUrl ? (
+      <Tooltip title={record.approvalFileUrl.replace(prefix, '')}>
+        <a
+          href="#"
+          onClick={async (e) => {
+            e.preventDefault();
+            await downloadFromOSS(record.approvalFileUrl); // 调用OSS下载函数
+          }}
+          style={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: 'inline-block',
+            maxWidth: '100%',
+          }}
+        >
+          {fileName}
+        </a>
+      </Tooltip>
+    ) : null; // 如果没有文件链接，则不渲染任何内容
+  };
+
 
   const approvalColumns: ProColumns<ApprovalInfoVO>[] = [
     {
       title: <FormattedMessage id="审批发起人" />,
       dataIndex: 'approvalInitiatorName',
       valueType: 'text',
+      filters: initiator,
+      onFilter: (value, record) => record.approvalReceiverName === value,
     },
     {
       title: <FormattedMessage id="审批接收人" />,
       dataIndex: 'approvalReceiverName',
       valueType: 'text',
+      filters: receiver,
+      onFilter: (value, record) => record.approvalReceiverName === value,
     },
     {
       title: <FormattedMessage id="审批类型" />,
       dataIndex: 'approvalType',
       valueType: 'select',
       valueEnum: approvalTypeConfig, // 使用映射
+      filters: fileType,
+      onFilter: (value, record) => record.approvalType === value,
     },
     {
-      title: <FormattedMessage id="文件链接" />,
+      title: '文件链接',
       dataIndex: 'approvalFileUrl',
-      valueType: 'text',
-      render: (_, record) =>
-        record.approvalFileUrl ? (
-          <a
-            href="#"
-            onClick={async (e) => {
-              e.preventDefault();
-              await downloadFromOSS(record.approvalFileUrl); // 调用OSS下载函数
-            }}
-            style={{ marginRight: 8 }}
-          >
-            下载文件
-          </a>
-        ) : null, // 如果没有文件链接，则不渲染任何内容
+      key: 'approvalFileUrl',
+      width: '150px',
+      render: renderApprovalFileLink,
     },
     {
       title: <FormattedMessage id="创建时间" />,
@@ -96,14 +134,35 @@ const ApprovalSystem: React.FC = () => {
       valueEnum: approvalStatusConfig,
     },
     {
+      title: '评论',
+      dataIndex: 'comment',
+      valueEnum: approvalStatusConfig,
+      render: (_, record) => {
+        const isApproved = record?.approvalStatus === 1; // 已批准
+        const isRejected = record?.approvalStatus === 2; // 已拒绝
+        return (
+          (!isApproved && !isRejected) ? (<Input
+            placeholder="输入评论"
+            defaultValue={record.comment} // 如果有默认值，可以设置
+            onBlur={async (e) => {
+              const comment = e.target.value;
+              if (comment !== record.comment) {
+                // 仅在评论发生变化时更新
+                await handleUpdateComment(record, comment);
+              }
+            }}
+          />) : (<span>{record.comment}</span>)
+        );
+      },
+    },
+    {
       title: '操作',
       dataIndex: 'approvalStatus',
       render: (_, record) => {
         const isApproved = record?.approvalStatus === 1; // 已批准
         const isRejected = record?.approvalStatus === 2; // 已拒绝
-
         return (
-          (isApproved || isRejected) ?? (
+          (!isApproved && !isRejected) ? (
             <div>
               <Button
                 type="primary"
@@ -121,26 +180,9 @@ const ApprovalSystem: React.FC = () => {
                 拒绝
               </Button>
             </div>
-          )
+          ) : null
         );
       },
-    },
-    {
-      title: '评论',
-      dataIndex: 'comment',
-      render: (_, record) => (
-        <Input
-          placeholder="输入评论"
-          defaultValue={record.comment} // 如果有默认值，可以设置
-          onBlur={async (e) => {
-            const comment = e.target.value;
-            if (comment !== record.comment) {
-              // 仅在评论发生变化时更新
-              await handleUpdateComment(record, comment);
-            }
-          }}
-        />
-      ),
     },
   ];
 
@@ -149,55 +191,30 @@ const ApprovalSystem: React.FC = () => {
       title: <FormattedMessage id="审批发起人" />,
       dataIndex: 'approvalInitiatorName',
       valueType: 'text',
+      filters: initiatorToMe,
+      onFilter: (value, record) => record.approvalInitiatorName === value,
     },
     {
       title: <FormattedMessage id="审批接收人" />,
       dataIndex: 'approvalReceiverName',
       valueType: 'text',
+      filters: receiverToMe,
+      onFilter: (value, record) => record.approvalReceiverName === value,
     },
     {
       title: <FormattedMessage id="审批类型" />,
       dataIndex: 'approvalType',
       valueType: 'select',
       valueEnum: approvalTypeConfig, // 使用映射
+      filters: fileTypeToMe,
+      onFilter: (value, record) => record.approvalType === value,
     },
     {
-      title: <FormattedMessage id="文件链接" />,
+      title: '文件链接',
       dataIndex: 'approvalFileUrl',
-      valueType: 'text',
-      render: (_, record) =>
-        record.approvalFileUrl ? (
-          <a
-            href="#"
-            onClick={async (e) => {
-              e.preventDefault();
-              await downloadFromOSS(record.approvalFileUrl); // 调用OSS下载函数
-            }}
-            style={{ marginRight: 8 }}
-          >
-            下载文件
-          </a>
-        ) : null, // 如果没有文件链接，则不渲染任何内容
-    },
-    {
-      title: <FormattedMessage id="上传文件" />,
-      dataIndex: 'approvalFileUrl',
-      valueType: 'text',
-      render: (_, record) => (
-        <div>
-          <Upload
-            name="file"
-            showUploadList={false}
-            beforeUpload={async (file) => {
-              record.approvalFileUrl = await handleFileUpload(file, record.id); // 使用OSS上传文件
-              actionRef.current?.reload();
-              return false; // 阻止自动上传，使用自定义上传逻辑
-            }}
-          >
-            <Button icon={<UploadOutlined />}>重新上传</Button>
-          </Upload>
-        </div>
-      ),
+      key: 'approvalFileUrl',
+      width: '150px',
+      render: renderApprovalFileLink,
     },
     {
       title: <FormattedMessage id="创建时间" />,
@@ -215,6 +232,31 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'select',
       valueEnum: approvalStatusConfig,
     },
+    {
+      title: '批示',
+      dataIndex: 'comment',
+      valueType: 'text',
+    },
+    {
+      title: <FormattedMessage id="操作" />,
+      dataIndex: 'approvalFileUrl',
+      valueType: 'text',
+      render: (_, record) => (
+        <div>
+          <Upload
+            name="file"
+            showUploadList={false}
+            beforeUpload={async (file) => {
+              record.approvalFileUrl = await handleFileUpload(file, record.id); // 使用OSS上传文件
+              actionRef.current?.reload();
+              return false; // 阻止自动上传，使用自定义上传逻辑
+            }}
+          >
+            <Button icon={<UploadOutlined />}>上传文件</Button>
+          </Upload>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -228,10 +270,7 @@ const ApprovalSystem: React.FC = () => {
             })}
             actionRef={actionRef}
             rowKey="key"
-            search={{
-              labelWidth: 'auto',
-              filterType: 'query',
-            }}
+            search={false}
             cardBordered
             toolBarRender={() => [
               <Button
@@ -256,10 +295,7 @@ const ApprovalSystem: React.FC = () => {
             })}
             actionRef={actionRef}
             rowKey="key"
-            search={{
-              labelWidth: 'auto',
-              filterType: 'query',
-            }}
+            search={false}
             cardBordered
             toolBarRender={() => [
               <Button
@@ -281,8 +317,16 @@ const ApprovalSystem: React.FC = () => {
       <ModalForm
         title="新加入审批"
         width="400px"
+        modalProps={{
+          destroyOnClose: true
+        }}
         open={state.createModalOpen}
         onOpenChange={(isOpen) => handleModalOpen('createModalOpen', isOpen)}
+        submitter={{
+          submitButtonProps: {
+            loading: state.isLoading,  // 控制加载状态
+          },
+        }}
         onFinish={async (values) => {
           const initiator = state.employeeList.find(
             (emp) => emp.name === values.approvalInitiatorName,
@@ -293,6 +337,7 @@ const ApprovalSystem: React.FC = () => {
 
           const data: AddApprovalInfoRequest = {
             ...values,
+            approvalStatus: 3,
             approvalInitiatorId: initiator?.id || 0, // 使用选中的发起人ID
             approvalReceiverId: receiver?.id || 0, // 使用选中的接收人ID
             approvalFileUrl: uploadedFileUrl, // 使用上传后的文件URL

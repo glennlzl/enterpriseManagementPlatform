@@ -52,6 +52,7 @@ export async function fetchReceiverData(userId: string) {
     if (response.isSuccess) {
       return response.data; // 访问返回的 `data` 字段
     } else {
+      console.log(response.msg);
       return Promise.reject(response.msg);
     }
   });
@@ -68,7 +69,7 @@ export async function addApproval(addApprovalInfoRequest: AddApprovalInfoRequest
     },
     withCredentials: true, // 确保携带 Cookies
   }).then((response) => {
-    if (response.isSuccess) {
+    if (response.isSuccess || response.msg === '该用户无审批记录') {
       return response.data; // 访问返回的 `data` 字段
     } else {
       return Promise.reject(response.msg);
@@ -97,7 +98,7 @@ export async function uploadFile(uplodaFileUrlRequest: UplodaFileUrlRequest) {
 
 /** 更新comment */
 export async function updateComment(updateCommentRequest: UpdateCommentRequest) {
-  const url = new URL(`${API_BASE_URL}/comment`);
+  const url = new URL(`${API_BASE_URL}/updateComment`);
   return request<ApiResponse<boolean>>(url.toString(), {
     method: 'POST',
     data: updateCommentRequest,

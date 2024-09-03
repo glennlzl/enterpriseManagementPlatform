@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import {Button, Tooltip} from 'antd';
 import {
   FooterToolbar,
   PageContainer,
@@ -11,20 +11,28 @@ import { useModel } from '@@/exports';
 import UpdateForm from './components/UpdateForm';
 import { useEmployeeManagement } from "@/hooks/user-management/Hook.useEmployeeManagement";
 import { EmployeeInfoAddOrUpdateRequest } from "@/api/usermanagement"; // 更新表单组件路径
+import _ from 'lodash';
 
 const TableList: React.FC = () => {
   const { initialState } = useModel('@@initialState');
+  if (!initialState?.currentUser) {
+    return null; // 或者返回一个 loading 状态，或者重定向到登录页面
+  }
   const { state, setState, actionRef, handleModalOpen, handleAdd, handleUpdate, fetchUsers, handleSyncSingle, handleSyncAll} = useEmployeeManagement(
     initialState.currentUser?.id || ''
   );
 
   const intl = useIntl();
+  const nameFilters = _.uniqBy(state.employeeList.map(item => ({ text: item.name, value: item.name })), 'value');
+  const phoneFilters = _.uniqBy(state.employeeList.map(item => ({ text: item.mobile, value: item.mobile })), 'value');
 
   const columns = [
     {
       title: <FormattedMessage id="姓名" />,
       dataIndex: 'name',
       valueType: 'textarea',
+      filters: nameFilters,
+      onFilter: (value, record) => record.name === value,
     },
     {
       title: <FormattedMessage id="上级" />,
@@ -35,11 +43,8 @@ const TableList: React.FC = () => {
       title: <FormattedMessage id="手机" />,
       dataIndex: 'mobile',
       valueType: 'textarea',
-    },
-    {
-      title: <FormattedMessage id="座机" />,
-      dataIndex: 'telephone',
-      valueType: 'textarea',
+      filters: phoneFilters,
+      onFilter: (value, record) => record.mobile === value,
     },
     {
       title: <FormattedMessage id="工号" />,
@@ -52,18 +57,8 @@ const TableList: React.FC = () => {
       valueType: 'textarea',
     },
     {
-      title: <FormattedMessage id="办公地点" />,
-      dataIndex: 'workPlace',
-      valueType: 'textarea',
-    },
-    {
       title: <FormattedMessage id="邮箱" />,
       dataIndex: 'email',
-      valueType: 'textarea',
-    },
-    {
-      title: <FormattedMessage id="组织邮箱" />,
-      dataIndex: 'orgEmail',
       valueType: 'textarea',
     },
     {
@@ -96,23 +91,25 @@ const TableList: React.FC = () => {
             }));
           }}
         >
-          <FormattedMessage id="更新" />
+          <FormattedMessage id="编辑" />
         </a>,
       ],
     },
     {
-      title: <FormattedMessage id="钉钉同步" />,
+      title: <FormattedMessage id="操作" />,
       dataIndex: 'dingdingSync',
       valueType: 'dingdingSync',
       render: (_, record) => [
         record.isUpdated && record.role >= 1 ? (
-          <a
-            key="sync"
-            onClick={() => handleSyncSingle(record.userId)}
-            style={{ marginLeft: 8 }}
-          >
-            <FormattedMessage id="同步钉钉" />
-          </a>
+          <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="点击将编辑后的人员同步到钉钉" />}>
+            <a
+              key="sync"
+              onClick={() => handleSyncSingle(record.userId)}
+              style={{ marginLeft: 8 }}
+            >
+              <FormattedMessage id="同步钉钉" />
+            </a>
+          </Tooltip>
         ) : null,
       ],
     },
@@ -127,21 +124,20 @@ const TableList: React.FC = () => {
         })}
         actionRef={actionRef}
         rowKey="id"
-        search={{
-          labelWidth: 'auto',
-          filterType: 'query',
-        }}
+        search={false}  // 移除搜索栏
         cardBordered
         toolBarRender={() => [
-          <Button
-            type="primary"
-            key="primary"
-            onClick={async() => {
-              await handleSyncAll();
-            }}
-          >
-            <FormattedMessage id='同步钉钉' defaultMessage="同步钉钉" />
-          </Button>,
+          <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="同步所有人员到钉钉" />}>
+            <Button
+              type="primary"
+              key="primary"
+              onClick={async() => {
+                await handleSyncAll();
+              }}
+            >
+              <FormattedMessage id='同步钉钉' defaultMessage="同步钉钉" />
+            </Button>
+          </ Tooltip>,
           <Button
             type="primary"
             key="primary"

@@ -66,7 +66,6 @@ export default [
     path: '/vehicle',
     name: 'vehicle.table-list',
     icon: 'table',
-    // component: './vehicle-system',
     routes: [
       {
         path: '/vehicle/vehicle-management',

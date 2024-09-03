@@ -4,6 +4,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import ProTable, { ActionType, ProColumns } from '@ant-design/pro-table';
 import type { VehicleType } from "@/model/vehicle-management-system";
 import {addVehicleType, deleteVehicleType, queryVehicleTypes} from "@/api/vihicle-system";
+import _ from "lodash";
 
 const VehicleTypeManagement: React.FC = () => {
   const actionRef = useRef<ActionType>();
@@ -11,6 +12,12 @@ const VehicleTypeManagement: React.FC = () => {
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+
+  const types = _.uniqBy(vehicleTypes.map(item => ({ text: item.vehicleType, value: item.vehicleType })), 'value');
+  const serialsNumber = _.uniqBy(vehicleTypes.map(item => ({ text: item.vehicleSerialNumber, value: item.vehicleSerialNumber })), 'value');
+  const brands = _.uniqBy(vehicleTypes.map(item => ({ text: item.vehicleBrand, value: item.vehicleBrand })), 'value');
+  const capacities = _.uniqBy(vehicleTypes.map(item => ({ text: item.approvedLoadCapacity, value: item.approvedLoadCapacity })), 'value');
+
 
   // useEffect 用于初次加载数据
   useEffect(() => {
@@ -70,21 +77,29 @@ const VehicleTypeManagement: React.FC = () => {
       title: '车辆类型',
       dataIndex: 'vehicleType',
       key: 'vehicleType',
+      filters: types,
+      onFilter: (value, record) => record.vehicleType === value,
     },
     {
       title: '车辆型号',
       dataIndex: 'vehicleSerialNumber',
       key: 'vehicleSerialNumber',
+      filters: serialsNumber,
+      onFilter: (value, record) => record.vehicleSerialNumber === value,
     },
     {
       title: '车辆品牌',
       dataIndex: 'vehicleBrand',
       key: 'vehicleBrand',
+      filters: brands,
+      onFilter: (value, record) => record.vehicleBrand === value,
     },
     {
       title: '核定载质量',
       dataIndex: 'approvedLoadCapacity',
       key: 'approvedLoadCapacity',
+      filters: capacities,
+      onFilter: (value, record) => record.approvedLoadCapacity === value,
     },
     {
       title: '操作',
@@ -106,9 +121,7 @@ const VehicleTypeManagement: React.FC = () => {
         loading={loading}
         actionRef={actionRef}
         rowKey="vehicleType"
-        search={{
-          labelWidth: 'auto',
-        }}
+        search={false}
         toolBarRender={() => [
           <Button
             type="primary"

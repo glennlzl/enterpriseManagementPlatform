@@ -3,8 +3,9 @@ import { hookUseDingTalkLogin } from '@/hooks/login/Hook.useDingTalkLogin';
 import { LoginForm } from '@ant-design/pro-components';
 import { Helmet, SelectLang, useIntl } from '@umijs/max';
 import { createStyles } from 'antd-style';
-import React from 'react';
+import React, {useState} from 'react';
 import Settings from '../../../../config/defaultSettings';
+import {Spin} from "antd";
 
 const useStyles = createStyles(({ token }) => {
   return {
@@ -42,20 +43,23 @@ const useStyles = createStyles(({ token }) => {
   };
 });
 
-const Lang = () => {
-  const { styles } = useStyles();
-
-  return (
-    <div className={styles.lang} data-lang>
-      {SelectLang && <SelectLang />}
-    </div>
-  );
-};
-
 const Login: React.FC = () => {
   const { styles } = useStyles();
   const { handleDingTalkLogin } = hookUseDingTalkLogin();
+  const [loading, setLoading] = useState(false);  // 用于管理 Spinner 的显示
   const intl = useIntl();
+
+  const onFinish = async () => {
+    setLoading(true);  // 开始加载，显示 Spinner
+    try {
+      await handleDingTalkLogin();
+      setLoading(false);  // 登录完成，隐藏 Spinner
+    } catch (error) {
+      console.error('Login failed:', error);
+    } finally {
+      setLoading(false);  // 登录完成，隐藏 Spinner
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -68,28 +72,30 @@ const Login: React.FC = () => {
           - {Settings.title}
         </title>
       </Helmet>
-      <Lang />
       <div
         style={{
           flex: '1',
           padding: '32px 0',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
-        <LoginForm
-          contentStyle={{
-            minWidth: 280,
-            maxWidth: '75vw',
-          }}
-          logo={<img alt="logo" src="/logo.svg" />}
-          title="企业资产管理平台"
-          subTitle={'xxx公司'}
-          initialValues={{
-            autoLogin: true,
-          }}
-          onFinish={async () => {
-            await handleDingTalkLogin();
-          }}
-        ></LoginForm>
+        <Spin spinning={loading}> {/* 使用 Spin 组件包裹 LoginForm */}
+          <LoginForm
+            contentStyle={{
+              minWidth: 280,
+              maxWidth: '75vw',
+            }}
+            logo={<img alt="logo" src="/logo.svg" />}
+            title="企业资产管理平台"
+            subTitle={'xxx公司'}
+            initialValues={{
+              autoLogin: true,
+            }}
+            onFinish={onFinish}  // 在 onFinish 中处理登录逻辑
+          ></LoginForm>
+        </Spin>
       </div>
       <Footer />
     </div>
