@@ -33,9 +33,7 @@ const DingTalkLoginComponent = () => {
         </div>
       ) : (
         <Button type="primary" loading={loading} onClick={async () => {
-          setLoading(true);
           await handleDingTalkLogin();
-          setLoading(false);
         }}>
           使用钉钉登录
         </Button>

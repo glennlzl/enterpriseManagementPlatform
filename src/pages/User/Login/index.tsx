@@ -64,7 +64,6 @@ const Login: React.FC = () => {
     }
   }, [location.search]);  // 当查询参数变化时，重新执行检查
 
-  console.log(loading);
   const onFinish = async () => {
     setLoading(true);  // 开始加载，显示 Spinner
     try {
