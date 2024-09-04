@@ -21,22 +21,22 @@ export async function getInitialState(): Promise<{
 }> {
   const { location } = history;
   // 尝试从 localStorage 中获取用户信息
-  const currentUser = localStorage.getItem('currentUser');
+  // const currentUser = localStorage.getItem('currentUser');
 
-  if (!currentUser) {
-    history.push(loginPath);
-  } else if (currentUser) {
-    return {
-      settings: defaultSettings as Partial<LayoutSettings>,
-      currentUser: JSON.parse(currentUser),
-    };
-  }
+  // if (!currentUser) {
+  //   history.push(loginPath);
+  // } else if (currentUser) {
+  //   return {
+  //     settings: defaultSettings as Partial<LayoutSettings>,
+  //     currentUser: JSON.parse(currentUser),
+  //   };
+  // }
 
-  if (location.pathname !== loginPath) {
-    return {
-      settings: defaultSettings as Partial<LayoutSettings>,
-    };
-  }
+  // if (location.pathname !== loginPath) {
+  //   return {
+  //     settings: defaultSettings as Partial<LayoutSettings>,
+  //   };
+  // }
   return {
     settings: defaultSettings as Partial<LayoutSettings>,
   };
@@ -55,22 +55,22 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
     waterMarkProps: {
       content: initialState?.currentUser?.name,
     },
-    onPageChange: () => {
-      const { location } = history;
-      const storedUser = localStorage.getItem('currentUser');
-
-      // 如果 initialState 中没有用户信息，也没有在 localStorage 中找到用户信息，并且当前访问的不是登录页面
-      if (!initialState?.currentUser && !storedUser && location.pathname !== loginPath) {
-        // 重定向到登录页面
-        history.push(loginPath);
-      } else if (storedUser && !initialState?.currentUser) {
-        // 如果 localStorage 中有用户信息，但 initialState 中没有，则更新 initialState
-        setInitialState((s) => ({
-          ...s,
-          currentUser: JSON.parse(storedUser),
-        }));
-      }
-    },
+    // onPageChange: () => {
+    //   const { location } = history;
+    //   const storedUser = localStorage.getItem('currentUser');
+    //
+    //   // 如果 initialState 中没有用户信息，也没有在 localStorage 中找到用户信息，并且当前访问的不是登录页面
+    //   if (!initialState?.currentUser && !storedUser && location.pathname !== loginPath) {
+    //     // 重定向到登录页面
+    //     history.push(loginPath);
+    //   } else if (storedUser && !initialState?.currentUser) {
+    //     // 如果 localStorage 中有用户信息，但 initialState 中没有，则更新 initialState
+    //     setInitialState((s) => ({
+    //       ...s,
+    //       currentUser: JSON.parse(storedUser),
+    //     }));
+    //   }
+    // },
     bgLayoutImgList: [
       {
         src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/D2LWSqNny4sAAAAAAAAAAAAAFl94AQBr',
