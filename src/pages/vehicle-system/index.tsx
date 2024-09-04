@@ -19,7 +19,7 @@ import {
 } from '@ant-design/pro-components';
 import {ProFormDatePicker, ProFormDigit, ProFormGroup} from '@ant-design/pro-form/lib';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, Space, Switch, message, Form, Input, Row, Col} from 'antd';
+import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip} from 'antd';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
@@ -167,8 +167,8 @@ const VehicleManagement: React.FC = () => {
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.vehicleType.localeCompare(b.vehicleType),
       filters: filters.vehicleTypeFilters,
       onFilter: (value, record) => record.vehicleType.includes(value as string),
-      width: 'auto',
       width: '120px',
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="车辆型号" />,
@@ -223,6 +223,7 @@ const VehicleManagement: React.FC = () => {
       filters: filters.isAuditedFilters,
       onFilter: (value, record) => record.isAudited === value,
       width: '120px',
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="是否有交强险" />,
@@ -248,6 +249,7 @@ const VehicleManagement: React.FC = () => {
       filters: filters.gpsFilters,
       onFilter: (value, record) => record.gps === value,
       width: '150px',
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="机械邦" />,
@@ -305,13 +307,6 @@ const VehicleManagement: React.FC = () => {
       title: <FormattedMessage id="其他备注信息" />,
       dataIndex: 'extend',
       valueType: 'text',
-      width: '120px',
-    },
-    {
-      title: <FormattedMessage id="是否删除" />,
-      dataIndex: 'isDeleted',
-      valueType: 'text',
-      render: (value: number) => (value === 1 ? '是' : '否'),
       width: '120px',
     },
     {
@@ -385,13 +380,15 @@ const VehicleManagement: React.FC = () => {
         headerTitle={
           <div>
             {intl.formatMessage({ id: '车辆管理', defaultMessage: '车辆管理' })}
-            <Switch
-              style={{ marginLeft: 16 }}
-              checkedChildren="预警开"
-              unCheckedChildren="预警关"
-              onChange={handleWarningChange}
-              checked={isWarning}
-            />
+            <Tooltip title={intl.formatMessage({ id: '点击打开预警', defaultMessage: '点击显示警报中车辆' })}>
+              <Switch
+                style={{ marginLeft: 16 }}
+                checkedChildren="预警开"
+                unCheckedChildren="预警关"
+                onChange={handleWarningChange}
+                checked={isWarning}
+              />
+            </Tooltip>
             {selectedRowKeys.length > 0 && (
               <Button onClick={handleBatchExport} style={{ marginLeft: 16 }}>
                 批量导出
@@ -404,14 +401,7 @@ const VehicleManagement: React.FC = () => {
             {/*)}*/}
           </div>
         }
-        onRow={(record) => {
-          return {
-            style: {
-              backgroundColor: isWarning && record.warningLevel >= 3 ? '#ffcccc' : '', // 根据条件设置背景颜色
-            },
-          };
-        }}
-        scroll={{ x: 3000 }} // 设置横向滚动，宽度可以根据你的需要调整
+        scroll={{ x: 3000 }}
         actionRef={actionRef}
         rowKey="id"
         search={false}
@@ -431,7 +421,14 @@ const VehicleManagement: React.FC = () => {
         ]}
         loading={loading}
         dataSource={vehicleList}
-        columns={columns}
+        columns={columns.map((col) => ({
+          ...col,
+          onCell: (record) => ({
+            style: {
+              backgroundColor: isWarning && record.warningLevel >= 3 ? '#ffcccc' : '',
+            },
+          }),
+        }))}
       />
 
       {/* Drawer 和 Modals */}
@@ -508,6 +505,9 @@ const VehicleManagement: React.FC = () => {
             options={vehicleTypeOptions}
             rules={[{ required: true, message: '请选择车辆类型' }]}
             width="200px"
+            fieldProps={{
+              dropdownMatchSelectWidth: false, // 只显示label
+            }}
           />
           <ProFormDatePicker
             name="purchaseDate"
@@ -685,6 +685,9 @@ const VehicleManagement: React.FC = () => {
             options={vehicleTypeOptions}
             rules={[{ required: true, message: '请选择车辆类型' }]}
             width="200px"
+            fieldProps={{
+              dropdownMatchSelectWidth: false, // 只显示label
+            }}
           />
           <ProFormDatePicker
             name="purchaseDate"
@@ -775,10 +778,6 @@ const VehicleManagement: React.FC = () => {
             width="200px"
           />
           <ProFormText name="extend" label="其他备注信息" width="200px" />
-        </ProFormGroup>
-
-        <ProFormGroup>
-          <ProFormDigit name="warningLevel" label="警告等级" min={0} max={5} width="200px" />
         </ProFormGroup>
       </ModalForm>
     </PageContainer>

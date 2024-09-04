@@ -1,11 +1,12 @@
 import { Footer } from '@/components';
 import { hookUseDingTalkLogin } from '@/hooks/login/Hook.useDingTalkLogin';
 import { LoginForm } from '@ant-design/pro-components';
-import { Helmet, SelectLang, useIntl } from '@umijs/max';
+import {Helmet, SelectLang, useIntl, useLocation} from '@umijs/max';
 import { createStyles } from 'antd-style';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import Settings from '../../../../config/defaultSettings';
 import {Spin} from "antd";
+import {useParams} from "@@/exports";
 
 const useStyles = createStyles(({ token }) => {
   return {
@@ -47,8 +48,23 @@ const Login: React.FC = () => {
   const { styles } = useStyles();
   const { handleDingTalkLogin } = hookUseDingTalkLogin();
   const [loading, setLoading] = useState(false);  // 用于管理 Spinner 的显示
+  const location = useLocation();  // 获取当前的 URL 和查询参数
   const intl = useIntl();
 
+
+  // 检查是否存在 authCode
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);  // 解析查询参数
+    const authCode = queryParams.get('authCode');  // 获取 authCode 的值
+
+    if (authCode) {
+      setLoading(true);  // 如果存在 authCode，则可以显示加载状态
+    } else {
+      setLoading(false);  // 否则不显示加载状态
+    }
+  }, [location.search]);  // 当查询参数变化时，重新执行检查
+
+  console.log(loading);
   const onFinish = async () => {
     setLoading(true);  // 开始加载，显示 Spinner
     try {
@@ -89,7 +105,7 @@ const Login: React.FC = () => {
             }}
             logo={<img alt="logo" src="/logo.svg" />}
             title="企业资产管理平台"
-            subTitle={'xxx公司'}
+            subTitle={' '}
             initialValues={{
               autoLogin: true,
             }}
@@ -97,7 +113,6 @@ const Login: React.FC = () => {
           ></LoginForm>
         </Spin>
       </div>
-      <Footer />
     </div>
   );
 };

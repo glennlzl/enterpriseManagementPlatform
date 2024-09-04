@@ -79,6 +79,7 @@ const VehicleTypeManagement: React.FC = () => {
       key: 'vehicleType',
       filters: types,
       onFilter: (value, record) => record.vehicleType === value,
+      filterSearch: true,
     },
     {
       title: '车辆型号',
@@ -86,6 +87,7 @@ const VehicleTypeManagement: React.FC = () => {
       key: 'vehicleSerialNumber',
       filters: serialsNumber,
       onFilter: (value, record) => record.vehicleSerialNumber === value,
+      filterSearch: true,
     },
     {
       title: '车辆品牌',
@@ -93,6 +95,7 @@ const VehicleTypeManagement: React.FC = () => {
       key: 'vehicleBrand',
       filters: brands,
       onFilter: (value, record) => record.vehicleBrand === value,
+      filterSearch: true,
     },
     {
       title: '核定载质量',
@@ -100,6 +103,7 @@ const VehicleTypeManagement: React.FC = () => {
       key: 'approvedLoadCapacity',
       filters: capacities,
       onFilter: (value, record) => record.approvedLoadCapacity === value,
+      filterSearch: true,
     },
     {
       title: '操作',

@@ -24,6 +24,7 @@ import {
   Select,
   Table,
   Upload,
+  Image,
 } from 'antd';
 import moment, { Moment } from 'moment';
 import React, { useEffect, useState } from 'react';
@@ -62,6 +63,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   const [editingKey, setEditingKey] = useState<number | null>(null); // 用于控制是否处于编辑模式
   const [editing, setEditing] = useState(false);
   const isAdmin = initialState?.currentUser?.role >= 2;
+  const [thisLoading, setLoading] = useState(false);
 
   const compareDateWithToday = (dateStr) => {
     // 将输入的 YYYY-MM-DD 字符串解析为 Luxon 的 DateTime 对象
@@ -138,6 +140,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
 
   const handleUpload = async ({ file, onSuccess, onError }: any) => {
     try {
+      setLoading(true);
       const ossStsAccessInfo = await fetchOssStsAccessInfo();
       const imageUrl = await uploadImageToOss(file, ossStsAccessInfo);
 
@@ -153,6 +156,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       });
 
       setSelectedImages((prevImages) => [...prevImages, imageUrl]);
+      setLoading(false);
 
       onSuccess(imageUrl);
     } catch (error) {
@@ -308,7 +312,6 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                 <Descriptions.Item label="负责人姓名">{vehicleInfo.responsiblePersonName}</Descriptions.Item>
                 <Descriptions.Item label="负责人联系电话">{vehicleInfo.responsiblePersonMobile}</Descriptions.Item>
                 <Descriptions.Item label="其他备注信息">{vehicleInfo.extend}</Descriptions.Item>
-                <Descriptions.Item label="是否删除">{vehicleInfo.isDeleted ? '是' : '否'}</Descriptions.Item>
                 <Descriptions.Item label="是否废弃">{vehicleInfo.isDeprecated ? '是' : '否'}</Descriptions.Item>
               </>
             )}
@@ -357,12 +360,14 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                     >
                       <Input type="number" placeholder="请输入结束里程数" />
                     </Form.Item>
-                    <Form.Item label="使用情况" name="usageStatus">
-                      <Select placeholder="请选择使用情况">
-                        <Option value={0}>正常</Option>
-                        <Option value={1}>异常</Option>
-                      </Select>
-                    </Form.Item>
+                    {isAdmin && (
+                      <Form.Item label="使用情况" name="usageStatus">
+                        <Select placeholder="请选择使用情况">
+                          <Option value={0}>正常</Option>
+                          <Option value={1}>异常</Option>
+                        </Select>
+                      </Form.Item>
+                    )}
                     <Form.Item label="车辆图片" name="vehicleImageUrls">
                       <Upload
                         customRequest={handleUpload}
@@ -381,7 +386,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                       <Input.TextArea placeholder="请输入备注信息" />
                     </Form.Item>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                      <Button type="primary" htmlType="submit">
+                      <Button type="primary" htmlType="submit" loading={thisLoading}>
                         保存
                       </Button>
                       <Button
@@ -401,14 +406,18 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                     <div style={{ marginBottom: '16px' }}>
                       <strong>车辆图片: </strong>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                        {record.vehicleImageUrls && record.vehicleImageUrls.map((url, index) => (
-                          <img
-                            key={index}
-                            src={url}
-                            alt={`车辆图片${index + 1}`}
-                            style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }}
-                          />
-                        ))}
+                        <Image.PreviewGroup>
+                          {record.vehicleImageUrls && record.vehicleImageUrls.map((url, index) => (
+                            <Image
+                              key={index}
+                              src={url}
+                              alt={`车辆图片${index + 1}`}
+                              width={100}
+                              height={100}
+                              style={{ objectFit: 'cover', borderRadius: '4px' }}
+                            />
+                          ))}
+                        </Image.PreviewGroup>
                       </div>
                     </div>
                     <p><strong>备注信息: </strong>{record.extend}</p>
@@ -472,7 +481,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
               label="结束里程数"
               name="endMileage"
               rules={[
-                { required: true, message: '请输入结束里程数' },
+                { message: '请输入结束里程数' },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     const startMileage = Number(getFieldValue('startMileage'));
@@ -487,16 +496,14 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
             >
               <Input type="number" placeholder="请输入结束里程数" />
             </Form.Item>
-            <Form.Item
-              label="使用情况"
-              name="usageStatus"
-              rules={[{ required: true, message: '请选择使用情况' }]}
-            >
-              <Select placeholder="请选择使用情况">
-                <Option value={0}>正常</Option>
-                <Option value={1}>异常</Option>
-              </Select>
-            </Form.Item>
+            {isAdmin && (
+              <Form.Item label="使用情况" name="usageStatus">
+                <Select placeholder="请选择使用情况">
+                  <Option value={0}>正常</Option>
+                  <Option value={1}>异常</Option>
+                </Select>
+              </Form.Item>
+            )}
             <Form.Item label="车辆图片" name="vehicleImageUrls">
               <Upload
                 customRequest={handleUpload}

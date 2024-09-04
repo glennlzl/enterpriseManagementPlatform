@@ -1,14 +1,14 @@
 import { hookUseDingTalkLogin } from '@/hooks/login/Hook.useDingTalkLogin';
 import { history, useModel } from '@umijs/max';
 import { Button, message } from 'antd';
-import { useEffect } from 'react';
+import {useEffect, useState} from 'react';
 
 const DingTalkLoginComponent = () => {
   // 使用 useModel 获取 initialState
   const { initialState, setInitialState } = useModel('@@initialState');
   const { currentUser, handleDingTalkLogin } = hookUseDingTalkLogin();
+  const [loading, setLoading] = useState(false);
 
-  console.log('asfasdfasdf');
   // 监听 currentUser 的变化
   useEffect(() => {
     if (currentUser) {
@@ -32,7 +32,11 @@ const DingTalkLoginComponent = () => {
           {/* 在这里展示更多用户信息或其他页面内容 */}
         </div>
       ) : (
-        <Button type="primary" onClick={handleDingTalkLogin}>
+        <Button type="primary" loading={loading} onClick={async () => {
+          setLoading(true);
+          await handleDingTalkLogin();
+          setLoading(false);
+        }}>
           使用钉钉登录
         </Button>
       )}

@@ -2,7 +2,7 @@ import { EmployeeSimpleInfoVO } from '@/api/usermanagement';
 import { ProFormSelect, ProFormText, StepsForm } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Modal } from 'antd';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import ManagerSelect from './ManagerSelect'; // 引入 ManagerSelect 组件
 
 export type FormValueType = {
@@ -24,17 +24,26 @@ export type UpdateFormProps = {
 
 const UpdateForm: React.FC<UpdateFormProps> = (props) => {
   const intl = useIntl();
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    if (props.updateModalOpen) {
+      setCurrentStep(0); // Reset to step 1 when the modal opens
+    }
+  }, [props.updateModalOpen]);
 
   return (
     <StepsForm
       stepsProps={{
         size: 'small',
       }}
+      current={currentStep} // Control the current step
+      onCurrentChange={setCurrentStep} // Update step when changed
       stepsFormRender={(dom, submitter) => {
         return (
           <Modal
             width={640}
-            styles={{
+            style={{
               body: {
                 padding: '32px 40px 48px',
               },
@@ -100,7 +109,6 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             id: '上级',
             defaultMessage: '上级',
           })}
-          required={true}
         />
         <ProFormText
           name="mobile"
@@ -109,15 +117,8 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             id: '手机',
             defaultMessage: '手机',
           })}
+          required={true}
         />
-        {/*<ProFormText*/}
-        {/*  name="telephone"*/}
-        {/*  width="xl"*/}
-        {/*  label={intl.formatMessage({*/}
-        {/*    id: '座机',*/}
-        {/*    defaultMessage: '座机',*/}
-        {/*  })}*/}
-        {/*/>*/}
         <ProFormText
           name="jobNumber"
           width="xl"
@@ -142,26 +143,6 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             defaultMessage: '邮箱',
           })}
         />
-        {/*{props.type === 'create' && (*/}
-        {/*  <>*/}
-        {/*    <ProFormText*/}
-        {/*      name="orgEmail"*/}
-        {/*      width="xl"*/}
-        {/*      label={intl.formatMessage({*/}
-        {/*        id: '组织邮箱',*/}
-        {/*        defaultMessage: '组织邮箱',*/}
-        {/*      })}*/}
-        {/*    />*/}
-        {/*    <ProFormText*/}
-        {/*      name="workPlace"*/}
-        {/*      width="xl"*/}
-        {/*      label={intl.formatMessage({*/}
-        {/*        id: '办公地点',*/}
-        {/*        defaultMessage: '办公地点',*/}
-        {/*      })}*/}
-        {/*    />*/}
-        {/*  </>*/}
-        {/*)}*/}
       </StepsForm.StepForm>
       <StepsForm.StepForm
         initialValues={{

@@ -33,6 +33,7 @@ const TableList: React.FC = () => {
       valueType: 'textarea',
       filters: nameFilters,
       onFilter: (value, record) => record.name === value,
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="上级" />,
@@ -45,6 +46,8 @@ const TableList: React.FC = () => {
       valueType: 'textarea',
       filters: phoneFilters,
       onFilter: (value, record) => record.mobile === value,
+      search: true,
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="工号" />,
@@ -93,13 +96,6 @@ const TableList: React.FC = () => {
         >
           <FormattedMessage id="编辑" />
         </a>,
-      ],
-    },
-    {
-      title: <FormattedMessage id="操作" />,
-      dataIndex: 'dingdingSync',
-      valueType: 'dingdingSync',
-      render: (_, record) => [
         record.isUpdated && record.role >= 1 ? (
           <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="点击将编辑后的人员同步到钉钉" />}>
             <a
@@ -112,7 +108,7 @@ const TableList: React.FC = () => {
           </Tooltip>
         ) : null,
       ],
-    },
+    }
   ];
 
   return (
@@ -124,7 +120,7 @@ const TableList: React.FC = () => {
         })}
         actionRef={actionRef}
         rowKey="id"
-        search={false}  // 移除搜索栏
+        search={false}
         cardBordered
         toolBarRender={() => [
           <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="同步所有人员到钉钉" />}>

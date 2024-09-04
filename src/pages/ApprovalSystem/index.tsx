@@ -11,7 +11,7 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, Input, Tabs, Tooltip, Upload} from 'antd';
+import {Button, Input, Modal, Tabs, Tooltip, Upload} from 'antd';
 import React, { useState } from 'react';
 import _ from 'lodash';
 
@@ -36,6 +36,8 @@ const ApprovalSystem: React.FC = () => {
     return null; // 或者返回一个 loading 状态，或者重定向到登录页面
   }
 
+  const [currentRecord, setCurrentRecord] = useState<ApprovalInfoVO | null>(null); // 用于存储当前操作的记录
+
   const {
     state,
     handleModalOpen,
@@ -49,23 +51,59 @@ const ApprovalSystem: React.FC = () => {
   } = useApprovalPage(initialState.currentUser?.id || '');
   const intl = useIntl();
   const [uploadedFileUrl, setUploadedFileUrl] = useState('');
+  const [comment, setComment] = useState('');
   const initiator = _.uniqBy(state.initiatorData.map(item => ({ text: item.approvalInitiatorName, value: item.approvalInitiatorName })), 'value');
   const receiver = _.uniqBy(state.initiatorData.map(item => ({ text: item.approvalReceiverName, value: item.approvalReceiverName })), 'value');
-  const fileType = _.uniqBy(state.initiatorData.map(item => ({ text: item.approvalType, value: item.approvalType })), 'value');
+  const fileType = _.uniqBy(
+    state.initiatorData.map(item => ({
+      text: approvalTypeConfig[item.approvalType]?.text || approvalTypeConfig.default.text, // 使用映射的文字
+      value: item.approvalType,
+    })),
+    'value'
+  );
   const initiatorToMe = _.uniqBy(state.receiverData.map(item => ({ text: item.approvalReceiverName, value: item.approvalReceiverName })), 'value');
   const receiverToMe = _.uniqBy(state.receiverData.map(item => ({ text: item.approvalReceiverName, value: item.approvalReceiverName })), 'value');
-  const fileTypeToMe = _.uniqBy(state.receiverData.map(item => ({ text: item.approvalType, value: item.approvalType })), 'value');
+  const fileTypeToMe = _.uniqBy(
+    state.receiverData.map(item => ({
+      text: approvalTypeConfig[item.approvalType]?.text || approvalTypeConfig.default.text, // 使用映射的文字
+      value: item.approvalType,
+    })),
+    'value'
+  );
+
+  const showModal = (record) => {
+    setCurrentRecord(record);
+    setComment(record.comment || '');  // 如果没有评论，默认设置为空字符串
+    handleModalOpen('commentModalOpen', true);  // 打开评论 Modal
+  };
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [loading, setLoading] = useState(false);
+
+
   const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
 
 
   const renderApprovalFileLink = (_, record) => {
-    // 处理后的文件名
-    const fileName = record.approvalFileUrl && record.approvalFileUrl.startsWith(prefix)
-      ? record.approvalFileUrl.replace(prefix, '').slice(0, 20) + '...' // 只显示前20个字符，并加上省略号
-      : '未知文件';
+    let fileName = '未知文件';
+
+    if (record.approvalFileUrl && record.approvalFileUrl.startsWith(prefix)) {
+      // 先去掉前缀部分
+      const rawFileName = record.approvalFileUrl.replace(prefix, '');
+
+      // 使用正则表达式或字符串处理去掉 uuid + '_'
+      const trimmedFileName = rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''); // 去掉 uuid 和下划线部分
+
+      if(trimmedFileName.length > 20) {
+        // 只显示前 20 个字符，并加上省略号
+        fileName = trimmedFileName.slice(0, 20) + '...';
+      } else {
+        fileName = trimmedFileName
+      }
+    }
 
     return record.approvalFileUrl ? (
-      <Tooltip title={record.approvalFileUrl.replace(prefix, '')}>
+      <Tooltip title={record.approvalFileUrl.replace(prefix, '').replace(/^[a-zA-Z0-9-]+_/, '')}>
         <a
           href="#"
           onClick={async (e) => {
@@ -94,6 +132,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       filters: initiator,
       onFilter: (value, record) => record.approvalReceiverName === value,
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="审批接收人" />,
@@ -101,6 +140,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       filters: receiver,
       onFilter: (value, record) => record.approvalReceiverName === value,
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="审批类型" />,
@@ -109,6 +149,7 @@ const ApprovalSystem: React.FC = () => {
       valueEnum: approvalTypeConfig, // 使用映射
       filters: fileType,
       onFilter: (value, record) => record.approvalType === value,
+      filterSearch: true,
     },
     {
       title: '文件链接',
@@ -134,27 +175,32 @@ const ApprovalSystem: React.FC = () => {
       valueEnum: approvalStatusConfig,
     },
     {
-      title: '评论',
+      title: '批示',
       dataIndex: 'comment',
-      valueEnum: approvalStatusConfig,
-      render: (_, record) => {
-        const isApproved = record?.approvalStatus === 1; // 已批准
-        const isRejected = record?.approvalStatus === 2; // 已拒绝
-        return (
-          (!isApproved && !isRejected) ? (<Input
-            placeholder="输入评论"
-            defaultValue={record.comment} // 如果有默认值，可以设置
-            onBlur={async (e) => {
-              const comment = e.target.value;
-              if (comment !== record.comment) {
-                // 仅在评论发生变化时更新
-                await handleUpdateComment(record, comment);
-              }
-            }}
-          />) : (<span>{record.comment}</span>)
-        );
-      },
+      valueType: 'text',
     },
+    // {
+    //   title: '评论',
+    //   dataIndex: 'comment',
+    //   valueEnum: approvalStatusConfig,
+    //   render: (_, record) => {
+    //     const isApproved = record?.approvalStatus === 1; // 已批准
+    //     const isRejected = record?.approvalStatus === 2; // 已拒绝
+    //     return (
+    //       (!isApproved && !isRejected) ? (<Input
+    //         placeholder="输入评论"
+    //         defaultValue={record.comment} // 如果有默认值，可以设置
+    //         onBlur={async (e) => {
+    //           const comment = e.target.value;
+    //           if (comment !== record.comment) {
+    //             // 仅在评论发生变化时更新
+    //             await handleUpdateComment(record, comment);
+    //           }
+    //         }}
+    //       />) : (<span>{record.comment}</span>)
+    //     );
+    //   },
+    // },
     {
       title: '操作',
       dataIndex: 'approvalStatus',
@@ -179,6 +225,13 @@ const ApprovalSystem: React.FC = () => {
               >
                 拒绝
               </Button>
+              <Button
+                type="link"
+                onClick={() => showModal(record)} // 点击打开评论输入框
+                style={{ marginLeft: 8 }}
+                >
+                添加评论
+              </Button>
             </div>
           ) : null
         );
@@ -186,6 +239,7 @@ const ApprovalSystem: React.FC = () => {
     },
   ];
 
+  console.log(currentRecord);
   const columns: ProColumns<ApprovalInfoVO>[] = [
     {
       title: <FormattedMessage id="审批发起人" />,
@@ -193,6 +247,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       filters: initiatorToMe,
       onFilter: (value, record) => record.approvalInitiatorName === value,
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="审批接收人" />,
@@ -200,6 +255,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       filters: receiverToMe,
       onFilter: (value, record) => record.approvalReceiverName === value,
+      filterSearch: true,
     },
     {
       title: <FormattedMessage id="审批类型" />,
@@ -208,6 +264,7 @@ const ApprovalSystem: React.FC = () => {
       valueEnum: approvalTypeConfig, // 使用映射
       filters: fileTypeToMe,
       onFilter: (value, record) => record.approvalType === value,
+      filterSearch: true,
     },
     {
       title: '文件链接',
@@ -247,17 +304,21 @@ const ApprovalSystem: React.FC = () => {
             name="file"
             showUploadList={false}
             beforeUpload={async (file) => {
+              setLoading(true);
               record.approvalFileUrl = await handleFileUpload(file, record.id); // 使用OSS上传文件
               actionRef.current?.reload();
+              setLoading(false);
               return false; // 阻止自动上传，使用自定义上传逻辑
             }}
           >
-            <Button icon={<UploadOutlined />}>上传文件</Button>
+            <Button icon={<UploadOutlined />} disabled={loading}>上传文件</Button>
           </Upload>
         </div>
       ),
     },
   ];
+
+  console.log(comment);
 
   return (
     <PageContainer>
@@ -301,7 +362,9 @@ const ApprovalSystem: React.FC = () => {
               <Button
                 type="primary"
                 key="primary"
-                onClick={() => handleModalOpen('createModalOpen', true)}
+                onClick={() => {
+                  handleModalOpen('createModalOpen', true)}
+              }
               >
                 <PlusOutlined />{' '}
                 <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
@@ -313,6 +376,27 @@ const ApprovalSystem: React.FC = () => {
           />
         </TabPane>
       </Tabs>
+
+      {/* 评论输入的 Modal */}
+      <Modal
+        title="输入评论"
+        visible={state.commentModalOpen}
+        onCancel={() => handleModalOpen('commentModalOpen', false)} // 取消关闭 Modal
+        onOk={async () => {
+          if (currentRecord) {
+            await handleUpdateComment(currentRecord, comment); // 提交评论时使用当前记录
+            handleModalOpen('commentModalOpen', false); // 关闭 Modal
+          }
+        }} // 提交评论
+      >
+        <Input.TextArea
+          value={comment}  // 绑定评论状态
+          onChange={(e) => setComment(e.target.value)}  // 更新评论状态
+          placeholder="请输入评论"
+          rows={4}
+        />
+      </Modal>
+
 
       <ModalForm
         title="新加入审批"

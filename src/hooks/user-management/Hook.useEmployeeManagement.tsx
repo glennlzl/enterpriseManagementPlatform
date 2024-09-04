@@ -32,7 +32,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
           employeeList,
         }));
       } catch (error) {
-        message.error('获取员工信息失败');
+        message.error(error);
       }
     };
 
@@ -56,7 +56,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
     } catch (error) {
       hide();
       console.log(error);
-      message.error('添加失败，请重试');
+      message.error(error);
       return false;
     }
   };

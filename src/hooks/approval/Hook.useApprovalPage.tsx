@@ -28,6 +28,7 @@ export const useApprovalPage = (userId: string) => {
   const [state, setState] = useState({
     initiatorData: [] as ApprovalInfoVO[],
     receiverData: [] as ApprovalInfoVO[],
+    commentModalOpen: false, // 用于控制评论 Modal
     createModalOpen: false,
     updateModalOpen: false,
     fileUrl: '', // 存储文件上传后的URL
@@ -133,7 +134,7 @@ export const useApprovalPage = (userId: string) => {
     }
   };
 
-  const handleModalOpen = (modalName: 'createModalOpen' | 'updateModalOpen', isOpen: boolean) => {
+  const handleModalOpen = (modalName: 'createModalOpen' | 'updateModalOpen' | 'commentModalOpen', isOpen: boolean) => {
     setState((prevState) => ({
       ...prevState,
       [modalName]: isOpen,
