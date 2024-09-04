@@ -43,6 +43,7 @@ export const useVehicleSystem = (userId: number) => {
   ) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     setLoading(true);
@@ -71,6 +72,7 @@ export const useVehicleSystem = (userId: number) => {
   useEffect(() => {
     const loginCheck = isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     fetchVehicleList(isWarning);
@@ -97,6 +99,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleWarningChange = async (checked: boolean) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     setIsWarning(checked);
@@ -106,6 +109,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleDeleteVehicle = async (id: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -121,6 +125,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleDeprecateVehicle = async (id: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -136,6 +141,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleRestoreVehicle = async (id: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -151,6 +157,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleAddVehicle = async (data: AddVehicleInfoRequest) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -167,6 +174,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleEditVehicle = async (data: UpdateVehicleInfoRequest) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -183,6 +191,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleAddVehicleType = async (data: AddVehicleTypeRequest) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -198,6 +207,7 @@ export const useVehicleSystem = (userId: number) => {
   const fetchVehicleUsageInfoList = async (vehicleId: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     setLoadingUsageInfo(true);
@@ -274,6 +284,7 @@ export const useVehicleSystem = (userId: number) => {
   const handleBatchDelete = async () => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     await Promise.all(selectedRowKeys.map(id => handleDeleteVehicle(id)));

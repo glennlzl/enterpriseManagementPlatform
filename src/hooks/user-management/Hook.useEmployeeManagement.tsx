@@ -33,6 +33,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
       try {
         const loginCheck = await isLogin();
         if (!loginCheck) {
+          message.error('请重新登录');
           history.push('/user/login');
         }
         const employeeList = await queryAllEmployeeSimpleInfo();
@@ -60,6 +61,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
     try {
       const loginCheck = await isLogin();
       if (!loginCheck) {
+        message.error('请重新登录');
         history.push('/user/login');
       }
       await addEmployee(fields);
@@ -77,6 +79,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
   const handleUpdate = async (formData: Partial<EmployeeInfoAddOrUpdateRequest>) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     const hide = message.loading('正在更新');
@@ -100,6 +103,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
   const fetchUsers = async () => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -113,6 +117,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
   const handleSyncAll = async () => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     const hide = message.loading('正在同步钉钉员工信息');
@@ -130,6 +135,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
   const handleSyncSingle = async (userId: string) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     const hide = message.loading('正在同步单个钉钉员工信息');

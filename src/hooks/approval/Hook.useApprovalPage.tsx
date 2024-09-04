@@ -43,6 +43,7 @@ export const useApprovalPage = (userId: string) => {
     const fetchEmployees = async () => {
       const loginCheck = await isLogin();
       if (!loginCheck) {
+        message.error('请重新登录');
         history.push('/user/login');
       }
       try {
@@ -88,6 +89,7 @@ export const useApprovalPage = (userId: string) => {
   const handleApprovalChange = async (record: ApprovalInfoVO, value: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -119,6 +121,7 @@ export const useApprovalPage = (userId: string) => {
   const handleUpdateComment = async (record: ApprovalInfoVO, value: string) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -170,6 +173,7 @@ export const useApprovalPage = (userId: string) => {
   const uploadToOSS = async (file: File) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -193,6 +197,7 @@ export const useApprovalPage = (userId: string) => {
   const downloadFromOSS = async (fileUrl: string) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -213,6 +218,7 @@ export const useApprovalPage = (userId: string) => {
   const handleFileUpload = async (file: File, recordId?: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
@@ -246,6 +252,7 @@ export const useApprovalPage = (userId: string) => {
   const handleAddApproval = async (data: AddApprovalInfoRequest) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
+      message.error('请重新登录');
       history.push('/user/login');
     }
     try {
