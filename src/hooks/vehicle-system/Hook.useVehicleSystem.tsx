@@ -11,6 +11,8 @@ import {
   queryVehicleUsageInfoList,
   updateVehicleInfo
 } from "@/api/vihicle-system";
+import {isLogin} from "@/api/usermanagement";
+import {history} from "@@/core/history";
 
 export const useVehicleSystem = (userId: number) => {
   const actionRef = useRef<ActionType>();
@@ -39,6 +41,10 @@ export const useVehicleSystem = (userId: number) => {
     project?: string,
     name?: string
   ) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     setLoading(true);
     try {
       // 检查 generalQueryCondition 是否为空
@@ -63,6 +69,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   useEffect(() => {
+    const loginCheck = isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     fetchVehicleList(isWarning);
     const vehicleTypeFilters = _.uniqBy(vehicleList.map(item => ({ text: item.vehicleType, value: item.vehicleType })), 'value');
     const registrantFilters = _.uniqBy(vehicleList.map(item => ({ text: item.registrant, value: item.registrant })), 'value');
@@ -85,11 +95,19 @@ export const useVehicleSystem = (userId: number) => {
   }, [userId, isWarning]);
 
   const handleWarningChange = async (checked: boolean) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     setIsWarning(checked);
     await fetchVehicleList(checked);
   };
 
   const handleDeleteVehicle = async (id: number) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       await deleteVehicleInfo(id);
       message.success('删除车辆成功');
@@ -101,6 +119,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   const handleDeprecateVehicle = async (id: number) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       await deprecateVehicleInfo(id);
       message.success('车辆已作废');
@@ -112,6 +134,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   const handleRestoreVehicle = async (id: number) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       await deprecateVehicleInfo(id);
       message.success('车辆已恢复');
@@ -123,6 +149,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   const handleAddVehicle = async (data: AddVehicleInfoRequest) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       await addVehicleInfo(data);
       message.success('添加车辆成功');
@@ -135,6 +165,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   const handleEditVehicle = async (data: UpdateVehicleInfoRequest) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       await updateVehicleInfo(data);
       message.success('车辆信息更新成功');
@@ -147,6 +181,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   const handleAddVehicleType = async (data: AddVehicleTypeRequest) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       await addVehicleType(data);
       message.success('车辆类型添加成功');
@@ -158,6 +196,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   const fetchVehicleUsageInfoList = async (vehicleId: number) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     setLoadingUsageInfo(true);
     try {
       const response = await queryVehicleUsageInfoList(vehicleId);
@@ -230,6 +272,10 @@ export const useVehicleSystem = (userId: number) => {
   };
 
   const handleBatchDelete = async () => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     await Promise.all(selectedRowKeys.map(id => handleDeleteVehicle(id)));
     await fetchVehicleList(isWarning); // 操作完成后刷新列表
   };

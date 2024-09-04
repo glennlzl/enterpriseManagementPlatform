@@ -9,6 +9,9 @@ import {
   queryAllEmployeeSimpleInfo, syncDingtalkEmployeeInfo, syncDingtalkSingleEmployeeInfo,
   updateEmployee
 } from "@/api/usermanagement"; // 之前定义的接口路径
+import {isLogin} from '@/api/usermanagement';
+import {history} from "@@/core/history";
+
 
 export const useEmployeeManagement = (currentUserId: string) => {
   const actionRef = useRef<ActionType>();
@@ -21,11 +24,17 @@ export const useEmployeeManagement = (currentUserId: string) => {
     selectedRowsState: [] as EmployeeInfoAddOrUpdateRequest[],
     employeeList: [] as EmployeeSimpleInfoResponse[],
   });
+  const { location } = history;
+
 
   useEffect(() => {
     // Fetch all employees when the component is mounted
     const fetchAllEmployees = async () => {
       try {
+        const loginCheck = await isLogin();
+        if (!loginCheck) {
+          history.push('/user/login');
+        }
         const employeeList = await queryAllEmployeeSimpleInfo();
         setState((prevState) => ({
           ...prevState,
@@ -49,6 +58,10 @@ export const useEmployeeManagement = (currentUserId: string) => {
   const handleAdd = async (fields: EmployeeInfoAddOrUpdateRequest) => {
     const hide = message.loading('正在添加');
     try {
+      const loginCheck = await isLogin();
+      if (!loginCheck) {
+        history.push('/user/login');
+      }
       await addEmployee(fields);
       hide();
       message.success('添加成功');
@@ -62,6 +75,10 @@ export const useEmployeeManagement = (currentUserId: string) => {
   };
 
   const handleUpdate = async (formData: Partial<EmployeeInfoAddOrUpdateRequest>) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     const hide = message.loading('正在更新');
     try {
       const fullData: EmployeeInfoAddOrUpdateRequest = {
@@ -81,6 +98,10 @@ export const useEmployeeManagement = (currentUserId: string) => {
   };
 
   const fetchUsers = async () => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       return await getUsers(currentUserId);
     } catch (error) {
@@ -90,6 +111,10 @@ export const useEmployeeManagement = (currentUserId: string) => {
   };
 
   const handleSyncAll = async () => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     const hide = message.loading('正在同步钉钉员工信息');
     try {
       await syncDingtalkEmployeeInfo();
@@ -103,6 +128,10 @@ export const useEmployeeManagement = (currentUserId: string) => {
   };
 
   const handleSyncSingle = async (userId: string) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     const hide = message.loading('正在同步单个钉钉员工信息');
     try {
       await syncDingtalkSingleEmployeeInfo(userId);

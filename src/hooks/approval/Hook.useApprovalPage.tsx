@@ -8,7 +8,7 @@ import {
 } from '@/api/apporvalsystem';
 import {
   EmployeeSimpleInfoResponse,
-  fetchOssStsAccessInfo,
+  fetchOssStsAccessInfo, isLogin,
   queryAllEmployeeSimpleInfo,
 } from '@/api/usermanagement';
 import {
@@ -21,6 +21,7 @@ import OSS from 'ali-oss';
 import { message } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import {history} from "@@/core/history";
 
 export const useApprovalPage = (userId: string) => {
   const actionRef = useRef<ActionType>();
@@ -40,6 +41,10 @@ export const useApprovalPage = (userId: string) => {
 
   useEffect(() => {
     const fetchEmployees = async () => {
+      const loginCheck = await isLogin();
+      if (!loginCheck) {
+        history.push('/user/login');
+      }
       try {
         const employeeList = await queryAllEmployeeSimpleInfo();
         setState((prevState) => ({
@@ -81,6 +86,10 @@ export const useApprovalPage = (userId: string) => {
   }, [userId]);
 
   const handleApprovalChange = async (record: ApprovalInfoVO, value: number) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       console.log(record);
       const success = await updateApprovalDecision({ id: record.id, isAgree: value === 1 });
@@ -108,6 +117,10 @@ export const useApprovalPage = (userId: string) => {
   };
 
   const handleUpdateComment = async (record: ApprovalInfoVO, value: string) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       console.log(record);
       const success = await updateComment({ id: record.id, comment: value });
@@ -155,6 +168,10 @@ export const useApprovalPage = (userId: string) => {
 
   // 上传文件到OSS
   const uploadToOSS = async (file: File) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       setState((prevState) => ({
         ...prevState,
@@ -174,6 +191,10 @@ export const useApprovalPage = (userId: string) => {
   };
 
   const downloadFromOSS = async (fileUrl: string) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       // 通过文件URL直接下载
       const response = await fetch(fileUrl);
@@ -190,6 +211,10 @@ export const useApprovalPage = (userId: string) => {
   };
 
   const handleFileUpload = async (file: File, recordId?: number) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       const fileUrl = await uploadToOSS(file); // 使用OSS进行上传
       const response = await uploadFile({ id: recordId, fileUrl } as UplodaFileUrlRequest);
@@ -219,6 +244,10 @@ export const useApprovalPage = (userId: string) => {
   };
 
   const handleAddApproval = async (data: AddApprovalInfoRequest) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      history.push('/user/login');
+    }
     try {
       const success = await addApproval(data);
       if (success) {
