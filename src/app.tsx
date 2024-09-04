@@ -23,15 +23,22 @@ export async function getInitialState(): Promise<{
   const { location } = history;
   const currentUser = localStorage.getItem('currentUser');
 
-  console.log('here1');
-  if (!currentUser) {
-    history.push(loginPath);
-  } else if (currentUser) {
+  if (currentUser) {
     return {
       settings: defaultSettings as Partial<LayoutSettings>,
       currentUser: JSON.parse(currentUser),
     };
   }
+
+  // console.log('here1');
+  // if (!currentUser) {
+  //   history.push(loginPath);
+  // } else if (currentUser) {
+  //   return {
+  //     settings: defaultSettings as Partial<LayoutSettings>,
+  //     currentUser: JSON.parse(currentUser),
+  //   };
+  // }
 
   if (location.pathname !== loginPath) {
     return {
