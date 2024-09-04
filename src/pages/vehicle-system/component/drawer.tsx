@@ -99,6 +99,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
     setSelectedRecordId(expanded ? record.id : null); // 保存当前展开行的ID
     setSelectedImages(record.vehicleImageUrls || []); // 保存当前展开行的图片
     setEditingKey(expanded ? record.id : null); // 设置是否编辑
+    form.resetFields(['dateRange']);
 
     if (expanded) {
       form.setFieldsValue({
@@ -172,8 +173,8 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         userId: vehicleInfo?.responsiblePersonId || 0,
         userName: vehicleInfo?.responsiblePersonName || '',
         id: selectedRecordId || 0,
-        startMileage: values.startMileage,
-        endMileage: values.endMileage,
+        startMileage: Number(values.startMileage),
+        endMileage: Number(values.endMileage),
         usageStatus: values.usageStatus,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
@@ -198,8 +199,8 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         userId: vehicleInfo?.responsiblePersonId || 0,
         userName: vehicleInfo?.responsiblePersonName || '',
         id: selectedRecordId || 0,
-        startMileage: values.startMileage,
-        endMileage: values.endMileage,
+        startMileage: Number(values.startMileage),
+        endMileage: Number(values.endMileage),
         usageStatus: values.usageStatus,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
@@ -267,14 +268,14 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       dataIndex: 'startMileage',
       key: 'startMileage',
       render: (text: string, record: VehicleUsageInfo) =>
-        `${record.startMileage}/${record.endMileage}`,
+        `${record.startMileage}/${_.isUndefined(record.endMileage) ? ' - ' : record.endMileage}`,
     },
     {
       title: '使用情况',
       dataIndex: 'usageStatus',
       key: 'usageStatus',
       render: (status: number) => (
-        <Badge status={status === 0 ? 'success' : 'error'} text={status === 0 ? '正常' : '异常'} />
+        <Badge status={status === 0 || _.isUndefined(status) ? 'success' : 'error'} text={status === 0 ? '正常' : '异常'} />
       ),
     },
   ];
@@ -332,7 +333,15 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         title={() => (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '15px', fontWeight: 'bold' }}>使用历史</span>
-            <RangePicker style={{ marginBottom: 20 }} onChange={handleDateFilter} format="MM-DD" />
+              <Form form={form}>
+                <Form.Item name="dateRange">
+                  <RangePicker
+                    style={{ marginBottom: 20 }}
+                    onChange={handleDateFilter}
+                    format="MM-DD"
+                  />
+                </Form.Item>
+            </Form>
           </div>
         )}
         expandable={{

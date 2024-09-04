@@ -52,20 +52,20 @@ export default [
   },
   {
     name: 'list.table-list',
-    icon: 'table',
+    icon: 'user',
     path: '/list',
     component: './TableList',
   },
   {
     path: '/approval',
     name: 'approval.table-list',
-    icon: 'table',
+    icon: 'book',
     component: './ApprovalSystem',
   },
   {
     path: '/vehicle',
     name: 'vehicle.table-list',
-    icon: 'table',
+    icon: 'car',
     routes: [
       {
         path: '/vehicle/vehicle-management',

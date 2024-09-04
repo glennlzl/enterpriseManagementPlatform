@@ -96,8 +96,15 @@ const TableList: React.FC = () => {
         >
           <FormattedMessage id="编辑" />
         </a>,
-        record.isUpdated && record.role >= 1 ? (
-          <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="当前人员信息已被管理员编辑过，如需同步所有人员最新钉钉信息，请点击按钮" />}>
+        record.isUpdated && typeof record.role !== 'undefined' && record.role >= 1 ? (
+          <Tooltip
+            title={
+              <FormattedMessage
+                id="点击同步钉钉"
+                defaultMessage="当前人员信息已被管理员编辑过，如需同步所有人员最新钉钉信息，请点击按钮"
+              />
+            }
+          >
             <a
               key="sync"
               onClick={() => handleSyncSingle(record.userId)}

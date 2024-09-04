@@ -226,11 +226,11 @@ const ApprovalSystem: React.FC = () => {
                 拒绝
               </Button>
               <Button
-                type="link"
+                type="default"
                 onClick={() => showModal(record)} // 点击打开评论输入框
                 style={{ marginLeft: 8 }}
                 >
-                添加评论
+                添加批示
               </Button>
             </div>
           ) : null
