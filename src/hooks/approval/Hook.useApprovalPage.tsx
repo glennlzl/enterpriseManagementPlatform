@@ -41,11 +41,11 @@ export const useApprovalPage = (userId: string) => {
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      const loginCheck = await isLogin();
-      if (!loginCheck) {
-        message.error('请重新登录');
-        history.push('/user/login');
-      }
+      // const loginCheck = await isLogin();
+      // if (!loginCheck) {
+      //   message.error('请重新登录');
+      //   history.push('/user/login');
+      // }
       try {
         const employeeList = await queryAllEmployeeSimpleInfo();
         setState((prevState) => ({

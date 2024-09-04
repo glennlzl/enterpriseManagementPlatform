@@ -31,11 +31,11 @@ export const useEmployeeManagement = (currentUserId: string) => {
     // Fetch all employees when the component is mounted
     const fetchAllEmployees = async () => {
       try {
-        const loginCheck = await isLogin();
-        if (!loginCheck) {
-          message.error('请重新登录');
-          history.push('/user/login');
-        }
+        // const loginCheck = await isLogin();
+        // if (!loginCheck) {
+        //   message.error('请重新登录');
+        //   history.push('/user/login');
+        // }
         const employeeList = await queryAllEmployeeSimpleInfo();
         setState((prevState) => ({
           ...prevState,

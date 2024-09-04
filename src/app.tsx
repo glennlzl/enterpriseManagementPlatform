@@ -1,5 +1,5 @@
 import { AvatarDropdown, AvatarName } from '@/components';
-import {EmployeeInfo, getUser, isLogin} from '@/api/usermanagement';
+import {EmployeeInfo, getUser} from '@/api/usermanagement';
 import { LinkOutlined } from '@ant-design/icons';
 import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
