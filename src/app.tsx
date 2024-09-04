@@ -23,7 +23,7 @@ export async function getInitialState(): Promise<{
   // 尝试从 localStorage 中获取用户信息
   const currentUser = localStorage.getItem('currentUser');
 
-  if (!await isLogin() && !currentUser) {
+  if (!currentUser) {
     history.push(loginPath);
   } else if (currentUser) {
     return {
