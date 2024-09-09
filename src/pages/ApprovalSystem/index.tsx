@@ -1,6 +1,6 @@
 import { useApprovalPage } from '@/hooks/approval/Hook.useApprovalPage';
 import { AddApprovalInfoRequest, ApprovalInfoVO } from '@/model/approvalsystem';
-import { useModel } from '@@/exports';
+import {useModel, useParams} from '@@/exports';
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
@@ -11,9 +11,13 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, Input, Modal, Tabs, Tooltip, Upload} from 'antd';
+import {Button, DatePicker, Input, message, Modal, Switch, Tabs, Tooltip, Upload} from 'antd';
 import React, { useState } from 'react';
 import _ from 'lodash';
+import { DateTime } from 'luxon';
+const { RangePicker } = DatePicker;
+import { CopyOutlined } from '@ant-design/icons';
+import { GENERAL_CLIENT_API_BASE_URL} from "@/api/usermanagement";
 
 const { TabPane } = Tabs;
 
@@ -23,13 +27,14 @@ export const approvalStatusConfig = {
   2: { text: '已拒绝', status: 'Error' },
 };
 
-const approvalTypeConfig = {
+export const approvalTypeConfig = {
   1: { text: '工程' },
   2: { text: '采购' },
   default: { text: '其他' }, // 处理任何其他数字或值
 };
 
 const ApprovalSystem: React.FC = () => {
+  const { id } = useParams(); // 使用 useParams 获取 id
   const { initialState } = useModel('@@initialState');
   // 检查用户是否已登录，如果未登录，返回 null 或者空组件
   if (!initialState?.currentUser) {
@@ -37,6 +42,10 @@ const ApprovalSystem: React.FC = () => {
   }
 
   const [currentRecord, setCurrentRecord] = useState<ApprovalInfoVO | null>(null); // 用于存储当前操作的记录
+  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
+  const [selectedRowKeysV2, setSelectedRowKeysV2] = useState<number[]>([]);
+  const [fileName, setFileName] = useState(''); // 用于保存文件名
+  const [showAll, setShowAll] = useState(false);
 
   const {
     state,
@@ -48,6 +57,7 @@ const ApprovalSystem: React.FC = () => {
     actionRef,
     uploadToOSS,
     handleUpdateComment,
+    exportToCSV
   } = useApprovalPage(initialState.currentUser?.id || '');
   const intl = useIntl();
   const [uploadedFileUrl, setUploadedFileUrl] = useState('');
@@ -71,6 +81,29 @@ const ApprovalSystem: React.FC = () => {
     'value'
   );
 
+  // 复制文本的函数
+  const handleCopy = (record: any) => {
+    navigator.clipboard.writeText(`${GENERAL_CLIENT_API_BASE_URL}/approval/id/${record.id}`).then(
+      () => {
+        message.success('复制成功！');
+      },
+      () => {
+        message.error('复制失败，请重试');
+      }
+    );
+  };
+
+  const handleDataSource = (dataSource: ApprovalInfoVO[]) => {
+    const target = _.filter(dataSource, (item) => Number(item.id) ===  Number(id))
+    console.log(target);
+    if (_.isUndefined(id) || _.isEmpty(target) || _.isEqual(showAll, true)) {
+      return dataSource;
+    }
+
+    return target;
+  };
+
+
   const showModal = (record) => {
     setCurrentRecord(record);
     setComment(record.comment || '');  // 如果没有评论，默认设置为空字符串
@@ -93,17 +126,20 @@ const ApprovalSystem: React.FC = () => {
 
       // 使用正则表达式或字符串处理去掉 uuid + '_'
       const trimmedFileName = rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''); // 去掉 uuid 和下划线部分
+      const decodedFileName = decodeURIComponent(trimmedFileName); // 解码文件名
 
-      if(trimmedFileName.length > 20) {
+      if(decodedFileName.length > 20) {
         // 只显示前 20 个字符，并加上省略号
-        fileName = trimmedFileName.slice(0, 20) + '...';
+        fileName = decodedFileName.slice(0, 20) + '...';
       } else {
-        fileName = trimmedFileName
+        fileName = decodedFileName
       }
     }
 
+    console.log(fileName);
+
     return record.approvalFileUrl ? (
-      <Tooltip title={record.approvalFileUrl.replace(prefix, '').replace(/^[a-zA-Z0-9-]+_/, '')}>
+      <Tooltip title={decodeURIComponent(record.approvalFileUrl.replace(prefix, '').replace(/^[a-zA-Z0-9-]+_/, ''))}>
         <a
           href="#"
           onClick={async (e) => {
@@ -133,6 +169,7 @@ const ApprovalSystem: React.FC = () => {
       filters: initiator,
       onFilter: (value, record) => record.approvalReceiverName === value,
       filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: <FormattedMessage id="审批接收人" />,
@@ -141,6 +178,7 @@ const ApprovalSystem: React.FC = () => {
       filters: receiver,
       onFilter: (value, record) => record.approvalReceiverName === value,
       filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: <FormattedMessage id="审批类型" />,
@@ -150,10 +188,12 @@ const ApprovalSystem: React.FC = () => {
       filters: fileType,
       onFilter: (value, record) => record.approvalType === value,
       filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
-      title: '文件链接',
+      title: <FormattedMessage id="文件链接" />,
       dataIndex: 'approvalFileUrl',
+      valueType: 'text',
       key: 'approvalFileUrl',
       width: '150px',
       render: renderApprovalFileLink,
@@ -161,46 +201,81 @@ const ApprovalSystem: React.FC = () => {
     {
       title: <FormattedMessage id="创建时间" />,
       dataIndex: 'createTime',
-      valueType: 'dateTime',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <RangePicker
+            onChange={(dates) => {
+              if (dates) {
+                // 设置选择的日期范围
+                const start = dates[0].toISOString();
+                const end = dates[1].toISOString();
+                setSelectedKeys([start, end]); // 将选择的值传递
+              } else {
+                setSelectedKeys([]); // 清空选择
+              }
+            }}
+            style={{ width: 188, marginBottom: 8, display: 'block' }}
+          />
+          <Button
+            type="primary"
+            onClick={() => confirm()} // 应用筛选
+            size="small"
+            style={{ width: 90 }}
+          >
+            确定
+          </Button>
+          <Button
+            onClick={() => {
+              clearFilters();
+              confirm();
+            }} // 清除筛选
+            size="small"
+            style={{ width: 90, marginLeft: 8 }}
+          >
+            重置
+          </Button>
+        </div>
+      ),
+      onFilter: (value, record) => {
+        const [startTime, endTime] = value;
+        // 使用 Luxon 进行日期比较
+        const recordTime = DateTime.fromISO(record.createTime);
+        const isWithinRange = recordTime >= DateTime.fromISO(startTime) && recordTime <= DateTime.fromISO(endTime);
+        return isWithinRange;
+      },
+      render: (text) => DateTime.fromISO(text).toFormat('yyyy-MM-dd HH:mm:ss'), // 格式化显示
     },
     {
       title: <FormattedMessage id="更新时间" />,
       dataIndex: 'updateTime',
-      valueType: 'dateTime',
+      valueType: 'dateTimeRange',
+      search: {
+        transform: (value) => ({
+          startUpdateTime: DateTime.fromJSDate(value[0].toJSDate()).toFormat('yyyy-MM-dd HH:mm:ss'),
+          endUpdateTime: DateTime.fromJSDate(value[1].toJSDate()).toFormat('yyyy-MM-dd HH:mm:ss'),
+        }),
+      },
+      render: (text) => {
+        return DateTime.fromISO(text).toFormat('yyyy-MM-dd HH:mm:ss'); // 解析并格式化显示
+      },
     },
     {
       title: '审批状态',
       dataIndex: 'approvalStatus',
       valueType: 'select',
       valueEnum: approvalStatusConfig,
+      filters: Object.keys(approvalStatusConfig).map(key => ({
+        text: approvalStatusConfig[key].text,
+        value: key,
+      })),
+      onFilter: (value, record) => record.approvalStatus === parseInt(value, 10), // 将值与状态进行比较
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: '批示',
       dataIndex: 'comment',
       valueType: 'text',
     },
-    // {
-    //   title: '评论',
-    //   dataIndex: 'comment',
-    //   valueEnum: approvalStatusConfig,
-    //   render: (_, record) => {
-    //     const isApproved = record?.approvalStatus === 1; // 已批准
-    //     const isRejected = record?.approvalStatus === 2; // 已拒绝
-    //     return (
-    //       (!isApproved && !isRejected) ? (<Input
-    //         placeholder="输入评论"
-    //         defaultValue={record.comment} // 如果有默认值，可以设置
-    //         onBlur={async (e) => {
-    //           const comment = e.target.value;
-    //           if (comment !== record.comment) {
-    //             // 仅在评论发生变化时更新
-    //             await handleUpdateComment(record, comment);
-    //           }
-    //         }}
-    //       />) : (<span>{record.comment}</span>)
-    //     );
-    //   },
-    // },
     {
       title: '操作',
       dataIndex: 'approvalStatus',
@@ -239,7 +314,6 @@ const ApprovalSystem: React.FC = () => {
     },
   ];
 
-  console.log(currentRecord);
   const columns: ProColumns<ApprovalInfoVO>[] = [
     {
       title: <FormattedMessage id="审批发起人" />,
@@ -248,6 +322,7 @@ const ApprovalSystem: React.FC = () => {
       filters: initiatorToMe,
       onFilter: (value, record) => record.approvalInitiatorName === value,
       filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: <FormattedMessage id="审批接收人" />,
@@ -256,6 +331,7 @@ const ApprovalSystem: React.FC = () => {
       filters: receiverToMe,
       onFilter: (value, record) => record.approvalReceiverName === value,
       filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: <FormattedMessage id="审批类型" />,
@@ -265,6 +341,7 @@ const ApprovalSystem: React.FC = () => {
       filters: fileTypeToMe,
       onFilter: (value, record) => record.approvalType === value,
       filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: '文件链接',
@@ -288,6 +365,12 @@ const ApprovalSystem: React.FC = () => {
       dataIndex: 'approvalStatus',
       valueType: 'select',
       valueEnum: approvalStatusConfig,
+      filters: Object.keys(approvalStatusConfig).map(key => ({
+        text: approvalStatusConfig[key].text,
+        value: key,
+      })),
+      onFilter: (value, record) => record.approvalStatus === parseInt(value, 10), // 将值与状态进行比较
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: '批示',
@@ -313,26 +396,54 @@ const ApprovalSystem: React.FC = () => {
           >
             <Button icon={<UploadOutlined />} disabled={loading}>上传文件</Button>
           </Upload>
+
+          <Button
+            type="link"
+            icon={<CopyOutlined />}
+            onClick={() => handleCopy(record)}> {/* 将 handleCopy 改为函数引用 */}
+            一键复制链接
+          </Button>
         </div>
       ),
-    },
+    }
   ];
 
-  console.log(comment);
+  const handleBatchExport = (columns: ProColumns<ApprovalInfoVO>[], fileName: string, data: any, selectedRowKeys: any) => {
+    console.log(data);
+    const selectedData = data.filter((item) => selectedRowKeys.includes(item.id));
+    if (selectedData.length > 0) {
+      exportToCSV(selectedData, fileName, columns); // 传递 columns 作为参数
+    } else {
+      message.warning('请先选择要导出的行');
+    }
+  };
 
   return (
     <PageContainer>
-      <Tabs defaultActiveKey="1">
+      <Tabs defaultActiveKey={_.isUndefined(id) ? "1" : "2"}>
         <TabPane tab="我发起的" key="1">
           <ProTable<ApprovalInfoVO, API.PageParams>
-            headerTitle={intl.formatMessage({
-              id: '审批管理',
-              defaultMessage: '审批管理',
-            })}
+            headerTitle={
+              <div>
+                {intl.formatMessage({
+                  id: '审批管理',
+                  defaultMessage: '审批管理',
+                })}
+                {selectedRowKeys.length > 0 && (
+                  <Button onClick={() => handleBatchExport(columns, '我发起的审批', state.initiatorData, selectedRowKeys)} style={{ marginLeft: 16 }}>
+                    批量导出
+                  </Button>
+                )}
+              </div>
+            }
             actionRef={actionRef}
-            rowKey="key"
+            rowKey="id"
             search={false}
             cardBordered
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as number[]),
+            }}
             toolBarRender={() => [
               <Button
                 type="primary"
@@ -350,28 +461,34 @@ const ApprovalSystem: React.FC = () => {
         </TabPane>
         <TabPane tab="我受理的" key="2">
           <ProTable<ApprovalInfoVO, API.PageParams>
-            headerTitle={intl.formatMessage({
-              id: '审批管理',
-              defaultMessage: '审批管理',
-            })}
+            headerTitle={
+              <div>
+                {intl.formatMessage({
+                  id: '审批管理',
+                  defaultMessage: '审批管理',
+                })}
+                {selectedRowKeys.length > 0 && (
+                  <Button onClick={() => handleBatchExport(columns,'我受理的', state.initiatorData, selectedRowKeysV2)} style={{ marginLeft: 16 }}>
+                    批量导出
+                  </Button>
+                )}
+                {_.isEqual(showAll, false) && (
+                  <Button type="primary" onClick={() => setShowAll(true)} style={{ marginLeft: 16 }}>
+                    显示全部
+                  </Button>
+                )}
+              </div>
+            }
             actionRef={actionRef}
-            rowKey="key"
+            rowKey="id"
             search={false}
             cardBordered
-            toolBarRender={() => [
-              <Button
-                type="primary"
-                key="primary"
-                onClick={() => {
-                  handleModalOpen('createModalOpen', true)}
-              }
-              >
-                <PlusOutlined />{' '}
-                <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
-              </Button>,
-            ]}
+            rowSelection={{
+              selectedRowKeysV2,
+              onChange: (selectedKeys) => setSelectedRowKeysV2(selectedKeys as number[]),
+            }}
             loading={state.loadingReceiver} // Spinner for Receiver data
-            dataSource={state.receiverData} // Use fetched data
+            dataSource={handleDataSource(state.receiverData)} // Use fetched data
             columns={approvalColumns}
           />
         </TabPane>
@@ -405,7 +522,10 @@ const ApprovalSystem: React.FC = () => {
           destroyOnClose: true
         }}
         open={state.createModalOpen}
-        onOpenChange={(isOpen) => handleModalOpen('createModalOpen', isOpen)}
+        onOpenChange={(isOpen) => {
+          handleModalOpen('createModalOpen', isOpen);
+          setFileName(''); // 将文件名保存到fileName中
+        }}
         submitter={{
           submitButtonProps: {
             loading: state.isLoading,  // 控制加载状态
@@ -457,11 +577,13 @@ const ApprovalSystem: React.FC = () => {
           beforeUpload={async (file) => {
             const res = await uploadToOSS(file); // 上传文件到OSS并获取URL
             setUploadedFileUrl(res); // 将文件URL保存到uploadedFileUrl中
+            setFileName(file.name); // 将文件名保存到fileName中
             return false; // 阻止自动上传，使用自定义上传逻辑
           }}
         >
           <Button icon={<UploadOutlined />}>点击上传文件</Button>
         </Upload>
+        {fileName && <div style={{ marginTop: 16 }}>已上传文件: {fileName}</div>}
       </ModalForm>
     </PageContainer>
   );

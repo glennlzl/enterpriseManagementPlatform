@@ -66,7 +66,9 @@ export interface EmployeeInfoAddOrUpdateRequest {
   isIncumbent?: number;
 }
 // http://47.93.51.8/user/login
-export const GENERAL_API_BASE_URL = 'http://47.93.51.8:8081/api';
+export const GENERAL_API_BASE_URL = 'http://127.0.0.1:8081/api';
+export const GENERAL_CLIENT_API_BASE_URL = 'http://127.0.0.1:8002';
+
 export const API_BASE_URL = `${GENERAL_API_BASE_URL}`;
 
 export interface OssStsAccessInfo {

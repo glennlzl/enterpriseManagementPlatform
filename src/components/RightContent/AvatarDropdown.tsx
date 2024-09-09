@@ -47,6 +47,18 @@ export const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({ menu, childre
     const urlParams = new URL(window.location.href).searchParams;
     /** 此方法会跳转到 redirect 参数所在的位置 */
     const redirect = urlParams.get('redirect');
+
+    // 删除当前网页的 cookies
+    const domain = window.location.hostname;
+    document.cookie.split(";").forEach(cookie => {
+      const name = cookie.split("=")[0].trim();
+      console.log(cookie);
+      // 删除当前路径的 cookie
+      document.cookie = `${name}=;expires=${new Date(0).toUTCString()};path=/;domain=${domain}`;
+      // 如果你有子路径的 cookies，也可以这样删除
+      document.cookie = `${name}=;expires=${new Date(0).toUTCString()};path=/`;
+    });
+
     // Note: There may be security issues, please note
     if (window.location.pathname !== '/user/login' && !redirect) {
       history.replace({

@@ -53,7 +53,7 @@ export const useVehicleSystem = (userId: number) => {
 
       const response = await queryVehicleInfoList({
         userId,
-        pageSize: 10,
+        pageSize: 100,
         pageNum: 1,
         isWarning: isWarning,
         generalQueryCondition: generalQueryConditionV2, // 只在不为空时传递
@@ -243,6 +243,7 @@ export const useVehicleSystem = (userId: number) => {
   // 导出CSV函数
   const exportToCSV = (data: any[], filename: string, columns: ProColumns<VehicleInfo>[]) => {
     const filteredColumns = columns.slice(0, -1);
+    console.log(columns);
 
     // 获取表头
     const headers = filteredColumns.map(col => {
@@ -254,7 +255,6 @@ export const useVehicleSystem = (userId: number) => {
       }
       return '';
     }).join(',');
-    console.log(headers);
     // 将数据转换为 CSV 格式
     const csvContent = data.map(item =>
       filteredColumns.map(col => {

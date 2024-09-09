@@ -61,6 +61,16 @@ export default [
     name: 'approval.table-list',
     icon: 'book',
     component: './ApprovalSystem',
+    routes: [
+      {
+        path: '/approval',
+        component: './ApprovalSystem', // 主审批页面
+      },
+      {
+        path: '/approval/id/:id', // 子路由，带参数
+        component: './ApprovalSystem', // 具体的审批详情页面
+      },
+    ],
   },
   {
     path: '/vehicle',

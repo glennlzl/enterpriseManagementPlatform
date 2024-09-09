@@ -11,6 +11,7 @@ import { useModel } from '@@/exports';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
+  ActionType,
   ModalForm,
   PageContainer,
   ProFormSelect,
@@ -21,7 +22,7 @@ import {ProFormDatePicker, ProFormDigit, ProFormGroup} from '@ant-design/pro-for
 import { FormattedMessage, useIntl } from '@umijs/max';
 import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip} from 'antd';
 import _ from 'lodash';
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import { DateTime } from 'luxon';
 import {css} from "antd-style";
 const VehicleManagement: React.FC = () => {
@@ -30,6 +31,12 @@ const VehicleManagement: React.FC = () => {
   if (!initialState?.currentUser) {
     return null; // 或者返回一个 loading 状态，或者重定向到登录页面
   }
+  const [isAdding, setIsAdding] = useState(false); // 控制新记录的展开
+  const [showMore, setShowMore] = useState(false);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
+  const [editingKey, setEditingKey] = useState<number | null>(null); // 用于控制是否处于编辑模式
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const [form] = Form.useForm();
 
   const {
     vehicleList,
@@ -63,6 +70,10 @@ const VehicleManagement: React.FC = () => {
   const [employeeOptions, setEmployeeOptions] = useState<
     { label: string; value: number; name: string, mobile: string }[]
   >([]);
+
+
+  const nameOptions = _.uniqBy(vehicleList.map(item => ({ text: item.responsiblePersonName, value: item.responsiblePersonName })), 'value');
+  const registantNameOptions = _.uniqBy(vehicleList.map(item => ({ text: item.registrant, value: item.registrant })), 'value');
 
   const [vehicleTypeOptions, setVehicleTypeOptions] = useState<{ label: string; value: string }[]>(
     [],
@@ -198,8 +209,11 @@ const VehicleManagement: React.FC = () => {
       title: <FormattedMessage id="登记人" />,
       dataIndex: 'registrant',
       valueType: 'text',
-      onFilter: (value, record) => record.registrant.includes(value as string),
+      filters: registantNameOptions,
+      onFilter: (value, record) => record.registrant === value,
       width: '120px',
+      filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: <FormattedMessage id="购车日期" />,
@@ -296,6 +310,10 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'responsiblePersonName',
       valueType: 'text',
       width: '120px',
+      filters: nameOptions,
+      onFilter: (value, record) => record.responsiblePersonName === value,
+      filterSearch: true,
+      filterMode: 'menu', // 立即应用模式
     },
     {
       title: <FormattedMessage id="负责人联系电话" />,
@@ -324,11 +342,18 @@ const VehicleManagement: React.FC = () => {
       width: 200,
       render: (_, record) => (
         <Space>
-          <a onClick={() => handleModalOpen('drawerVisible', true, record)}>详情</a>
+          <a onClick={() => {
+            handleModalOpen('drawerVisible', true, record);
+            setExpandedRowKeys([]);
+            setIsAdding(false);
+            setShowMore(false);
+            // setEditingKey([]);
+            form.resetFields();
+          }}>详情</a>
           <a onClick={() => handleModalOpen('editModalOpen', true, record)}>编辑</a>
-          {initialState.currentUser?.role > 1 && (
+          {(initialState.currentUser?.role > 1 && record.isDeprecated) ? (
             <a onClick={() => handleDeleteVehicle(record.id)}>删除</a>
-          )}
+          ) : <></>}
           {record.isDeprecated ? (
             <a onClick={() => handleRestoreVehicle(record.id)}>恢复</a>
           ) : (
@@ -347,6 +372,8 @@ const VehicleManagement: React.FC = () => {
       message.warning('请先选择要导出的车辆信息');
     }
   };
+
+  console.log(selectedRowKeys);
 
   return (
     <PageContainer breadcrumbRender={false}>
@@ -423,11 +450,26 @@ const VehicleManagement: React.FC = () => {
         dataSource={vehicleList}
         columns={columns.map((col) => ({
           ...col,
-          onCell: (record) => ({
-            style: {
-              backgroundColor: isWarning && record.warningLevel >= 3 ? '#ffcccc' : '',
-            },
-          }),
+          onCell: (record) => {
+            // 这里你可以添加多个条件
+            let backgroundColor = '';
+
+            // 如果 warningLevel >= 3 并且 isWarning 为 true，背景设置为红色
+            if (isWarning && record.warningLevel >= 3) {
+              backgroundColor = '#ffcccc';
+            }
+
+            // 如果满足其他条件，背景设置为灰色
+            else if (record.isDeprecated) {
+              backgroundColor = '#cccccc'; // 灰色
+            }
+
+            return {
+              style: {
+                backgroundColor,
+              },
+            };
+          },
         }))}
       />
 
@@ -438,6 +480,17 @@ const VehicleManagement: React.FC = () => {
         vehicleInfo={currentVehicle!}
         usageInfoList={usageInfoList}
         loading={loading}
+        isAdding={isAdding}
+        setIsAdding={setIsAdding}
+        expandedRowKeys={expandedRowKeys}
+        setExpandedRowKeys={setExpandedRowKeys}
+        editingKey={editingKey}
+        setEditingKey={setEditingKey}
+        showMore={showMore}
+        setShowMore={setShowMore}
+        form={form}
+        employeeOptions={employeeOptions}
+        refreshCurrentInfo={() => fetchVehicleList(isWarning)}
       />
 
       {/* 新增车辆 Modal */}

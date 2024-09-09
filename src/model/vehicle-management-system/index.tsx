@@ -87,6 +87,7 @@ export interface VehicleType {
   vehicleSerialNumber: string;
   vehicleBrand: string;
   approvedLoadCapacity?: string;
+  maintenanceInterval: number;
 }
 
 export interface VehicleUsageInfo {

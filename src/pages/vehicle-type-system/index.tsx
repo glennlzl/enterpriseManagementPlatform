@@ -106,6 +106,11 @@ const VehicleTypeManagement: React.FC = () => {
       filterSearch: true,
     },
     {
+      title: '保养里程',
+      dataIndex: 'maintenanceInterval',
+      key: 'maintenanceInterval',
+    },
+    {
       title: '操作',
       valueType: 'option',
       key: 'option',

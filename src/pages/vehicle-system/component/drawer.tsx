@@ -30,6 +30,7 @@ import moment, { Moment } from 'moment';
 import React, { useEffect, useState } from 'react';
 import {useModel} from "@@/exports";
 import { DateTime } from 'luxon';
+import {ProFormSelect} from "@ant-design/pro-components";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -50,17 +51,22 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                                                        vehicleInfo,
                                                        usageInfoList,
                                                        loading,
-                                                     }) => {
+                                                       isAdding,
+                                                       setIsAdding,
+                                                       expandedRowKeys,
+                                                       setExpandedRowKeys,
+                                                       editingKey,
+                                                       setEditingKey,
+                                                       showMore,
+                                                       setShowMore,
+                                                       form,
+                                                       employeeOptions,
+                                                       refreshCurrentInfo}) => {
   const { initialState } = useModel('@@initialState');
-  const [showMore, setShowMore] = useState(false);
   const [filteredUsageList, setFilteredUsageList] = useState<VehicleUsageInfo[]>(usageInfoList);
-  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
-  const [isAdding, setIsAdding] = useState(false); // 控制新记录的展开
-  const [form] = Form.useForm();
   const [fileList, setFileList] = useState<any[]>([]); // 用于存储文件列表
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null); // 保存展开行的
   const [selectedImages, setSelectedImages] = useState<string[]>([]); // 保存展开行的图片
-  const [editingKey, setEditingKey] = useState<number | null>(null); // 用于控制是否处于编辑模式
   const [editing, setEditing] = useState(false);
   const isAdmin = initialState?.currentUser?.role >= 2;
   const [thisLoading, setLoading] = useState(false);
@@ -94,13 +100,16 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
     }
   };
 
-  const handleExpand = (expanded: boolean, record: VehicleUsageInfo) => {
-    setExpandedRowKeys(expanded ? [record.id] : []);
-    setSelectedRecordId(expanded ? record.id : null); // 保存当前展开行的ID
-    setSelectedImages(record.vehicleImageUrls || []); // 保存当前展开行的图片
-    setEditingKey(expanded ? record.id : null); // 设置是否编辑
-    form.resetFields(['dateRange']);
+  const handleExpand = (expanded: boolean, record: any) => {
+    setExpandedRowKeys((prevKeys) => {
+      if (expanded) {
+        return [...prevKeys, record.id];
+      } else {
+        return prevKeys.filter((key) => key !== record.id);
+      }
+    });
 
+    // 仅当展开时更新对应行的信息
     if (expanded) {
       form.setFieldsValue({
         startMileage: record.startMileage,
@@ -108,13 +117,13 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         usageStatus: record.usageStatus,
         vehicleImageUrls: record.vehicleImageUrls,
         extend: record.extend,
-        recordTime: record.recordTime, // 新增的字段
+        recordTime: record.recordTime,
       });
 
       setFileList(
         record.vehicleImageUrls?.map((url, index) => ({
           uid: index.toString(),
-          name: Image-`${index + 1}`,
+          name: `Image-${index + 1}`,
           status: 'done',
           url: url,
         })) || [],
@@ -147,11 +156,8 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
 
       setFileList((prevList) => [...prevList, imageUrl]);
 
-      console.log(imageUrl);
-
       // 获取当前的 vehicleImageUrls 并确保它是一个数组
       const currentUrls = form.getFieldValue('vehicleImageUrls');
-      console.log(currentUrls)
       form.setFieldsValue({
         vehicleImageUrls: _.isUndefined(currentUrls) ? [...currentUrls, imageUrl] : [imageUrl],
       });
@@ -166,14 +172,18 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   };
 
   const handleUpdate = async () => {
+    console.log('sdfsdf');
     const values = await form.validateFields();
+    console.log(values);
+    const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
+    await refreshCurrentInfo();
     try {
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
-        userId: vehicleInfo?.responsiblePersonId || 0,
-        userName: vehicleInfo?.responsiblePersonName || '',
+        userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
+        userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
         id: selectedRecordId || 0,
-        startMileage: Number(values.startMileage),
+        startMileage: vehicleInfo?.currentMileage || 0,
         endMileage: Number(values.endMileage),
         usageStatus: values.usageStatus,
         vehicleImageUrls: selectedImages,
@@ -182,7 +192,6 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       };
       await updateVehicleUsageInfo(payload);
       message.success('车辆使用信息更新成功');
-      setIsAdding(false);
       setEditingKey(null); // 退出编辑模式
       setEditing(false);
       await refreshUsageInfoList(); // 更新数据
@@ -193,13 +202,14 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
 
   const handleAdd = async () => {
     const values = await form.validateFields();
+    const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
+    await refreshCurrentInfo();
     try {
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
-        userId: vehicleInfo?.responsiblePersonId || 0,
-        userName: vehicleInfo?.responsiblePersonName || '',
-        id: selectedRecordId || 0,
-        startMileage: Number(values.startMileage),
+        userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
+        userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
+        startMileage: vehicleInfo?.currentMileage || 0,
         endMileage: Number(values.endMileage),
         usageStatus: values.usageStatus,
         vehicleImageUrls: selectedImages,
@@ -215,11 +225,13 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (record: any) => {
     try {
-      await deleteVehicleUsageInfo(id);
+      await deleteVehicleUsageInfo(record.id);
+      setEditingKey(record.id); // 只设置当前行为编辑状态
+      await refreshCurrentInfo();
       message.success('车辆使用信息删除成功');
-      setFilteredUsageList(filteredUsageList.filter((item) => item.id !== id));
+      setFilteredUsageList(filteredUsageList.filter((item) => item.id !== record.id));
       await refreshUsageInfoList(); // 更新数据
     } catch (error) {
       message.error(error);
@@ -242,14 +254,13 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
     }
   };
 
-  const handleEdit = () => {
-    setEditingKey(selectedRecordId);
-    setEditing(true);
+  const handleEdit = (record: any) => {
+    console.log(record);
+    setEditingKey(record.id); // 只设置当前行为编辑状态
   };
 
   const handleCancelEdit = () => {
     setEditingKey(null);
-    setEditing(false);
   };
 
   const columns = [
@@ -279,6 +290,8 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       ),
     },
   ];
+
+  console.log(showMore);
 
   return (
     <Drawer title="车辆详情" width={640} placement="right" onClose={onClose} visible={visible}>
@@ -348,21 +361,29 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
           expandedRowRender: (record) => {
             return (
               <div style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-                {(editing && (isAdmin || !compareDateWithToday(record.recordTime))) ? (
+                {(editingKey === record.id && (isAdmin || !compareDateWithToday(record.recordTime))) ? (
                   <Form layout="vertical" form={form} onFinish={handleUpdate}>
-                    <Form.Item label="开始里程数" name="startMileage">
-                      <Input type="number" placeholder="请输入开始里程数" />
-                    </Form.Item>
+                    {
+                      isAdmin && <ProFormSelect
+                        name="responsiblePersonId"
+                        label="负责人"
+                        options={employeeOptions}
+                        width="200px"
+                        initialValue={vehicleInfo?.responsiblePersonId} // 设置初始选中值
+                      />
+                    }
                     <Form.Item
                       label="结束里程数"
                       name="endMileage"
                       rules={[
-                        ({ getFieldValue }) => ({
+                        () => ({
                           validator(_, value) {
-                            if (!value || getFieldValue('startMileage') <= value) {
+                            const startMileage = Number(vehicleInfo?.currentMileage ?? 0);
+                            const endMileage = Number(value);
+                            if (!value || startMileage <= endMileage) {
                               return Promise.resolve();
                             }
-                            return Promise.reject(new Error('结束里程数必须大于等于开始里程数'));
+                            return Promise.reject(new Error('结束里程数必须大于等于当前里程数，当前里程数为 ' + startMileage + ' 公里'));
                           },
                         }),
                       ]}
@@ -431,16 +452,9 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                     </div>
                     <p><strong>备注信息: </strong>{record.extend}</p>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                      <Button type="default" onClick={handleEdit}>
-                        编辑
-                      </Button>
-                      <Button
-                        type="default"
-                        style={{ marginLeft: '8px' }}
-                        onClick={() => handleExpand(false, record)}
-                      >
-                        收起
-                      </Button>
+                      <Button type="default" onClick={() => handleEdit(record)}>编辑</Button>
+                      <Button type="default" style={{ marginLeft: '8px' }} onClick={() => handleExpand(false, record)}>收起</Button>
+                      {isAdmin || !compareDateWithToday(record.recordTime) ? <Button type="default" style={{ marginLeft: '8px' }} onClick={() => handleDelete(record)}>删除</Button> : null}
                     </div>
                   </div>
                 )}
@@ -480,31 +494,35 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         >
           <Form layout="vertical" form={form} onFinish={handleAdd}>
             <Form.Item
-              label="开始里程数"
-              name="startMileage"
-              rules={[{ required: true, message: '请输入开始里程数' }]}
-            >
-              <Input type="number" placeholder="请输入开始里程数" />
-            </Form.Item>
-            <Form.Item
               label="结束里程数"
               name="endMileage"
               rules={[
                 { message: '请输入结束里程数' },
-                ({ getFieldValue }) => ({
+                () => ({
                   validator(_, value) {
-                    const startMileage = Number(getFieldValue('startMileage'));
+                    const startMileage = Number(vehicleInfo?.currentMileage ?? 0);
                     const endMileage = Number(value);
                     if (!value || startMileage <= endMileage) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('结束里程数必须大于等于开始里程数'));
+                    return Promise.reject(new Error('结束里程数必须大于等于当前里程数，当前里程数为 ' + startMileage + ' 公里'));
                   },
                 }),
               ]}
             >
               <Input type="number" placeholder="请输入结束里程数" />
             </Form.Item>
+            {
+              isAdmin && <ProFormSelect
+                name="responsiblePersonId"
+                label="使用者"
+                options={employeeOptions}
+                fieldProps={{
+                  labelInValue: false, // 只显示label
+                }}
+                width="200px"
+              />
+            }
             {isAdmin && (
               <Form.Item label="使用情况" name="usageStatus">
                 <Select placeholder="请选择使用情况">

@@ -19,9 +19,12 @@ import {
 import type { ActionType } from '@ant-design/pro-components';
 import OSS from 'ali-oss';
 import { message } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {history} from "@@/core/history";
+import {ProColumns} from "@ant-design/pro-components";
+import {VehicleInfo} from "@/model/vehicle-management-system";
+import {approvalStatusConfig, approvalTypeConfig} from "@/pages/ApprovalSystem";
 
 export const useApprovalPage = (userId: string) => {
   const actionRef = useRef<ActionType>();
@@ -41,11 +44,11 @@ export const useApprovalPage = (userId: string) => {
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      // const loginCheck = await isLogin();
-      // if (!loginCheck) {
-      //   message.error('请重新登录');
-      //   history.push('/user/login');
-      // }
+      const loginCheck = await isLogin();
+      if (!loginCheck) {
+        message.error('请重新登录');
+        history.push('/user/login');
+      }
       try {
         const employeeList = await queryAllEmployeeSimpleInfo();
         setState((prevState) => ({
@@ -148,6 +151,63 @@ export const useApprovalPage = (userId: string) => {
     } catch (error) {
       message.error(error);
     }
+  };
+
+  // 导出CSV函数
+  const exportToCSV = (data: any[], filename: string, columns: ProColumns<ApprovalInfoVO>[]) => {
+    // 过滤掉 title 为 "操作" 的列
+    const filteredColumns = columns.filter(col => {
+      if (typeof col.title === 'string') {
+        return col.title !== '操作';
+      }
+      if (React.isValidElement(col.title) && col.title.props?.children) {
+        return col.title.props.children !== '操作';
+      }
+      return true;
+    });
+
+    // 获取表头
+    const headers = filteredColumns.map(col => {
+      if (typeof col.title === 'string') {
+        return col.title;
+      }
+      if (React.isValidElement(col.title) && typeof col.title.props?.id === 'string') {
+        return col.title.props.id;
+      }
+      if (React.isValidElement(col.title)) {
+        return col.title.props.children;
+      }
+      return '';
+    }).join(',');
+
+    // 将数据转换为 CSV 格式
+    const csvContent = data.map(item =>
+      filteredColumns.map(col => {
+        let value = item[col.dataIndex as keyof ApprovalInfoVO];
+
+        // 特别处理 approvalStatus 和 approvalType 字段
+        if (col.dataIndex === 'approvalStatus') {
+          value = approvalStatusConfig[value]?.text || value; // 获取审批状态文字
+        } else if (col.dataIndex === 'approvalType') {
+          value = approvalTypeConfig[value]?.text || value; // 获取审批类型文字
+        } else if (col.dataIndex === 'approvalFileUrl') {
+          value = item.approvalFileUrl;
+        }
+
+        return value !== undefined ? value : '';
+      }).join(',')
+    ).join('\n');
+
+    // 生成最终的 CSV 内容，包含表头
+    const csv = `${headers}\n${csvContent}`;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleModalOpen = (modalName: 'createModalOpen' | 'updateModalOpen' | 'commentModalOpen', isOpen: boolean) => {
@@ -292,5 +352,6 @@ export const useApprovalPage = (userId: string) => {
     actionRef,
     uploadToOSS,
     handleUpdateComment,
+    exportToCSV
   };
 };
