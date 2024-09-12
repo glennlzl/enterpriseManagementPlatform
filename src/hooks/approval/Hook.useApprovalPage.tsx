@@ -156,7 +156,7 @@ export const useApprovalPage = (userId: string) => {
   // 导出CSV函数
   const exportToCSV = (data: any[], filename: string, columns: ProColumns<ApprovalInfoVO>[]) => {
     // 过滤掉 title 为 "操作" 的列
-    const filteredColumns = columns.filter(col => {
+    const filteredColumns = columns.slice(0, -1).filter(col => {
       if (typeof col.title === 'string') {
         return col.title !== '操作';
       }
