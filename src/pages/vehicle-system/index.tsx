@@ -17,11 +17,11 @@ import {
   PageContainer,
   ProFormSelect,
   ProFormText,
-  ProTable,
+  ProTable, StepsForm,
 } from '@ant-design/pro-components';
 import { ProFormDatePicker, ProFormDigit, ProFormGroup } from '@ant-design/pro-form/lib';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import { Button, Space, Switch, message, Form, Input, Row, Col, Tooltip } from 'antd';
+import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip, Modal} from 'antd';
 import _ from 'lodash';
 import React, { useEffect, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
@@ -36,6 +36,8 @@ const VehicleManagement: React.FC = () => {
   const [showMore, setShowMore] = useState(false);
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
   const [editingKey, setEditingKey] = useState<number | null>(null); // 用于控制是否处于编辑模式
+  const [currentCreateStep, setCurrentCreateStep] = useState(0);
+  const [currentEditStep, setCurrentEditStep] = useState(0);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [form] = Form.useForm();
 
@@ -61,6 +63,8 @@ const VehicleManagement: React.FC = () => {
     fetchVehicleList,
     selectedRowKeys,
     handleRestoreVehicle,
+    setCreateModalOpen,
+    setEditModalOpen,
     filters,
   } = useVehicleSystem(initialState.currentUser?.id || '');
 
@@ -86,6 +90,21 @@ const VehicleManagement: React.FC = () => {
     setQueryParams(newQueryParams);
 
     actionRef.current?.reload();
+  };
+
+  const formatDate = (dateString: string) => {
+    // 如果日期字符串长度为10，表示格式为 'yyyy-MM-dd'
+    if (dateString.length === 10) {
+      return dateString; // 返回原始格式
+    }
+
+    // 如果日期字符串是 'YYYY-MM-DD HH:mm:ss' 格式
+    if (dateString.length === 19) {
+      return DateTime.fromFormat(dateString, "yyyy-MM-dd HH:mm:ss").toFormat("yyyy-MM-dd");
+    }
+
+    // 如果日期格式不匹配，返回一个默认值或错误
+    return "Invalid date format";
   };
 
   useEffect(() => {
@@ -295,16 +314,16 @@ const VehicleManagement: React.FC = () => {
           : a.currentMileage - b.currentMileage,
       width: '120px',
     },
-    // {
-    //   title: <FormattedMessage id="下次保养公里数" />,
-    //   dataIndex: 'nextMaintenanceMileage',
-    //   valueType: 'text',
-    //   sorter: (a: VehicleInfo, b: VehicleInfo) =>
-    //     _.isUndefined(a.nextMaintenanceMileage) || _.isUndefined(b.nextMaintenanceMileage)
-    //       ? 0
-    //       : a.nextMaintenanceMileage - b.nextMaintenanceMileage,
-    //   width: '150px',
-    // },
+    {
+      title: <FormattedMessage id="下次保养公里数" />,
+      dataIndex: 'nextMaintenanceMileage',
+      valueType: 'text',
+      sorter: (a: VehicleInfo, b: VehicleInfo) =>
+        _.isUndefined(a.nextMaintenanceMileage) || _.isUndefined(b.nextMaintenanceMileage)
+          ? 0
+          : a.nextMaintenanceMileage - b.nextMaintenanceMileage,
+      width: '150px',
+    },
     {
       title: <FormattedMessage id="负责人姓名" />,
       dataIndex: 'responsiblePersonName',
@@ -381,8 +400,6 @@ const VehicleManagement: React.FC = () => {
       message.warning('请先选择要导出的车辆信息');
     }
   };
-
-  console.log(selectedRowKeys);
 
   return (
     <PageContainer breadcrumbRender={false}>
@@ -503,23 +520,12 @@ const VehicleManagement: React.FC = () => {
       />
 
       {/* 新增车辆 Modal */}
-      <ModalForm
-        title="新加入车辆"
-        modalProps={{
-          destroyOnClose: true
-        }}
-        width="750px"
-        open={createModalOpen}
-        onOpenChange={(isOpen) => handleModalOpen('createModalOpen', isOpen)}
+      <StepsForm
         onFinish={async (values) => {
-          const selectedEmployee = employeeOptions.find(
-            (emp) => emp.value === values.responsiblePersonId,
-          );
+          const selectedEmployee = employeeOptions.find((emp) => emp.value === values.responsiblePersonId);
 
-          const selectedDrivers: Driver[] = values.driverList.map((id: number) => {
+          const selectedDrivers = values.driverList.map((id) => {
             const selectedEmployee = employeeOptions.find((emp) => emp.value === id);
-            console.log('hererereeddddd', selectedEmployee)
-
             return {
               id: selectedEmployee?.value || 0,
               name: selectedEmployee?.name || 'Unknown',
@@ -528,10 +534,12 @@ const VehicleManagement: React.FC = () => {
 
           const selectedType = JSON.parse(values.vehicleTypeSelection);
 
-          const data: AddVehicleInfoRequest = {
+          const data = {
             ...values,
             driverList: selectedDrivers,
-            purchaseDate: DateTime.fromFormat(values.purchaseDate, "yyyy-MM-dd HH:mm:ss").toFormat("yyyy-MM-dd"),
+            purchaseDate: formatDate(values.purchaseDate),
+            trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
+            commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
             vehicleType: selectedType.vehicleType,
             vehicleSerialNumber: selectedType.vehicleSerialNumber,
             vehicleBrand: selectedType.vehicleBrand,
@@ -543,42 +551,81 @@ const VehicleManagement: React.FC = () => {
             registrant: initialState.currentUser?.name || '',
           };
           await handleAddVehicle(data);
+          setCreateModalOpen(false);  // 关闭模态框
+        }}
+        stepsProps={{
+          size: 'medium',
+        }}
+        current={currentCreateStep}
+        onCurrentChange={setCurrentCreateStep}
+        stepsFormRender={(dom, submitter) => {
+          return (
+            <Modal
+              width={800}
+              style={{
+                body: {
+                  padding: '80px 80px 80px',
+                },
+              }}
+
+              destroyOnClose
+              open={createModalOpen}
+              title={intl.formatMessage({
+                id: '新增车辆信息',
+              })}
+              afterClose={() => {setCurrentCreateStep(0);}}
+              footer={submitter}
+              onCancel={() => {
+                setCurrentCreateStep(0);
+                setCreateModalOpen(false);
+              }
+              } // 关闭模态框
+            >
+              {dom}
+            </Modal>
+          );
         }}
       >
-        <ProFormGroup>
+        {/* Step 1: 基本信息 */}
+        <StepsForm.StepForm
+          title="车辆基本信息"
+        >
           <ProFormText
             name="vehicleNumber"
             label="车辆编号"
+            width="xl"
             rules={[{ required: true, message: '请输入车辆编号' }]}
-            width="200px"
           />
           <ProFormText
             name="engineeingVehicleNumber"
             label="工程车编号"
+            width="xl"
             rules={[{ required: true, message: '请输入工程车编号' }]}
-            width="200px"
           />
           <ProFormText
             name="licenseNumber"
             label="车牌号码"
+            width="xl"
             rules={[{ required: true, message: '请输入车牌号码' }]}
-            width="200px"
           />
-        </ProFormGroup>
+        </StepsForm.StepForm>
 
-        <ProFormGroup>
+        {/* Step 2: 维护信息 */}
+        <StepsForm.StepForm
+          title="维护信息"
+        >
           <ProFormText
             name="engineNumber"
             label="发动机号后6位"
             rules={[{ required: true, message: '请输入发动机号后6位' }]}
-            width="200px"
+            width="xl"
           />
           <ProFormSelect
             name="vehicleTypeSelection"
             label="车辆类型选择"
             options={vehicleTypeOptions}
             rules={[{ required: true, message: '请选择车辆类型' }]}
-            width="200px"
+            width="xl"
             fieldProps={{
               dropdownMatchSelectWidth: false, // 只显示label
             }}
@@ -587,16 +634,13 @@ const VehicleManagement: React.FC = () => {
             name="purchaseDate"
             label="购车日期"
             rules={[{ required: true, message: '请选择购车日期' }]}
-            width="200px"
+            width="xl"
           />
-        </ProFormGroup>
-
-        <ProFormGroup>
           <ProFormText
             name="auditMonth"
             label="年检月份"
             rules={[{ required: true, message: '请输入年检月份' }]}
-            width="200px"
+            width="xl"
           />
           <ProFormSelect
             name="isAudited"
@@ -605,43 +649,26 @@ const VehicleManagement: React.FC = () => {
               { label: '是', value: 1 },
               { label: '否', value: 0 },
             ]}
-            rules={[{ required: true, message: '请输入是否年检' }]}
-            width="200px"
+            rules={[{ required: true, message: '请选择是否年检' }]}
+            width="xl"
           />
-          {/* <ProFormSelect
-            name="trafficInsurance"
-            label="是否有交强险"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            rules={[{ required: true, message: '请输入是否有交强险' }]}
-            width="200px"
-          /> */}
+        </StepsForm.StepForm>
+
+        {/* Step 3: 保险与其他 */}
+        <StepsForm.StepForm
+          title="保险与其他信息"
+        >
           <ProFormDatePicker
             name="trafficInsuranceDate"
             label="交强险日期"
             rules={[{ required: true, message: '请输入交强险日期' }]}
-            width="200px"
+            width="xl"
           />
-        </ProFormGroup>
-
-        <ProFormGroup>
-          {/* <ProFormSelect
-            name="commercialInsurance"
-            label="是否有商业险"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            rules={[{ required: true, message: '请输入是否有商业险' }]}
-            width="200px"
-          /> */}
           <ProFormDatePicker
             name="commercialInsuranceDate"
             label="商业险日期"
             rules={[{ required: true, message: '请输入商业险日期' }]}
-            width="200px"
+            width="xl"
           />
           <ProFormSelect
             name="gps"
@@ -650,29 +677,38 @@ const VehicleManagement: React.FC = () => {
               { label: '是', value: 1 },
               { label: '否', value: 0 },
             ]}
-            width="200px"
+            width="xl"
           />
           <ProFormText
             name="mechanicalBond"
             label="机械邦"
             rules={[{ required: true, message: '请输入机械邦信息' }]}
-            width="200px"
+            width="xl"
           />
-        </ProFormGroup>
+        </StepsForm.StepForm>
 
-        <ProFormGroup>
+        {/* Step 4: 使用与管理信息 */}
+        <StepsForm.StepForm
+          title="使用与管理信息"
+        >
           <ProFormText
             name="usageProject"
             label="使用项目"
             rules={[{ required: true, message: '请输入使用项目' }]}
-            width="200px"
+            width="xl"
           />
-          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px" />
-          <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />
-        </ProFormGroup>
-
-        <ProFormGroup>
-          {/* <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" /> */}
+          <ProFormDigit
+            name="lastMaintenanceMileage"
+            label="上次保养公里数"
+            min={0}
+            width="xl"
+          />
+          <ProFormDigit
+            name="currentMileage"
+            label="当前公里数"
+            min={0}
+            width="xl"
+          />
           <ProFormSelect
             name="responsiblePersonId"
             label="负责人"
@@ -681,33 +717,21 @@ const VehicleManagement: React.FC = () => {
               labelInValue: false, // 只显示label
             }}
             rules={[{ required: true, message: '请选择负责人' }]}
-            width="200px"
+            width="xl"
           />
           <ProFormSelect
-            mode="multiple" // 多选模式
+            mode="multiple"  // 多选模式
             name="driverList"
             label="司机"
             options={employeeOptions}
             allowClear
-            width="200px"
+            width="xl"
           />
-        </ProFormGroup>
-      </ModalForm>
+        </StepsForm.StepForm>
+      </StepsForm>
 
-      {/* 编辑车辆信息 Modal */}
-      <ModalForm
-        title="编辑车辆信息"
-        width="750px"
-        modalProps={{
-          destroyOnClose: true
-        }}
-        open={editModalOpen}
-        key={currentVehicle?.id || 'new'}  // 使用 key 来强制重新渲染
-        initialValues={{
-          ...currentVehicle,
-          vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
-        }}
-        onOpenChange={(isOpen) => handleModalOpen('editModalOpen', isOpen)}
+      {/* 编辑车辆 step */}
+      <StepsForm
         onFinish={async (values) => {
 
           const selectedEmployee = employeeOptions.find(
@@ -746,7 +770,9 @@ const VehicleManagement: React.FC = () => {
           const data: UpdateVehicleInfoRequest = {
             ...values,
             driverList: selectedDrivers,
-            purchaseDate: DateTime.fromFormat(values.purchaseDate, "yyyy-MM-dd HH:mm:ss").toFormat("yyyy-MM-dd"),
+            purchaseDate: formatDate(values.purchaseDate),
+            trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
+            commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
             vehicleType: selectedType.vehicleType,
             vehicleSerialNumber: selectedType.vehicleSerialNumber,
             vehicleBrand: selectedType.vehicleBrand,
@@ -760,41 +786,91 @@ const VehicleManagement: React.FC = () => {
           };
           await handleEditVehicle(data);
         }}
+        stepsProps={{
+          size: 'medium',
+        }}
+        current={currentEditStep}
+        onCurrentChange={setCurrentEditStep}
+        stepsFormRender={(dom, submitter) => {
+          return (
+            <Modal
+              width={800}
+              style={{
+                body: {
+                  padding: '80px 80px 80px',
+                },
+              }}
+              key={currentVehicle?.id || 'new'}  // 使用 key 来强制重新渲染
+              destroyOnClose
+              open={editModalOpen}
+              title={intl.formatMessage({
+                id: '编辑车辆信息',
+              })}
+              afterClose={() => {setCurrentEditStep(0);}}
+              footer={submitter}
+              onCancel={() => {
+                setCurrentEditStep(0);
+                setEditModalOpen(false);
+              }
+              } // 关闭模态框
+            >
+              {dom}
+            </Modal>
+          );
+        }}
+        initialValues={{
+          ...currentVehicle,
+          vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+        }}
       >
-        <ProFormGroup>
+        {/* Step 1: 基本信息 */}
+        <StepsForm.StepForm
+          title="车辆基本信息"
+          initialValues={{
+            ...currentVehicle,
+            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+          }}
+        >
           <ProFormText
             name="vehicleNumber"
             label="车辆编号"
+            width="xl"
             rules={[{ required: true, message: '请输入车辆编号' }]}
-            width="200px"
           />
           <ProFormText
             name="engineeingVehicleNumber"
             label="工程车编号"
+            width="xl"
             rules={[{ required: true, message: '请输入工程车编号' }]}
-            width="200px"
           />
           <ProFormText
             name="licenseNumber"
             label="车牌号码"
+            width="xl"
             rules={[{ required: true, message: '请输入车牌号码' }]}
-            width="200px"
           />
-        </ProFormGroup>
+        </StepsForm.StepForm>
 
-        <ProFormGroup>
+        {/* Step 2: 维护信息 */}
+        <StepsForm.StepForm
+          title="维护信息"
+          initialValues={{
+            ...currentVehicle,
+            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+          }}
+        >
           <ProFormText
             name="engineNumber"
             label="发动机号后6位"
             rules={[{ required: true, message: '请输入发动机号后6位' }]}
-            width="200px"
+            width="xl"
           />
           <ProFormSelect
             name="vehicleTypeSelection"
             label="车辆类型选择"
             options={vehicleTypeOptions}
             rules={[{ required: true, message: '请选择车辆类型' }]}
-            width="200px"
+            width="xl"
             fieldProps={{
               dropdownMatchSelectWidth: false, // 只显示label
             }}
@@ -803,16 +879,13 @@ const VehicleManagement: React.FC = () => {
             name="purchaseDate"
             label="购车日期"
             rules={[{ required: true, message: '请选择购车日期' }]}
-            width="200px"
+            width="xl"
           />
-        </ProFormGroup>
-
-        <ProFormGroup>
           <ProFormText
             name="auditMonth"
             label="年检月份"
             rules={[{ required: true, message: '请输入年检月份' }]}
-            width="200px"
+            width="xl"
           />
           <ProFormSelect
             name="isAudited"
@@ -821,41 +894,30 @@ const VehicleManagement: React.FC = () => {
               { label: '是', value: 1 },
               { label: '否', value: 0 },
             ]}
-            rules={[{ required: true, message: '请输入是否年检' }]}
-            width="200px"
+            rules={[{ required: true, message: '请选择是否年检' }]}
+            width="xl"
           />
-          {/* <ProFormSelect
-            name="trafficInsurance"
-            label="是否有交强险"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            rules={[{ required: true, message: '请输入是否有交强险' }]}
-            width="200px"
-          /> */}
+        </StepsForm.StepForm>
+
+        {/* Step 3: 保险与其他 */}
+        <StepsForm.StepForm
+          title="保险与其他信息"
+          initialValues={{
+            ...currentVehicle,
+            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+          }}
+        >
           <ProFormDatePicker
             name="trafficInsuranceDate"
             label="交强险日期"
-            width="200px"
+            rules={[{ required: true, message: '请输入交强险日期' }]}
+            width="xl"
           />
-        </ProFormGroup>
-
-        <ProFormGroup>
-          {/* <ProFormSelect
-            name="commercialInsurance"
-            label="是否有商业险"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            rules={[{ required: true, message: '请输入是否有商业险' }]}
-            width="200px"
-          /> */}
           <ProFormDatePicker
             name="commercialInsuranceDate"
             label="商业险日期"
-            width="200px"
+            rules={[{ required: true, message: '请输入商业险日期' }]}
+            width="xl"
           />
           <ProFormSelect
             name="gps"
@@ -864,29 +926,42 @@ const VehicleManagement: React.FC = () => {
               { label: '是', value: 1 },
               { label: '否', value: 0 },
             ]}
-            width="200px"
+            width="xl"
           />
           <ProFormText
             name="mechanicalBond"
             label="机械邦"
             rules={[{ required: true, message: '请输入机械邦信息' }]}
-            width="200px"
+            width="xl"
           />
-        </ProFormGroup>
+        </StepsForm.StepForm>
 
-        <ProFormGroup>
+        {/* Step 4: 使用与管理信息 */}
+        <StepsForm.StepForm
+          title="使用与管理信息"
+          initialValues={{
+            ...currentVehicle,
+            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+          }}
+        >
           <ProFormText
             name="usageProject"
             label="使用项目"
             rules={[{ required: true, message: '请输入使用项目' }]}
-            width="200px"
+            width="xl"
           />
-          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px" />
-          <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />
-        </ProFormGroup>
-
-        <ProFormGroup>
-          {/* <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" /> */}
+          <ProFormDigit
+            name="lastMaintenanceMileage"
+            label="上次保养公里数"
+            min={0}
+            width="xl"
+          />
+          <ProFormDigit
+            name="currentMileage"
+            label="当前公里数"
+            min={0}
+            width="xl"
+          />
           <ProFormSelect
             name="responsiblePersonId"
             label="负责人"
@@ -895,19 +970,236 @@ const VehicleManagement: React.FC = () => {
               labelInValue: false, // 只显示label
             }}
             rules={[{ required: true, message: '请选择负责人' }]}
-            width="200px"
+            width="xl"
           />
           <ProFormSelect
-            mode="multiple" // 多选模式
+            mode="multiple"  // 多选模式
             name="driverList"
             label="司机"
             options={employeeOptions}
             allowClear
-            width="200px"
+            width="xl"
           />
-          <ProFormText name="extend" label="其他备注信息" width="200px" />
-        </ProFormGroup>
-      </ModalForm>
+        </StepsForm.StepForm>
+      </StepsForm>
+
+      {/*/!* 编辑车辆信息 Modal *!/*/}
+      {/*<ModalForm*/}
+      {/*  title="编辑车辆信息"*/}
+      {/*  width="750px"*/}
+      {/*  modalProps={{*/}
+      {/*    destroyOnClose: true*/}
+      {/*  }}*/}
+      {/*  open={editModalOpen}*/}
+      {/*  key={currentVehicle?.id || 'new'}  // 使用 key 来强制重新渲染*/}
+      {/*  initialValues={{*/}
+      {/*    ...currentVehicle,*/}
+      {/*    vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值*/}
+      {/*  }}*/}
+      {/*  onOpenChange={(isOpen) => handleModalOpen('editModalOpen', isOpen)}*/}
+      {/*  onFinish={async (values) => {*/}
+
+      {/*    const selectedEmployee = employeeOptions.find(*/}
+      {/*      (emp) => emp.value === values.responsiblePersonId,*/}
+      {/*    );*/}
+
+      {/*    let selectedDrivers;*/}
+
+      {/*    if (_.isUndefined(values.driverList)) {*/}
+      {/*      selectedDrivers = [];*/}
+      {/*    } else {*/}
+      {/*      selectedDrivers = values.driverList.map((id: number) => {*/}
+      {/*        const employee = employeeOptions.find((emp) => emp.value === id);*/}
+      {/*        return {*/}
+      {/*          id: employee?.value || 0,*/}
+      {/*          name: employee?.name || 'Unknown',*/}
+      {/*        };*/}
+      {/*      });*/}
+      {/*    }*/}
+
+      {/*    let selectedType;*/}
+
+      {/*    try {*/}
+      {/*      // 尝试解析 `vehicleTypeSelection` 字段*/}
+      {/*      selectedType = JSON.parse(values.vehicleTypeSelection);*/}
+      {/*    } catch (error) {*/}
+      {/*      // 如果解析失败，则使用初始值*/}
+      {/*      selectedType = {*/}
+      {/*        vehicleType: currentVehicle?.vehicleType || '',*/}
+      {/*        vehicleSerialNumber: currentVehicle?.vehicleSerialNumber || '',*/}
+      {/*        vehicleBrand: currentVehicle?.vehicleBrand || '',*/}
+      {/*        approvedLoadCapacity: currentVehicle?.approvedLoadCapacity || '',*/}
+      {/*      };*/}
+      {/*    }*/}
+
+      {/*    const data: UpdateVehicleInfoRequest = {*/}
+      {/*      ...values,*/}
+      {/*      driverList: selectedDrivers,*/}
+      {/*      purchaseDate: formatDate(values.purchaseDate),*/}
+      {/*      trafficInsuranceDate: formatDate(values.trafficInsuranceDate),*/}
+      {/*      commercialInsuranceDate: formatDate(values.commercialInsuranceDate),*/}
+      {/*      vehicleType: selectedType.vehicleType,*/}
+      {/*      vehicleSerialNumber: selectedType.vehicleSerialNumber,*/}
+      {/*      vehicleBrand: selectedType.vehicleBrand,*/}
+      {/*      approvedLoadCapacity: selectedType.approvedLoadCapacity,*/}
+      {/*      responsiblePersonName: selectedEmployee?.name || '',*/}
+      {/*      responsiblePersonId: selectedEmployee?.value || 0,*/}
+      {/*      responsiblePersonMobile: selectedEmployee?.mobile || '',*/}
+      {/*      registrantId: initialState.currentUser?.id || 0,*/}
+      {/*      registrant: initialState.currentUser?.name || '',*/}
+      {/*      id: currentVehicle?.id || 0, // 更新时需要车辆 ID*/}
+      {/*    };*/}
+      {/*    await handleEditVehicle(data);*/}
+      {/*  }}*/}
+      {/*>*/}
+      {/*  <ProFormGroup>*/}
+      {/*    <ProFormText*/}
+      {/*      name="vehicleNumber"*/}
+      {/*      label="车辆编号"*/}
+      {/*      rules={[{ required: true, message: '请输入车辆编号' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormText*/}
+      {/*      name="engineeingVehicleNumber"*/}
+      {/*      label="工程车编号"*/}
+      {/*      rules={[{ required: true, message: '请输入工程车编号' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormText*/}
+      {/*      name="licenseNumber"*/}
+      {/*      label="车牌号码"*/}
+      {/*      rules={[{ required: true, message: '请输入车牌号码' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*  </ProFormGroup>*/}
+
+      {/*  <ProFormGroup>*/}
+      {/*    <ProFormText*/}
+      {/*      name="engineNumber"*/}
+      {/*      label="发动机号后6位"*/}
+      {/*      rules={[{ required: true, message: '请输入发动机号后6位' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormSelect*/}
+      {/*      name="vehicleTypeSelection"*/}
+      {/*      label="车辆类型选择"*/}
+      {/*      options={vehicleTypeOptions}*/}
+      {/*      rules={[{ required: true, message: '请选择车辆类型' }]}*/}
+      {/*      width="200px"*/}
+      {/*      fieldProps={{*/}
+      {/*        dropdownMatchSelectWidth: false, // 只显示label*/}
+      {/*      }}*/}
+      {/*    />*/}
+      {/*    <ProFormDatePicker*/}
+      {/*      name="purchaseDate"*/}
+      {/*      label="购车日期"*/}
+      {/*      rules={[{ required: true, message: '请选择购车日期' }]}*/}
+      {/*      width="200px"*/}
+      {/*      dataFormat="YYYY-MM-DD"*/}
+      {/*    />*/}
+      {/*  </ProFormGroup>*/}
+
+      {/*  <ProFormGroup>*/}
+      {/*    <ProFormText*/}
+      {/*      name="auditMonth"*/}
+      {/*      label="年检月份"*/}
+      {/*      rules={[{ required: true, message: '请输入年检月份' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormSelect*/}
+      {/*      name="isAudited"*/}
+      {/*      label="是否年检"*/}
+      {/*      options={[*/}
+      {/*        { label: '是', value: 1 },*/}
+      {/*        { label: '否', value: 0 },*/}
+      {/*      ]}*/}
+      {/*      rules={[{ required: true, message: '请输入是否年检' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    /!* <ProFormSelect*/}
+      {/*      name="trafficInsurance"*/}
+      {/*      label="是否有交强险"*/}
+      {/*      options={[*/}
+      {/*        { label: '是', value: 1 },*/}
+      {/*        { label: '否', value: 0 },*/}
+      {/*      ]}*/}
+      {/*      rules={[{ required: true, message: '请输入是否有交强险' }]}*/}
+      {/*      width="200px"*/}
+      {/*    /> *!/*/}
+      {/*    <ProFormDatePicker*/}
+      {/*      name="trafficInsuranceDate"*/}
+      {/*      label="交强险日期"*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*  </ProFormGroup>*/}
+
+      {/*  <ProFormGroup>*/}
+      {/*    /!* <ProFormSelect*/}
+      {/*      name="commercialInsurance"*/}
+      {/*      label="是否有商业险"*/}
+      {/*      options={[*/}
+      {/*        { label: '是', value: 1 },*/}
+      {/*        { label: '否', value: 0 },*/}
+      {/*      ]}*/}
+      {/*      rules={[{ required: true, message: '请输入是否有商业险' }]}*/}
+      {/*      width="200px"*/}
+      {/*    /> *!/*/}
+      {/*    <ProFormDatePicker*/}
+      {/*      name="commercialInsuranceDate"*/}
+      {/*      label="商业险日期"*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormSelect*/}
+      {/*      name="gps"*/}
+      {/*      label="是否安装GPS"*/}
+      {/*      options={[*/}
+      {/*        { label: '是', value: 1 },*/}
+      {/*        { label: '否', value: 0 },*/}
+      {/*      ]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormText*/}
+      {/*      name="mechanicalBond"*/}
+      {/*      label="机械邦"*/}
+      {/*      rules={[{ required: true, message: '请输入机械邦信息' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*  </ProFormGroup>*/}
+
+      {/*  <ProFormGroup>*/}
+      {/*    <ProFormText*/}
+      {/*      name="usageProject"*/}
+      {/*      label="使用项目"*/}
+      {/*      rules={[{ required: true, message: '请输入使用项目' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px" />*/}
+      {/*    <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />*/}
+      {/*  </ProFormGroup>*/}
+
+      {/*  <ProFormGroup>*/}
+      {/*    /!* <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" /> *!/*/}
+      {/*    <ProFormSelect*/}
+      {/*      name="responsiblePersonId"*/}
+      {/*      label="负责人"*/}
+      {/*      options={employeeOptions}*/}
+      {/*      fieldProps={{*/}
+      {/*        labelInValue: false, // 只显示label*/}
+      {/*      }}*/}
+      {/*      rules={[{ required: true, message: '请选择负责人' }]}*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormSelect*/}
+      {/*      mode="multiple" // 多选模式*/}
+      {/*      name="driverList"*/}
+      {/*      label="司机"*/}
+      {/*      options={employeeOptions}*/}
+      {/*      allowClear*/}
+      {/*      width="200px"*/}
+      {/*    />*/}
+      {/*    <ProFormText name="extend" label="其他备注信息" width="200px" />*/}
+      {/*  </ProFormGroup>*/}
+      {/*</ModalForm>*/}
     </PageContainer>
   );
 };

@@ -316,6 +316,8 @@ export const useVehicleSystem = (userId: number) => {
     handleRestoreVehicle,
     filters,
     setFilters,
-    fetchVehicleList
+    fetchVehicleList,
+    setCreateModalOpen,
+    setEditModalOpen,
   };
 };

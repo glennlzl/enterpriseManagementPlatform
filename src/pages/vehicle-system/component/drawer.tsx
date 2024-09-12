@@ -172,9 +172,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   };
 
   const handleUpdate = async () => {
-    console.log('sdfsdf');
     const values = await form.validateFields();
-    console.log(values);
     const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
     await refreshCurrentInfo();
     try {
@@ -255,7 +253,6 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   };
 
   const handleEdit = (record: any) => {
-    console.log(record);
     setEditingKey(record.id); // 只设置当前行为编辑状态
   };
 
@@ -290,8 +287,6 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       ),
     },
   ];
-
-  console.log(showMore);
 
   return (
     <Drawer title="车辆详情" width={640} placement="right" onClose={onClose} visible={visible}>
