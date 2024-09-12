@@ -3,6 +3,7 @@ import { queryVehicleTypes } from '@/api/vihicle-system';
 import { useVehicleSystem } from '@/hooks/vehicle-system/Hook.useVehicleSystem';
 import type {
   AddVehicleInfoRequest,
+  Driver,
   UpdateVehicleInfoRequest,
   VehicleInfo,
 } from '@/model/vehicle-management-system';
@@ -18,13 +19,13 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
-import {ProFormDatePicker, ProFormDigit, ProFormGroup} from '@ant-design/pro-form/lib';
+import { ProFormDatePicker, ProFormDigit, ProFormGroup } from '@ant-design/pro-form/lib';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip} from 'antd';
+import { Button, Space, Switch, message, Form, Input, Row, Col, Tooltip } from 'antd';
 import _ from 'lodash';
-import React, {useEffect, useRef, useState} from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
-import {css} from "antd-style";
+import { css } from "antd-style";
 const VehicleManagement: React.FC = () => {
   const { initialState } = useModel('@@initialState');
 
@@ -93,9 +94,8 @@ const VehicleManagement: React.FC = () => {
       try {
         const response = await queryVehicleTypes();
         const options = response.map((type) => ({
-          label: `${type.vehicleType} - ${type.vehicleSerialNumber} - ${type.vehicleBrand} - ${
-            type.approvedLoadCapacity || ''
-          }`,
+          label: `${type.vehicleType} - ${type.vehicleSerialNumber} - ${type.vehicleBrand} - ${type.approvedLoadCapacity || ''
+            }`,
           value: JSON.stringify(type), // 将整个对象作为字符串传递
         }));
         setVehicleTypeOptions(options);
@@ -196,14 +196,14 @@ const VehicleManagement: React.FC = () => {
       width: '120px',
     },
     {
-      title: <FormattedMessage id="核定载质量" />,
+      title: <FormattedMessage id="核定载质量(吨)" />,
       dataIndex: 'approvedLoadCapacity',
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         _.isUndefined(a.approvedLoadCapacity) || _.isUndefined(b.approvedLoadCapacity)
           ? {}
           : a.approvedLoadCapacity.localeCompare(b.approvedLoadCapacity),
-      width: '120px',
+      width: '150px',
     },
     {
       title: <FormattedMessage id="登记人" />,
@@ -291,20 +291,20 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         _.isUndefined(a.currentMileage) || _.isUndefined(b.currentMileage)
-          ? {}
+          ? 0
           : a.currentMileage - b.currentMileage,
       width: '120px',
     },
-    {
-      title: <FormattedMessage id="下次保养公里数" />,
-      dataIndex: 'nextMaintenanceMileage',
-      valueType: 'text',
-      sorter: (a: VehicleInfo, b: VehicleInfo) =>
-        _.isUndefined(a.nextMaintenanceMileage) || _.isUndefined(b.nextMaintenanceMileage)
-          ? {}
-          : a.nextMaintenanceMileage - b.nextMaintenanceMileage,
-      width: '150px',
-    },
+    // {
+    //   title: <FormattedMessage id="下次保养公里数" />,
+    //   dataIndex: 'nextMaintenanceMileage',
+    //   valueType: 'text',
+    //   sorter: (a: VehicleInfo, b: VehicleInfo) =>
+    //     _.isUndefined(a.nextMaintenanceMileage) || _.isUndefined(b.nextMaintenanceMileage)
+    //       ? 0
+    //       : a.nextMaintenanceMileage - b.nextMaintenanceMileage,
+    //   width: '150px',
+    // },
     {
       title: <FormattedMessage id="负责人姓名" />,
       dataIndex: 'responsiblePersonName',
@@ -320,6 +320,15 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'responsiblePersonMobile',
       valueType: 'text',
       width: '120px',
+    },
+    {
+      title: <FormattedMessage id="司机" />,
+      dataIndex: 'driverList',
+      valueType: 'text',
+      width: '120px',
+      render: (_, record) => {
+        return record.driverList?.map(driver => driver.name).join(', ') || '-';
+      },
     },
     {
       title: <FormattedMessage id="其他备注信息" />,
@@ -506,10 +515,22 @@ const VehicleManagement: React.FC = () => {
           const selectedEmployee = employeeOptions.find(
             (emp) => emp.value === values.responsiblePersonId,
           );
+
+          const selectedDrivers: Driver[] = values.driverList.map((id: number) => {
+            const selectedEmployee = employeeOptions.find((emp) => emp.value === id);
+            console.log('hererereeddddd', selectedEmployee)
+
+            return {
+              id: selectedEmployee?.value || 0,
+              name: selectedEmployee?.name || 'Unknown',
+            };
+          });
+
           const selectedType = JSON.parse(values.vehicleTypeSelection);
-          console.log(selectedType);
+
           const data: AddVehicleInfoRequest = {
             ...values,
+            driverList: selectedDrivers,
             purchaseDate: DateTime.fromFormat(values.purchaseDate, "yyyy-MM-dd HH:mm:ss").toFormat("yyyy-MM-dd"),
             vehicleType: selectedType.vehicleType,
             vehicleSerialNumber: selectedType.vehicleSerialNumber,
@@ -587,7 +608,7 @@ const VehicleManagement: React.FC = () => {
             rules={[{ required: true, message: '请输入是否年检' }]}
             width="200px"
           />
-          <ProFormSelect
+          {/* <ProFormSelect
             name="trafficInsurance"
             label="是否有交强险"
             options={[
@@ -596,11 +617,17 @@ const VehicleManagement: React.FC = () => {
             ]}
             rules={[{ required: true, message: '请输入是否有交强险' }]}
             width="200px"
+          /> */}
+          <ProFormDatePicker
+            name="trafficInsuranceDate"
+            label="交强险日期"
+            rules={[{ required: true, message: '请输入交强险日期' }]}
+            width="200px"
           />
         </ProFormGroup>
 
         <ProFormGroup>
-          <ProFormSelect
+          {/* <ProFormSelect
             name="commercialInsurance"
             label="是否有商业险"
             options={[
@@ -608,6 +635,12 @@ const VehicleManagement: React.FC = () => {
               { label: '否', value: 0 },
             ]}
             rules={[{ required: true, message: '请输入是否有商业险' }]}
+            width="200px"
+          /> */}
+          <ProFormDatePicker
+            name="commercialInsuranceDate"
+            label="商业险日期"
+            rules={[{ required: true, message: '请输入商业险日期' }]}
             width="200px"
           />
           <ProFormSelect
@@ -634,12 +667,12 @@ const VehicleManagement: React.FC = () => {
             rules={[{ required: true, message: '请输入使用项目' }]}
             width="200px"
           />
-          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px"/>
+          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px" />
           <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />
         </ProFormGroup>
 
         <ProFormGroup>
-          <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" />
+          {/* <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" /> */}
           <ProFormSelect
             name="responsiblePersonId"
             label="负责人"
@@ -648,6 +681,14 @@ const VehicleManagement: React.FC = () => {
               labelInValue: false, // 只显示label
             }}
             rules={[{ required: true, message: '请选择负责人' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            mode="multiple" // 多选模式
+            name="driverList"
+            label="司机"
+            options={employeeOptions}
+            allowClear
             width="200px"
           />
         </ProFormGroup>
@@ -664,14 +705,29 @@ const VehicleManagement: React.FC = () => {
         key={currentVehicle?.id || 'new'}  // 使用 key 来强制重新渲染
         initialValues={{
           ...currentVehicle,
-          vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${
-            !(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+          vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
         }}
         onOpenChange={(isOpen) => handleModalOpen('editModalOpen', isOpen)}
         onFinish={async (values) => {
+
           const selectedEmployee = employeeOptions.find(
             (emp) => emp.value === values.responsiblePersonId,
           );
+
+          let selectedDrivers;
+
+          if (_.isUndefined(values.driverList)) {
+            selectedDrivers = [];
+          } else {
+            selectedDrivers = values.driverList.map((id: number) => {
+              const employee = employeeOptions.find((emp) => emp.value === id);
+              return {
+                id: employee?.value || 0,
+                name: employee?.name || 'Unknown',
+              };
+            });
+          }
+
           let selectedType;
 
           try {
@@ -689,6 +745,7 @@ const VehicleManagement: React.FC = () => {
 
           const data: UpdateVehicleInfoRequest = {
             ...values,
+            driverList: selectedDrivers,
             purchaseDate: DateTime.fromFormat(values.purchaseDate, "yyyy-MM-dd HH:mm:ss").toFormat("yyyy-MM-dd"),
             vehicleType: selectedType.vehicleType,
             vehicleSerialNumber: selectedType.vehicleSerialNumber,
@@ -767,7 +824,7 @@ const VehicleManagement: React.FC = () => {
             rules={[{ required: true, message: '请输入是否年检' }]}
             width="200px"
           />
-          <ProFormSelect
+          {/* <ProFormSelect
             name="trafficInsurance"
             label="是否有交强险"
             options={[
@@ -776,11 +833,16 @@ const VehicleManagement: React.FC = () => {
             ]}
             rules={[{ required: true, message: '请输入是否有交强险' }]}
             width="200px"
+          /> */}
+          <ProFormDatePicker
+            name="trafficInsuranceDate"
+            label="交强险日期"
+            width="200px"
           />
         </ProFormGroup>
 
         <ProFormGroup>
-          <ProFormSelect
+          {/* <ProFormSelect
             name="commercialInsurance"
             label="是否有商业险"
             options={[
@@ -788,6 +850,11 @@ const VehicleManagement: React.FC = () => {
               { label: '否', value: 0 },
             ]}
             rules={[{ required: true, message: '请输入是否有商业险' }]}
+            width="200px"
+          /> */}
+          <ProFormDatePicker
+            name="commercialInsuranceDate"
+            label="商业险日期"
             width="200px"
           />
           <ProFormSelect
@@ -814,12 +881,12 @@ const VehicleManagement: React.FC = () => {
             rules={[{ required: true, message: '请输入使用项目' }]}
             width="200px"
           />
-          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px"/>
+          <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px" />
           <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />
         </ProFormGroup>
 
         <ProFormGroup>
-          <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" />
+          {/* <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" /> */}
           <ProFormSelect
             name="responsiblePersonId"
             label="负责人"
@@ -828,6 +895,14 @@ const VehicleManagement: React.FC = () => {
               labelInValue: false, // 只显示label
             }}
             rules={[{ required: true, message: '请选择负责人' }]}
+            width="200px"
+          />
+          <ProFormSelect
+            mode="multiple" // 多选模式
+            name="driverList"
+            label="司机"
+            options={employeeOptions}
+            allowClear
             width="200px"
           />
           <ProFormText name="extend" label="其他备注信息" width="200px" />

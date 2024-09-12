@@ -1,3 +1,5 @@
+import ExportComponent from "@ant-design/pro-form/es/components/DatePicker";
+
 export interface AddVehicleInfoRequest {
   vehicleNumber: string;
   engineeingVehicleNumber: string;
@@ -12,8 +14,10 @@ export interface AddVehicleInfoRequest {
   purchaseDate: string;
   auditMonth: string;
   isAudited?: number;
-  trafficInsurance: number;
-  commercialInsurance: number;
+  trafficInsurance?: number;
+  commercialInsurance?: number;
+  trafficInsuranceDate: string;
+  commercialInsuranceDate: string;
   gps?: number;
   mechanicalBond: string;
   usageProject: string;
@@ -24,6 +28,7 @@ export interface AddVehicleInfoRequest {
   responsiblePersonId?: number;
   responsiblePersonMobile?: string;
   extend?: string;
+  driverList?: Driver[];
 }
 
 export interface UpdateVehicleInfoRequest extends Partial<AddVehicleInfoRequest> {
@@ -66,7 +71,9 @@ export interface VehicleInfo {
   auditMonth: string;
   isAudited?: number;
   trafficInsurance: number;
+  trafficInsuranceDate?: string;
   commercialInsurance: number;
+  commercialInsuranceDate?: string;
   gps?: number;
   mechanicalBond: string;
   usageProject: string;
@@ -80,6 +87,7 @@ export interface VehicleInfo {
   isDeleted?: number;
   isDeprecated?: number;
   warningLevel?: number;
+  driverList?: Driver[];
 }
 
 export interface VehicleType {
@@ -101,5 +109,10 @@ export interface VehicleUsageInfo {
   vehicleImageUrls: string[];
   extend?: string;
   recordTime: string;
+}
+
+export interface Driver {
+  id: number;
+  name: string;
 }
 

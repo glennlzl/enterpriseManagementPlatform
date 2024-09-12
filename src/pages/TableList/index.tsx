@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import {Button, Tooltip} from 'antd';
+import { Button, Tooltip } from 'antd';
 import {
   FooterToolbar,
   PageContainer,
@@ -18,7 +18,7 @@ const TableList: React.FC = () => {
   if (!initialState?.currentUser) {
     return null; // 或者返回一个 loading 状态，或者重定向到登录页面
   }
-  const { state, setState, actionRef, handleModalOpen, handleAdd, handleUpdate, fetchUsers, handleSyncSingle, handleSyncAll} = useEmployeeManagement(
+  const { state, setState, actionRef, handleModalOpen, handleAdd, handleUpdate, fetchUsers, handleSyncSingle, handleSyncAll } = useEmployeeManagement(
     initialState.currentUser?.id || ''
   );
 
@@ -107,7 +107,10 @@ const TableList: React.FC = () => {
           >
             <a
               key="sync"
-              onClick={() => handleSyncSingle(record.userId)}
+              onClick={() => {
+                const employee = state.employeeList.find((emp) => emp.name === record.name);
+                handleSyncSingle(employee?.id);
+              }}
               style={{ marginLeft: 8 }}
             >
               <FormattedMessage id="同步钉钉" />
@@ -134,8 +137,8 @@ const TableList: React.FC = () => {
             <Button
               type="primary"
               key="primary"
-              onClick={async() => {
-                await handleSyncAll();
+              onClick={async () => {
+                await handleSyncAll(initialState.currentUser?.id || 0);
               }}
             >
               <FormattedMessage id='同步钉钉' defaultMessage="同步钉钉" />

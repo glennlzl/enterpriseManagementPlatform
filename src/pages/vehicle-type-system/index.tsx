@@ -98,7 +98,7 @@ const VehicleTypeManagement: React.FC = () => {
       filterSearch: true,
     },
     {
-      title: '核定载质量',
+      title: '核定载质量(吨)',
       dataIndex: 'approvedLoadCapacity',
       key: 'approvedLoadCapacity',
       filters: capacities,
@@ -170,7 +170,7 @@ const VehicleTypeManagement: React.FC = () => {
             <Input placeholder="请输入车辆品牌" />
           </Form.Item>
           <Form.Item
-            label="核定载质量"
+            label="核定载质量(吨)"
             name="approvedLoadCapacity"
           >
             <Input placeholder="请输入核定载质量" />

@@ -1,6 +1,6 @@
-import {useEffect, useRef, useState} from 'react';
-import {message} from 'antd';
-import type {ActionType} from '@ant-design/pro-components';
+import { useEffect, useRef, useState } from 'react';
+import { message } from 'antd';
+import type { ActionType } from '@ant-design/pro-components';
 import {
   addEmployee,
   EmployeeInfoAddOrUpdateRequest,
@@ -9,8 +9,8 @@ import {
   queryAllEmployeeSimpleInfo, syncDingtalkEmployeeInfo, syncDingtalkSingleEmployeeInfo,
   updateEmployee
 } from "@/api/usermanagement"; // 之前定义的接口路径
-import {isLogin} from '@/api/usermanagement';
-import {history} from "@@/core/history";
+import { isLogin } from '@/api/usermanagement';
+import { history } from "@@/core/history";
 
 
 export const useEmployeeManagement = (currentUserId: string) => {
@@ -70,7 +70,6 @@ export const useEmployeeManagement = (currentUserId: string) => {
       return true;
     } catch (error) {
       hide();
-      console.log(error);
       message.error(error);
       return false;
     }
@@ -95,7 +94,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
       return true;
     } catch (error) {
       hide();
-      message.error(`更新失败，请重试. 错误信息: ${error.message}`);
+      message.error(error);
       return false;
     }
   };
@@ -114,7 +113,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
     }
   };
 
-  const handleSyncAll = async () => {
+  const handleSyncAll = async (id: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
       message.error('请重新登录');
@@ -122,31 +121,36 @@ export const useEmployeeManagement = (currentUserId: string) => {
     }
     const hide = message.loading('正在同步钉钉员工信息');
     try {
-      await syncDingtalkEmployeeInfo();
+      const res = await syncDingtalkEmployeeInfo();
       hide();
       message.success('同步成功');
       actionRef.current?.reload();
+      return true;
     } catch (error) {
       hide();
-      message.error(`同步失败，请重试. 错误信息: ${error.message}`);
+      message.error(error);
+      return false;
     }
   };
 
-  const handleSyncSingle = async (userId: string) => {
+  const handleSyncSingle = async (userId: number) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
       message.error('请重新登录');
       history.push('/user/login');
     }
+    console.log("userId");
+    console.log(userId);
     const hide = message.loading('正在同步单个钉钉员工信息');
     try {
+      console.log("asfasdfasdfasdfsdaf");
       await syncDingtalkSingleEmployeeInfo(userId);
       hide();
       message.success('单个同步成功');
       actionRef.current?.reload();
     } catch (error) {
       hide();
-      message.error(`单个同步失败，请重试. 错误信息: ${error.message}`);
+      message.error(error);
     }
   };
 

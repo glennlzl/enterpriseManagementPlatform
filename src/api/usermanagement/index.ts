@@ -66,8 +66,8 @@ export interface EmployeeInfoAddOrUpdateRequest {
   isIncumbent?: number;
 }
 // http://47.93.51.8/user/login
-export const GENERAL_API_BASE_URL = 'http://127.0.0.1:8081/api';
-export const GENERAL_CLIENT_API_BASE_URL = 'http://127.0.0.1:8002';
+export const GENERAL_API_BASE_URL = 'http://47.93.51.8:8081/api';
+export const GENERAL_CLIENT_API_BASE_URL = 'http://47.93.51.8';
 
 export const API_BASE_URL = `${GENERAL_API_BASE_URL}`;
 
@@ -205,7 +205,7 @@ export async function syncDingtalkEmployeeInfo(options?: { [key: string]: any })
 
 /** 同步单个钉钉员工信息 GET /system/employee-info/syncDingtalkSingleEmployeeInfo */
 export async function syncDingtalkSingleEmployeeInfo(
-  userId: string,
+  userId: number,
   options?: { [key: string]: any },
 ) {
   const url = `${API_BASE_URL}/system/employee-info/syncDingtalkSingleEmployeeInfo`;
