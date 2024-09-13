@@ -17,6 +17,7 @@ export const hookUseDingTalkLogin = () => {
     window.location.href = `https://login.dingtalk.com/oauth2/auth?redirect_uri=${redirectUri}&response_type=code&client_id=${client_id}&scope=openid&state=dddd&prompt=consent`;
   };
 
+
   useEffect(() => {
     const urlParams = new URL(window.location.href);
     const code = urlParams.searchParams.get('authCode');
