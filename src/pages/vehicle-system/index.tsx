@@ -345,8 +345,11 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'driverList',
       valueType: 'text',
       width: '120px',
-      render: (_, record) => {
-        return record.driverList?.map(driver => driver.name).join(', ') || '-';
+      render: (value) => {
+        if (!Array.isArray(value) || _.isEmpty(value)) {
+          return '';
+        }
+        return value.map(driver => driver.name).join(', ') || '-';
       },
     },
     {

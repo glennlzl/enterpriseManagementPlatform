@@ -171,7 +171,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
     }
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (id: number) => {
     const values = await form.validateFields();
     const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
     await refreshCurrentInfo();
@@ -180,10 +180,10 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         vehicleId: vehicleInfo?.id || 0,
         userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
         userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
-        id: selectedRecordId || 0,
+        id: id || 0,
         startMileage: vehicleInfo?.currentMileage || 0,
         endMileage: Number(values.endMileage),
-        usageStatus: values.usageStatus,
+        usageStatus: values.usageStatus || 0,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
         recordTime: values.recordTime, // 保存使用日期
@@ -209,7 +209,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
         startMileage: vehicleInfo?.currentMileage || 0,
         endMileage: Number(values.endMileage),
-        usageStatus: values.usageStatus,
+        usageStatus: values.usageStatus || 0,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
         recordTime: values.recordTime, // 保存使用日期
@@ -283,7 +283,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       dataIndex: 'usageStatus',
       key: 'usageStatus',
       render: (status: number) => (
-        <Badge status={status === 0 || _.isUndefined(status) ? 'success' : 'error'} text={status === 0 ? '正常' : '异常'} />
+        <Badge status={status === 0 ? 'success' : 'error'} text={status === 0 ? '正常' : '异常'} />
       ),
     },
   ];
@@ -357,7 +357,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
             return (
               <div style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
                 {(editingKey === record.id && (isAdmin || !compareDateWithToday(record.recordTime))) ? (
-                  <Form layout="vertical" form={form} onFinish={handleUpdate}>
+                  <Form layout="vertical" form={form} onFinish={() => handleUpdate(record.id)}>
                     {
                       isAdmin && <ProFormSelect
                         name="responsiblePersonId"
@@ -373,12 +373,12 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                       rules={[
                         () => ({
                           validator(_, value) {
-                            const startMileage = Number(vehicleInfo?.currentMileage ?? 0);
+                            const startMileage = Number(record.startMileage ?? 0);
                             const endMileage = Number(value);
                             if (!value || startMileage <= endMileage) {
                               return Promise.resolve();
                             }
-                            return Promise.reject(new Error('结束里程数必须大于等于当前里程数，当前里程数为 ' + startMileage + ' 公里'));
+                            return Promise.reject(new Error('结束里程数必须大于等于开始里程数，当前里程数为 ' + startMileage + ' 公里'));
                           },
                         }),
                       ]}
