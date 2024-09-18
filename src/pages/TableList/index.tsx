@@ -109,7 +109,7 @@ const TableList: React.FC = () => {
               key="sync"
               onClick={() => {
                 const employee = state.employeeList.find((emp) => emp.name === record.name);
-                handleSyncSingle(employee?.id);
+                handleSyncSingle(employee?.userId);
               }}
               style={{ marginLeft: 8 }}
             >

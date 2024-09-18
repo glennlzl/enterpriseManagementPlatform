@@ -139,8 +139,7 @@ export const useEmployeeManagement = (currentUserId: string) => {
       message.error('请重新登录');
       history.push('/user/login');
     }
-    console.log("userId");
-    console.log(userId);
+
     const hide = message.loading('正在同步单个钉钉员工信息');
     try {
       console.log("asfasdfasdfasdfsdaf");

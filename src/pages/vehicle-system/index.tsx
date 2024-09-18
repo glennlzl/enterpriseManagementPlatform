@@ -2,8 +2,6 @@ import { queryAllEmployeeSimpleInfo } from '@/api/usermanagement';
 import { queryVehicleTypes } from '@/api/vihicle-system';
 import { useVehicleSystem } from '@/hooks/vehicle-system/Hook.useVehicleSystem';
 import type {
-  AddVehicleInfoRequest,
-  Driver,
   UpdateVehicleInfoRequest,
   VehicleInfo,
 } from '@/model/vehicle-management-system';
@@ -12,20 +10,18 @@ import { useModel } from '@@/exports';
 import { PlusOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
 import {
-  ActionType,
-  ModalForm,
   PageContainer,
   ProFormSelect,
   ProFormText,
   ProTable, StepsForm,
 } from '@ant-design/pro-components';
-import { ProFormDatePicker, ProFormDigit, ProFormGroup } from '@ant-design/pro-form/lib';
+import { ProFormDatePicker, ProFormDigit } from '@ant-design/pro-form/lib';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip, Modal} from 'antd';
+import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip, Modal, InputNumber, DatePicker} from 'antd';
 import _ from 'lodash';
-import React, { useEffect, useRef, useState } from 'react';
-import { DateTime } from 'luxon';
-import { css } from "antd-style";
+import React, {useEffect, useMemo, useState} from 'react';
+import moment from 'moment';
+
 const VehicleManagement: React.FC = () => {
   const { initialState } = useModel('@@initialState');
 
@@ -58,7 +54,6 @@ const VehicleManagement: React.FC = () => {
     handleDeleteVehicle,
     handleDeprecateVehicle,
     actionRef,
-    handleBatchDelete,
     setSelectedRowKeys,
     fetchVehicleList,
     selectedRowKeys,
@@ -84,6 +79,19 @@ const VehicleManagement: React.FC = () => {
     [],
   );
 
+  const [columnsStateMap, setColumnsStateMap] = useState(() => {
+    const vehicleInfoTableSettings: any = localStorage.getItem('vehicleInfoTableSettings');
+    return JSON.parse(vehicleInfoTableSettings) || {};
+  });
+
+  const handleOnChangeColumn = (map: any) => {
+    if (JSON.stringify(map) !== JSON.stringify(columnsStateMap)) {
+      setColumnsStateMap(map);
+      // 手动更新 localStorage
+      localStorage.setItem('vehicleInfoTableSettings', JSON.stringify(map));
+    }
+  };
+
   // 处理表单输入变化
   const handleFormChange = (changedValues: any) => {
     const newQueryParams = { ...queryParams, ...changedValues };
@@ -91,6 +99,7 @@ const VehicleManagement: React.FC = () => {
 
     actionRef.current?.reload();
   };
+
 
   const formatDate = (dateString: string) => {
     // 如果日期字符串长度为10，表示格式为 'yyyy-MM-dd'
@@ -122,12 +131,6 @@ const VehicleManagement: React.FC = () => {
         console.error('加载车辆类型失败:', error);
       }
     };
-
-    loadVehicleTypes();
-  }, []);
-
-  useEffect(() => {
-    // 加载员工信息
     const loadEmployeeInfo = async () => {
       try {
         const response = await queryAllEmployeeSimpleInfo();
@@ -143,6 +146,7 @@ const VehicleManagement: React.FC = () => {
       }
     };
 
+    loadVehicleTypes();
     loadEmployeeInfo();
   }, []);
 
@@ -240,6 +244,66 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.purchaseDate.localeCompare(b.purchaseDate),
       width: '120px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+        const [startDate, endDate] = selectedKeys[0] || [];
+        return (
+          <div style={{ padding: 8 }}>
+            <DatePicker.RangePicker
+              value={[
+                startDate ? moment(startDate, 'YYYY-MM-DD') : null,
+                endDate ? moment(endDate, 'YYYY-MM-DD') : null,
+              ]}
+              onChange={(dates) => {
+                if (dates) {
+                  setSelectedKeys([
+                    dates.map((date) => date.format('YYYY-MM-DD')),
+                  ]);
+                } else {
+                  setSelectedKeys([]);
+                }
+              }}
+              style={{ marginBottom: 8, display: 'block' }}
+              format="YYYY-MM-DD"
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+                style={{ width: 90 }}
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  if (clearFilters) {
+                    clearFilters();
+                  }
+                  confirm();
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        );
+      },
+      onFilter: (value, record) => {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+
+        const recordDate = new Date(record.purchaseDate);
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+
+        if (isNaN(recordDate.getTime())) {
+          return false;
+        }
+
+        return recordDate >= startDate && recordDate <= endDate;
+      },
     },
     {
       title: <FormattedMessage id="年检月份" />,
@@ -302,27 +366,205 @@ const VehicleManagement: React.FC = () => {
       title: <FormattedMessage id="上次保养公里数" />,
       dataIndex: 'lastMaintenanceMileage',
       valueType: 'text',
-      width: '120px',
+      width: '150px',
+      sorter: (a, b) => Number(a.lastMaintenanceMileage) - Number(b.lastMaintenanceMileage),
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Row gutter={8}>
+            <Col span={12}>
+              <InputNumber
+                placeholder="最小值"
+                value={selectedKeys[0]?.min}
+                onChange={(value) => {
+                  setSelectedKeys([{ ...selectedKeys[0], min: value }]);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Col>
+            <Col span={12}>
+              <InputNumber
+                placeholder="最大值"
+                value={selectedKeys[0]?.max}
+                onChange={(value) => {
+                  setSelectedKeys([{ ...selectedKeys[0], max: value }]);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Col>
+          </Row>
+          <div style={{ marginTop: 8, textAlign: 'right' }}>
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+                style={{ width: 90 }}
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters();
+                  confirm();
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        </div>
+      ),
+      onFilter: (value, record) => {
+        const min = Number(value.min);
+        const max = Number(value.max);
+        const mileage = Number(record.lastMaintenanceMileage) || 0;
+        if (!isNaN(min) && !isNaN(max)) {
+          return mileage >= min && mileage <= max;
+        } else if (!isNaN(min)) {
+          return mileage >= min;
+        } else if (!isNaN(max)) {
+          return mileage <= max;
+        }
+        return true;
+      },
     },
     {
       title: <FormattedMessage id="当前公里数" />,
       dataIndex: 'currentMileage',
       valueType: 'text',
-      sorter: (a: VehicleInfo, b: VehicleInfo) =>
-        _.isUndefined(a.currentMileage) || _.isUndefined(b.currentMileage)
-          ? 0
-          : a.currentMileage - b.currentMileage,
-      width: '120px',
+      sorter: (a, b) => Number(a.currentMileage) - Number(b.currentMileage),
+      width: '150px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Row gutter={8}>
+            <Col span={12}>
+              <InputNumber
+                placeholder="最小值"
+                value={selectedKeys[0]?.min}
+                onChange={(value) => {
+                  setSelectedKeys([{ ...selectedKeys[0], min: value }]);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Col>
+            <Col span={12}>
+              <InputNumber
+                placeholder="最大值"
+                value={selectedKeys[0]?.max}
+                onChange={(value) => {
+                  setSelectedKeys([{ ...selectedKeys[0], max: value }]);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Col>
+          </Row>
+          <div style={{ marginTop: 8, textAlign: 'right' }}>
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+                style={{ width: 90 }}
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters();
+                  confirm();
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        </div>
+      ),
+      onFilter: (value, record) => {
+        const min = Number(value.min);
+        const max = Number(value.max);
+        const mileage = Number(record.currentMileage) || 0;
+        if (!isNaN(min) && !isNaN(max)) {
+          return mileage >= min && mileage <= max;
+        } else if (!isNaN(min)) {
+          return mileage >= min;
+        } else if (!isNaN(max)) {
+          return mileage <= max;
+        }
+        return true;
+      },
     },
     {
       title: <FormattedMessage id="下次保养公里数" />,
       dataIndex: 'nextMaintenanceMileage',
       valueType: 'text',
-      sorter: (a: VehicleInfo, b: VehicleInfo) =>
-        _.isUndefined(a.nextMaintenanceMileage) || _.isUndefined(b.nextMaintenanceMileage)
-          ? 0
-          : a.nextMaintenanceMileage - b.nextMaintenanceMileage,
+      sorter: (a, b) => Number(a.nextMaintenanceMileage) - Number(b.nextMaintenanceMileage),
       width: '150px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Row gutter={8}>
+            <Col span={12}>
+              <InputNumber
+                placeholder="最小值"
+                value={selectedKeys[0]?.min}
+                onChange={(value) => {
+                  setSelectedKeys([{ ...selectedKeys[0], min: value }]);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Col>
+            <Col span={12}>
+              <InputNumber
+                placeholder="最大值"
+                value={selectedKeys[0]?.max}
+                onChange={(value) => {
+                  setSelectedKeys([{ ...selectedKeys[0], max: value }]);
+                }}
+                style={{ width: '100%' }}
+              />
+            </Col>
+          </Row>
+          <div style={{ marginTop: 8, textAlign: 'right' }}>
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+                style={{ width: 90 }}
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters();
+                  confirm();
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        </div>
+      ),
+      onFilter: (value, record) => {
+        const min = Number(value.min);
+        const max = Number(value.max);
+        const mileage = Number(record.nextMaintenanceMileage) || 0;
+        if (!isNaN(min) && !isNaN(max)) {
+          return mileage >= min && mileage <= max;
+        } else if (!isNaN(min)) {
+          return mileage >= min;
+        } else if (!isNaN(max)) {
+          return mileage <= max;
+        }
+        return true;
+      },
     },
     {
       title: <FormattedMessage id="负责人姓名" />,
@@ -395,15 +637,43 @@ const VehicleManagement: React.FC = () => {
     },
   ];
 
+  const memoizedColumns = useMemo(() => {
+    return columns.map((col) => ({
+      ...col,
+      onCell: (record) => {
+        let backgroundColor = '';
+
+        if (isWarning && record.warningLevel >= 3) {
+          backgroundColor = '#ffcccc';
+        } else if (record.isDeprecated) {
+          backgroundColor = '#cccccc'; // 灰色
+        }
+
+        return {
+          style: {
+            backgroundColor,
+          },
+        };
+      },
+    }));
+  }, [columns, isWarning]);
+
+
   const handleBatchExport = () => {
-    const selectedData = vehicleList.filter((item) => selectedRowKeys.includes(item.id));
+    const selectedData = vehicleList.filter((item) =>
+      selectedRowKeys.includes(item.id),
+    );
     if (selectedData.length > 0) {
-      exportToCSV(selectedData, '车辆信息导出', columns); // 传递 columns 作为参数
+      exportToCSV(
+        selectedData,
+        '车辆信息导出',
+        columns,
+        columnsStateMap, // 传入 columnsStateMap
+      );
     } else {
       message.warning('请先选择要导出的车辆信息');
     }
   };
-
   return (
     <PageContainer breadcrumbRender={false}>
       <Form
@@ -457,6 +727,10 @@ const VehicleManagement: React.FC = () => {
             {/*)}*/}
           </div>
         }
+        columnsState={{
+          value: columnsStateMap,
+          onChange: (map) => handleOnChangeColumn(map),
+        }}
         scroll={{ x: 3000 }}
         actionRef={actionRef}
         rowKey="id"
@@ -465,6 +739,7 @@ const VehicleManagement: React.FC = () => {
         rowSelection={{
           selectedRowKeys,
           onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as number[]),
+          preserveSelectedRowKeys: true,
         }}
         toolBarRender={() => [
           <Button
@@ -477,29 +752,7 @@ const VehicleManagement: React.FC = () => {
         ]}
         loading={loading}
         dataSource={vehicleList}
-        columns={columns.map((col) => ({
-          ...col,
-          onCell: (record) => {
-            // 这里你可以添加多个条件
-            let backgroundColor = '';
-
-            // 如果 warningLevel >= 3 并且 isWarning 为 true，背景设置为红色
-            if (isWarning && record.warningLevel >= 3) {
-              backgroundColor = '#ffcccc';
-            }
-
-            // 如果满足其他条件，背景设置为灰色
-            else if (record.isDeprecated) {
-              backgroundColor = '#cccccc'; // 灰色
-            }
-
-            return {
-              style: {
-                backgroundColor,
-              },
-            };
-          },
-        }))}
+        columns={memoizedColumns}
       />
 
       {/* Drawer 和 Modals */}
@@ -985,224 +1238,6 @@ const VehicleManagement: React.FC = () => {
           />
         </StepsForm.StepForm>
       </StepsForm>
-
-      {/*/!* 编辑车辆信息 Modal *!/*/}
-      {/*<ModalForm*/}
-      {/*  title="编辑车辆信息"*/}
-      {/*  width="750px"*/}
-      {/*  modalProps={{*/}
-      {/*    destroyOnClose: true*/}
-      {/*  }}*/}
-      {/*  open={editModalOpen}*/}
-      {/*  key={currentVehicle?.id || 'new'}  // 使用 key 来强制重新渲染*/}
-      {/*  initialValues={{*/}
-      {/*    ...currentVehicle,*/}
-      {/*    vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值*/}
-      {/*  }}*/}
-      {/*  onOpenChange={(isOpen) => handleModalOpen('editModalOpen', isOpen)}*/}
-      {/*  onFinish={async (values) => {*/}
-
-      {/*    const selectedEmployee = employeeOptions.find(*/}
-      {/*      (emp) => emp.value === values.responsiblePersonId,*/}
-      {/*    );*/}
-
-      {/*    let selectedDrivers;*/}
-
-      {/*    if (_.isUndefined(values.driverList)) {*/}
-      {/*      selectedDrivers = [];*/}
-      {/*    } else {*/}
-      {/*      selectedDrivers = values.driverList.map((id: number) => {*/}
-      {/*        const employee = employeeOptions.find((emp) => emp.value === id);*/}
-      {/*        return {*/}
-      {/*          id: employee?.value || 0,*/}
-      {/*          name: employee?.name || 'Unknown',*/}
-      {/*        };*/}
-      {/*      });*/}
-      {/*    }*/}
-
-      {/*    let selectedType;*/}
-
-      {/*    try {*/}
-      {/*      // 尝试解析 `vehicleTypeSelection` 字段*/}
-      {/*      selectedType = JSON.parse(values.vehicleTypeSelection);*/}
-      {/*    } catch (error) {*/}
-      {/*      // 如果解析失败，则使用初始值*/}
-      {/*      selectedType = {*/}
-      {/*        vehicleType: currentVehicle?.vehicleType || '',*/}
-      {/*        vehicleSerialNumber: currentVehicle?.vehicleSerialNumber || '',*/}
-      {/*        vehicleBrand: currentVehicle?.vehicleBrand || '',*/}
-      {/*        approvedLoadCapacity: currentVehicle?.approvedLoadCapacity || '',*/}
-      {/*      };*/}
-      {/*    }*/}
-
-      {/*    const data: UpdateVehicleInfoRequest = {*/}
-      {/*      ...values,*/}
-      {/*      driverList: selectedDrivers,*/}
-      {/*      purchaseDate: formatDate(values.purchaseDate),*/}
-      {/*      trafficInsuranceDate: formatDate(values.trafficInsuranceDate),*/}
-      {/*      commercialInsuranceDate: formatDate(values.commercialInsuranceDate),*/}
-      {/*      vehicleType: selectedType.vehicleType,*/}
-      {/*      vehicleSerialNumber: selectedType.vehicleSerialNumber,*/}
-      {/*      vehicleBrand: selectedType.vehicleBrand,*/}
-      {/*      approvedLoadCapacity: selectedType.approvedLoadCapacity,*/}
-      {/*      responsiblePersonName: selectedEmployee?.name || '',*/}
-      {/*      responsiblePersonId: selectedEmployee?.value || 0,*/}
-      {/*      responsiblePersonMobile: selectedEmployee?.mobile || '',*/}
-      {/*      registrantId: initialState.currentUser?.id || 0,*/}
-      {/*      registrant: initialState.currentUser?.name || '',*/}
-      {/*      id: currentVehicle?.id || 0, // 更新时需要车辆 ID*/}
-      {/*    };*/}
-      {/*    await handleEditVehicle(data);*/}
-      {/*  }}*/}
-      {/*>*/}
-      {/*  <ProFormGroup>*/}
-      {/*    <ProFormText*/}
-      {/*      name="vehicleNumber"*/}
-      {/*      label="车辆编号"*/}
-      {/*      rules={[{ required: true, message: '请输入车辆编号' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormText*/}
-      {/*      name="engineeingVehicleNumber"*/}
-      {/*      label="工程车编号"*/}
-      {/*      rules={[{ required: true, message: '请输入工程车编号' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormText*/}
-      {/*      name="licenseNumber"*/}
-      {/*      label="车牌号码"*/}
-      {/*      rules={[{ required: true, message: '请输入车牌号码' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*  </ProFormGroup>*/}
-
-      {/*  <ProFormGroup>*/}
-      {/*    <ProFormText*/}
-      {/*      name="engineNumber"*/}
-      {/*      label="发动机号后6位"*/}
-      {/*      rules={[{ required: true, message: '请输入发动机号后6位' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormSelect*/}
-      {/*      name="vehicleTypeSelection"*/}
-      {/*      label="车辆类型选择"*/}
-      {/*      options={vehicleTypeOptions}*/}
-      {/*      rules={[{ required: true, message: '请选择车辆类型' }]}*/}
-      {/*      width="200px"*/}
-      {/*      fieldProps={{*/}
-      {/*        dropdownMatchSelectWidth: false, // 只显示label*/}
-      {/*      }}*/}
-      {/*    />*/}
-      {/*    <ProFormDatePicker*/}
-      {/*      name="purchaseDate"*/}
-      {/*      label="购车日期"*/}
-      {/*      rules={[{ required: true, message: '请选择购车日期' }]}*/}
-      {/*      width="200px"*/}
-      {/*      dataFormat="YYYY-MM-DD"*/}
-      {/*    />*/}
-      {/*  </ProFormGroup>*/}
-
-      {/*  <ProFormGroup>*/}
-      {/*    <ProFormText*/}
-      {/*      name="auditMonth"*/}
-      {/*      label="年检月份"*/}
-      {/*      rules={[{ required: true, message: '请输入年检月份' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormSelect*/}
-      {/*      name="isAudited"*/}
-      {/*      label="是否年检"*/}
-      {/*      options={[*/}
-      {/*        { label: '是', value: 1 },*/}
-      {/*        { label: '否', value: 0 },*/}
-      {/*      ]}*/}
-      {/*      rules={[{ required: true, message: '请输入是否年检' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    /!* <ProFormSelect*/}
-      {/*      name="trafficInsurance"*/}
-      {/*      label="是否有交强险"*/}
-      {/*      options={[*/}
-      {/*        { label: '是', value: 1 },*/}
-      {/*        { label: '否', value: 0 },*/}
-      {/*      ]}*/}
-      {/*      rules={[{ required: true, message: '请输入是否有交强险' }]}*/}
-      {/*      width="200px"*/}
-      {/*    /> *!/*/}
-      {/*    <ProFormDatePicker*/}
-      {/*      name="trafficInsuranceDate"*/}
-      {/*      label="交强险日期"*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*  </ProFormGroup>*/}
-
-      {/*  <ProFormGroup>*/}
-      {/*    /!* <ProFormSelect*/}
-      {/*      name="commercialInsurance"*/}
-      {/*      label="是否有商业险"*/}
-      {/*      options={[*/}
-      {/*        { label: '是', value: 1 },*/}
-      {/*        { label: '否', value: 0 },*/}
-      {/*      ]}*/}
-      {/*      rules={[{ required: true, message: '请输入是否有商业险' }]}*/}
-      {/*      width="200px"*/}
-      {/*    /> *!/*/}
-      {/*    <ProFormDatePicker*/}
-      {/*      name="commercialInsuranceDate"*/}
-      {/*      label="商业险日期"*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormSelect*/}
-      {/*      name="gps"*/}
-      {/*      label="是否安装GPS"*/}
-      {/*      options={[*/}
-      {/*        { label: '是', value: 1 },*/}
-      {/*        { label: '否', value: 0 },*/}
-      {/*      ]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormText*/}
-      {/*      name="mechanicalBond"*/}
-      {/*      label="机械邦"*/}
-      {/*      rules={[{ required: true, message: '请输入机械邦信息' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*  </ProFormGroup>*/}
-
-      {/*  <ProFormGroup>*/}
-      {/*    <ProFormText*/}
-      {/*      name="usageProject"*/}
-      {/*      label="使用项目"*/}
-      {/*      rules={[{ required: true, message: '请输入使用项目' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormDigit name="lastMaintenanceMileage" label="上次保养公里数" min={0} width="200px" />*/}
-      {/*    <ProFormDigit name="currentMileage" label="当前公里数" min={0} width="200px" />*/}
-      {/*  </ProFormGroup>*/}
-
-      {/*  <ProFormGroup>*/}
-      {/*    /!* <ProFormDigit name="nextMaintenanceMileage" label="下次保养公里数" min={0} width="200px" /> *!/*/}
-      {/*    <ProFormSelect*/}
-      {/*      name="responsiblePersonId"*/}
-      {/*      label="负责人"*/}
-      {/*      options={employeeOptions}*/}
-      {/*      fieldProps={{*/}
-      {/*        labelInValue: false, // 只显示label*/}
-      {/*      }}*/}
-      {/*      rules={[{ required: true, message: '请选择负责人' }]}*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormSelect*/}
-      {/*      mode="multiple" // 多选模式*/}
-      {/*      name="driverList"*/}
-      {/*      label="司机"*/}
-      {/*      options={employeeOptions}*/}
-      {/*      allowClear*/}
-      {/*      width="200px"*/}
-      {/*    />*/}
-      {/*    <ProFormText name="extend" label="其他备注信息" width="200px" />*/}
-      {/*  </ProFormGroup>*/}
-      {/*</ModalForm>*/}
     </PageContainer>
   );
 };

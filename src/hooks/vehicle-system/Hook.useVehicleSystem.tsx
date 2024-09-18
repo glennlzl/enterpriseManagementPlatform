@@ -35,6 +35,11 @@ export const useVehicleSystem = (userId: number) => {
     mechanicalBondFilters: []
   });
 
+
+  const handleOnChangeColumn = (map: any) => {
+    setColumnsStateMap(map);
+  }
+
   const fetchVehicleList = async (
     isWarning: boolean = false,
     generalQueryCondition?: string,
@@ -240,45 +245,109 @@ export const useVehicleSystem = (userId: number) => {
     }
   };
 
-  // 导出CSV函数
-  const exportToCSV = (data: any[], filename: string, columns: ProColumns<VehicleInfo>[]) => {
-    const filteredColumns = columns.slice(0, -1);
-    console.log(columns);
+  const exportToCSV = (
+    data: VehicleInfo[],
+    filename: string,
+    columns: ProColumns<VehicleInfo>[],
+    columnsStateMap: any,
+  ) => {
+    const filteredColumns = columns.filter((col) => {
+      const dataIndex = col.dataIndex as string;
 
-    // 获取表头
-    const headers = filteredColumns.map(col => {
-      // 检查 col.title 是 React 元素还是字符串
-      if (typeof col.title.props.id === 'string') {
-        return col.title.props.id;
-      } else if (React.isValidElement(col.title)) {
-        return (col.title as React.ReactElement).props.children;
+      if (
+        columnsStateMap[dataIndex] &&
+        columnsStateMap[dataIndex].show === false
+      ) {
+        return false;
       }
-      return '';
-    }).join(',');
-    // 将数据转换为 CSV 格式
-    const csvContent = data.map(item =>
-      filteredColumns.map(col => {
-        const value = item[col.dataIndex as keyof VehicleInfo];
 
-        // 根据不同的字段进行布尔值转换
-        if (col.render) {
-          return col.render(value);
+      if (dataIndex === 'option') {
+        return false;
+      }
+
+      return true;
+    });
+
+    const headers = filteredColumns
+      .map((col) => {
+        if (typeof col.title === 'string') {
+          return escapeCsvCell(col.title);
+        } else if (React.isValidElement(col.title)) {
+          const titleText = col.title.props.children || col.title.props.id || '';
+          return escapeCsvCell(titleText);
         }
+        return '';
+      })
+      .join(',');
 
-        return value;
-      }).join(',')
-    ).join('\n');
+    const csvRows = data
+      .map((item) =>
+        filteredColumns
+          .map((col) => {
+            let value = item[col.dataIndex as keyof VehicleInfo];
 
-    // 生成最终的 CSV 内容，包含表头
-    const csv = `${headers}\n${csvContent}`;
+            if (value === undefined || value === null) {
+              value = '';
+            }
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            if (col.render) {
+              const renderedValue = col.render(value, item, 0);
+
+              if (React.isValidElement(renderedValue)) {
+                const text = renderedValue.props.children || '';
+                return escapeCsvCell(text);
+              }
+
+              if (Array.isArray(renderedValue)) {
+                const text = renderedValue.join('; ');
+                return escapeCsvCell(text);
+              }
+
+              return escapeCsvCell(renderedValue.toString());
+            }
+
+            if (Array.isArray(value)) {
+              if (typeof value[0] === 'object' && value[0] !== null) {
+                const text = value.map((item) => item.name).join('; ');
+                return escapeCsvCell(text);
+              } else {
+                const text = value.join('; ');
+                return escapeCsvCell(text);
+              }
+            }
+
+            return escapeCsvCell(value.toString());
+          })
+          .join(','),
+      )
+      .join('\n');
+
+    const csvContent = `${headers}\n${csvRows}`;
+
+    const csvBlob = new Blob(
+      [new Uint8Array([0xef, 0xbb, 0xbf]), csvContent],
+      { type: 'text/csv;charset=utf-8;' }
+    );
+
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    link.href = URL.createObjectURL(csvBlob);
     link.setAttribute('download', `${filename}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const escapeCsvCell = (value: string) => {
+    if (typeof value !== 'string') {
+      value = value.toString();
+    }
+
+    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+      value = value.replace(/"/g, '""'); // Escape double quotes
+      return `"${value}"`;
+    }
+
+    return value;
   };
 
   const handleBatchDelete = async () => {

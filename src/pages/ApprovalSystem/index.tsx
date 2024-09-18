@@ -11,13 +11,15 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, DatePicker, Input, message, Modal, Switch, Tabs, Tooltip, Upload} from 'antd';
+import {Button, DatePicker, Input, message, Modal, Space, Tabs, Tooltip, Upload} from 'antd';
 import React, { useState } from 'react';
 import _ from 'lodash';
-import { DateTime } from 'luxon';
-const { RangePicker } = DatePicker;
 import { CopyOutlined } from '@ant-design/icons';
 import { GENERAL_CLIENT_API_BASE_URL} from "@/api/usermanagement";
+import { DateTime } from 'luxon';
+import moment from "moment";
+
+
 
 const { TabPane } = Tabs;
 
@@ -198,76 +200,133 @@ const ApprovalSystem: React.FC = () => {
       width: '150px',
       render: renderApprovalFileLink,
     },
-    // {
-    //   title: <FormattedMessage id="创建时间" />,
-    //   dataIndex: 'createTime',
-    //   filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-    //     <div style={{ padding: 8 }}>
-    //       <RangePicker
-    //         onChange={(dates) => {
-    //           if (dates) {
-    //             // 设置选择的日期范围
-    //             const start = dates[0].toISOString();
-    //             const end = dates[1].toISOString();
-    //             setSelectedKeys([start, end]); // 将选择的值传递
-    //           } else {
-    //             setSelectedKeys([]); // 清空选择
-    //           }
-    //         }}
-    //         style={{ width: 188, marginBottom: 8, display: 'block' }}
-    //       />
-    //       <Button
-    //         type="primary"
-    //         onClick={() => confirm()} // 应用筛选
-    //         size="small"
-    //         style={{ width: 90 }}
-    //       >
-    //         确定
-    //       </Button>
-    //       <Button
-    //         onClick={() => {
-    //           clearFilters();
-    //           confirm();
-    //         }} // 清除筛选
-    //         size="small"
-    //         style={{ width: 90, marginLeft: 8 }}
-    //       >
-    //         重置
-    //       </Button>
-    //     </div>
-    //   ),
-    //   onFilter: (value, record) => {
-    //     const [startTime, endTime] = value;
-    //     // 使用 Luxon 进行日期比较
-    //     const recordTime = DateTime.fromISO(record.createTime);
-    //     const isWithinRange = recordTime >= DateTime.fromISO(startTime) && recordTime <= DateTime.fromISO(endTime);
-    //     return isWithinRange;
-    //   },
-    //   render: (text) => DateTime.fromISO(text).toFormat('yyyy-MM-dd HH:mm:ss'), // 格式化显示
-    // },
-    // {
-    //   title: <FormattedMessage id="更新时间" />,
-    //   dataIndex: 'updateTime',
-    //   valueType: 'dateTimeRange',
-    //   search: {
-    //     transform: (value) => ({
-    //       startUpdateTime: DateTime.fromJSDate(value[0].toJSDate()).toFormat('yyyy-MM-dd HH:mm:ss'),
-    //       endUpdateTime: DateTime.fromJSDate(value[1].toJSDate()).toFormat('yyyy-MM-dd HH:mm:ss'),
-    //     }),
-    //   },
-    //   render: (text) => {
-    //     return DateTime.fromISO(text).toFormat('yyyy-MM-dd HH:mm:ss'); // 解析并格式化显示
-    //   },
-    // },
     {
       title: <FormattedMessage id="创建时间" />,
       dataIndex: 'createTime',
       valueType: 'dateTime',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+        const [startDate, endDate] = selectedKeys[0] || [];
+        return (
+          <div style={{ padding: 8 }}>
+            <DatePicker.RangePicker
+              value={[
+                startDate ? moment(startDate) : null,
+                endDate ? moment(endDate) : null,
+              ]}
+              onChange={(dates) => {
+                if (dates) {
+                  setSelectedKeys([
+                    dates.map((date) => date.format('YYYY-MM-DD')),
+                  ]);
+                } else {
+                  setSelectedKeys([]);
+                }
+              }}
+              format="YYYY-MM-DD"
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  if (clearFilters) {
+                    clearFilters();
+                  }
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        );
+      },
+      onFilter: (value, record) => {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+
+        const recordDate = DateTime.fromISO(record.createTime);
+        const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+        const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+        if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+          return false;
+        }
+
+        // 比较日期范围，忽略时间部分
+        return recordDate >= startDate && recordDate <= endDate;
+      },
     },
     {
       title: <FormattedMessage id="更新时间" />,
       dataIndex: 'updateTime',
       valueType: 'dateTime',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+        const [startDate, endDate] = selectedKeys[0] || [];
+        return (
+          <div style={{ padding: 8 }}>
+            <DatePicker.RangePicker
+              value={[
+                startDate ? moment(startDate) : null,
+                endDate ? moment(endDate) : null,
+              ]}
+              onChange={(dates) => {
+                if (dates) {
+                  setSelectedKeys([
+                    dates.map((date) => date.format('YYYY-MM-DD')),
+                  ]);
+                } else {
+                  setSelectedKeys([]);
+                }
+              }}
+              format="YYYY-MM-DD"
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  if (clearFilters) {
+                    clearFilters();
+                  }
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        );
+      },
+      onFilter: (value, record) => {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+
+        const recordDate = DateTime.fromISO(record.createTime);
+        const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+        const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+        if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+          return false;
+        }
+
+        // 比较日期范围，忽略时间部分
+        return recordDate >= startDate && recordDate <= endDate;
+      },
     },
     {
       title: '审批状态',
@@ -364,11 +423,129 @@ const ApprovalSystem: React.FC = () => {
       title: <FormattedMessage id="创建时间" />,
       dataIndex: 'createTime',
       valueType: 'dateTime',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+        const [startDate, endDate] = selectedKeys[0] || [];
+        return (
+          <div style={{ padding: 8 }}>
+            <DatePicker.RangePicker
+              value={[
+                startDate ? moment(startDate) : null,
+                endDate ? moment(endDate) : null,
+              ]}
+              onChange={(dates) => {
+                if (dates) {
+                  setSelectedKeys([
+                    dates.map((date) => date.format('YYYY-MM-DD')),
+                  ]);
+                } else {
+                  setSelectedKeys([]);
+                }
+              }}
+              format="YYYY-MM-DD"
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  if (clearFilters) {
+                    clearFilters();
+                  }
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        );
+      },
+      onFilter: (value, record) => {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+
+        const recordDate = DateTime.fromISO(record.createTime);
+        const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+        const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+        if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+          return false;
+        }
+
+        // 比较日期范围，忽略时间部分
+        return recordDate >= startDate && recordDate <= endDate;
+      },
     },
     {
       title: <FormattedMessage id="更新时间" />,
       dataIndex: 'updateTime',
       valueType: 'dateTime',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+        const [startDate, endDate] = selectedKeys[0] || [];
+        return (
+          <div style={{ padding: 8 }}>
+            <DatePicker.RangePicker
+              value={[
+                startDate ? moment(startDate) : null,
+                endDate ? moment(endDate) : null,
+              ]}
+              onChange={(dates) => {
+                if (dates) {
+                  setSelectedKeys([
+                    dates.map((date) => date.format('YYYY-MM-DD')),
+                  ]);
+                } else {
+                  setSelectedKeys([]);
+                }
+              }}
+              format="YYYY-MM-DD"
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  if (clearFilters) {
+                    clearFilters();
+                  }
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        );
+      },
+      onFilter: (value, record) => {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+
+        const recordDate = DateTime.fromISO(record.createTime);
+        const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+        const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+        if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+          return false;
+        }
+
+        // 比较日期范围，忽略时间部分
+        return recordDate >= startDate && recordDate <= endDate;
+      },
     },
     {
       title: '审批状态',
