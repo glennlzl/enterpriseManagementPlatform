@@ -50,7 +50,7 @@ export interface AddOrUpdateVehicleUsageInfoRequest {
   userName: string;
   startMileage: number;
   endMileage: number;
-  usageStatus: number;
+  usageStatus?: number;
   vehicleImageUrls: string[];
   extend?: string;
 }

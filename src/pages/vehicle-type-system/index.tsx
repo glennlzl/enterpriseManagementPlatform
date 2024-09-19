@@ -175,6 +175,12 @@ const VehicleTypeManagement: React.FC = () => {
           >
             <Input placeholder="请输入核定载质量" />
           </Form.Item>
+          <Form.Item
+            label="保养间隔"
+            name="maintenanceInterval"
+          >
+            <Input placeholder="请输入保养间隔" />
+          </Form.Item>
         </Form>
       </Modal>
     </>

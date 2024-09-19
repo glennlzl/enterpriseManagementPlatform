@@ -183,7 +183,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         id: id || 0,
         startMileage: vehicleInfo?.currentMileage || 0,
         endMileage: Number(values.endMileage),
-        usageStatus: values.usageStatus || 0,
+        usageStatus: values.usageStatus || undefined,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
         recordTime: values.recordTime, // 保存使用日期
@@ -209,7 +209,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
         startMileage: vehicleInfo?.currentMileage || 0,
         endMileage: Number(values.endMileage),
-        usageStatus: values.usageStatus || 0,
+        usageStatus: values.usageStatus || undefined,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
         recordTime: values.recordTime, // 保存使用日期

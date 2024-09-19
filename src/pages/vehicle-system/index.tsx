@@ -20,6 +20,7 @@ import { FormattedMessage, useIntl } from '@umijs/max';
 import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip, Modal, InputNumber, DatePicker} from 'antd';
 import _ from 'lodash';
 import React, {useEffect, useMemo, useState} from 'react';
+import { DateTime } from 'luxon';
 import moment from 'moment';
 
 const VehicleManagement: React.FC = () => {
@@ -293,16 +294,16 @@ const VehicleManagement: React.FC = () => {
       onFilter: (value, record) => {
         if (!value || value.length === 0) return true;
         const [start, end] = value;
-
-        const recordDate = new Date(record.purchaseDate);
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-
-        if (isNaN(recordDate.getTime())) {
+        // 将日期字符串解析为 moment 对象
+        const recordDate = moment(record.purchaseDate, 'YYYY-MM-DD');
+        // 检查日期是否有效
+        if (!recordDate.isValid()) {
           return false;
         }
-
-        return recordDate >= startDate && recordDate <= endDate;
+        const startDate = moment(start, 'YYYY-MM-DD').startOf('day');
+        const endDate = moment(end, 'YYYY-MM-DD').endOf('day');
+        console.log(startDate, endDate);
+        return recordDate.isBetween(startDate, endDate, 'day', '[]');
       },
     },
     {
@@ -366,7 +367,7 @@ const VehicleManagement: React.FC = () => {
       title: <FormattedMessage id="上次保养公里数" />,
       dataIndex: 'lastMaintenanceMileage',
       valueType: 'text',
-      width: '150px',
+      width: '120px',
       sorter: (a, b) => Number(a.lastMaintenanceMileage) - Number(b.lastMaintenanceMileage),
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <div style={{ padding: 8 }}>
@@ -435,7 +436,7 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'currentMileage',
       valueType: 'text',
       sorter: (a, b) => Number(a.currentMileage) - Number(b.currentMileage),
-      width: '150px',
+      width: '120px',
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <div style={{ padding: 8 }}>
           <Row gutter={8}>
