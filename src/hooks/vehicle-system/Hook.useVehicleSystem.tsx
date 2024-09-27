@@ -388,5 +388,6 @@ export const useVehicleSystem = (userId: number) => {
     fetchVehicleList,
     setCreateModalOpen,
     setEditModalOpen,
+    setCurrentVehicle
   };
 };

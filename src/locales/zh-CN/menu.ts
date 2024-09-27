@@ -22,6 +22,8 @@ export default {
   'menu.form.step-form.result': '分步表单（完成）',
   'menu.form.advanced-form': '高级表单',
   'menu.list': '列表页',
+  'menu.project': '计量管理',
+  'menu.project.table-list': '计量管理',
   'menu.vehicle.table-list': '车辆管理',
   'menu.vehicle': '车辆管理',
   'menu.approval': '审批系統',

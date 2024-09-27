@@ -45,13 +45,13 @@ export interface AddVehicleTypeRequest {
 
 export interface AddOrUpdateVehicleUsageInfoRequest {
   id?: number;
-  vehicleId: number;
+  vehicleId?: number;
   userId: number;
   userName: string;
-  startMileage: number;
-  endMileage: number;
+  startMileage?: number;
+  endMileage?: number;
   usageStatus?: number;
-  vehicleImageUrls: string[];
+  vehicleImageUrls?: string[];
   extend?: string;
 }
 

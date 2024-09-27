@@ -1,7 +1,7 @@
 import { fetchOssStsAccessInfo, OssStsAccessInfo } from '@/api/usermanagement';
 import {
   addVehicleUsageInfo,
-  deleteVehicleUsageInfo,
+  deleteVehicleUsageInfo, getVehicleInfo,
   queryVehicleUsageInfoList,
   updateVehicleUsageInfo,
 } from '@/api/vihicle-system';
@@ -31,6 +31,7 @@ import React, { useEffect, useState } from 'react';
 import {useModel} from "@@/exports";
 import { DateTime } from 'luxon';
 import {ProFormSelect} from "@ant-design/pro-components";
+import {isNull} from "lodash";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -61,7 +62,8 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                                                        setShowMore,
                                                        form,
                                                        employeeOptions,
-                                                       refreshCurrentInfo}) => {
+                                                       setVehicleInfo,
+                                                       fetchVehicleList}) => {
   const { initialState } = useModel('@@initialState');
   const [filteredUsageList, setFilteredUsageList] = useState<VehicleUsageInfo[]>(usageInfoList);
   const [fileList, setFileList] = useState<any[]>([]); // 用于存储文件列表
@@ -70,6 +72,23 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   const [editing, setEditing] = useState(false);
   const isAdmin = initialState?.currentUser?.role >= 2;
   const [thisLoading, setLoading] = useState(false);
+  const isCreateButtonDisabled = !(_.isEmpty(filteredUsageList) || !_.isNull(filteredUsageList[0].endMileage))
+  // 假设每个员工对象包含 id 和 username 属性
+  const employeeOptionsWithUsername = employeeOptions.map((employee) => ({
+    value: employee.value,
+    label: employee.name, // 使用用户名作为显示标签
+  }));
+  const responsibleEmployeeOptions = (!vehicleInfo || !employeeOptionsWithUsername || _.isNull(vehicleInfo?.driverList))
+    ? []
+    : employeeOptionsWithUsername.filter((item) =>
+      item.value === vehicleInfo?.responsiblePersonId ||
+      item.value === vehicleInfo?.registrantId ||
+      _.includes(vehicleInfo.driverList?.map((driver) => driver.id) || [], item.value)
+    );
+
+  console.log( vehicleInfo?.driverList);
+
+
 
   const compareDateWithToday = (dateStr) => {
     // 将输入的 YYYY-MM-DD 字符串解析为 Luxon 的 DateTime 对象
@@ -90,6 +109,9 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   }, [usageInfoList]);
 
   const refreshUsageInfoList = async () => {
+    const updateVehicleInfo = await getVehicleInfo(vehicleInfo?.id || 0);
+    setVehicleInfo(updateVehicleInfo);
+    fetchVehicleList();
     if (vehicleInfo) {
       try {
         const updatedUsageList = await queryVehicleUsageInfoList(vehicleInfo.id);
@@ -174,20 +196,20 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   const handleUpdate = async (id: number) => {
     const values = await form.validateFields();
     const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
-    await refreshCurrentInfo();
     try {
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
         userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
         userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
         id: id || 0,
-        startMileage: vehicleInfo?.currentMileage || 0,
-        endMileage: Number(values.endMileage),
+        startMileage: vehicleInfo?.currentMileage || undefined,
+        endMileage: values.endMileage || undefined,
         usageStatus: values.usageStatus || undefined,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
         recordTime: values.recordTime, // 保存使用日期
       };
+      console.log(payload);
       await updateVehicleUsageInfo(payload);
       message.success('车辆使用信息更新成功');
       setEditingKey(null); // 退出编辑模式
@@ -201,14 +223,13 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   const handleAdd = async () => {
     const values = await form.validateFields();
     const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
-    await refreshCurrentInfo();
     try {
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
         userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
         userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
-        startMileage: vehicleInfo?.currentMileage || 0,
-        endMileage: Number(values.endMileage),
+        startMileage: vehicleInfo?.currentMileage || undefined,
+        endMileage: values.endMileage || undefined,
         usageStatus: values.usageStatus || undefined,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
@@ -227,7 +248,6 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
     try {
       await deleteVehicleUsageInfo(record.id);
       setEditingKey(record.id); // 只设置当前行为编辑状态
-      await refreshCurrentInfo();
       message.success('车辆使用信息删除成功');
       setFilteredUsageList(filteredUsageList.filter((item) => item.id !== record.id));
       await refreshUsageInfoList(); // 更新数据
@@ -283,7 +303,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       dataIndex: 'usageStatus',
       key: 'usageStatus',
       render: (status: number) => (
-        <Badge status={status === 0 ? 'success' : 'error'} text={status === 0 ? '正常' : '异常'} />
+        <Badge status={status === 0 || isNull(status) ? 'success' : 'error'} text={status === 0 || isNull(status) ? '正常' : '异常'} />
       ),
     },
   ];
@@ -361,10 +381,15 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                     {
                       isAdmin && <ProFormSelect
                         name="responsiblePersonId"
-                        label="负责人"
-                        options={employeeOptions}
+                        label="使用者"
+                        options={responsibleEmployeeOptions}
                         width="200px"
-                        initialValue={vehicleInfo?.responsiblePersonId} // 设置初始选中值
+                        initialValue={
+                          {
+                            value: record.userId,
+                            label: record.userName,
+                          }
+                      } // 设置初始选中值
                       />
                     }
                     <Form.Item
@@ -427,7 +452,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                   <div>
                     <p><strong>开始里程数: </strong>{record.startMileage}</p>
                     <p><strong>结束里程数: </strong>{record.endMileage}</p>
-                    <p><strong>使用情况: </strong>{record.usageStatus === 0 ? '正常' : '异常'}</p>
+                    <p><strong>使用情况: </strong>{record.usageStatus === 0 || isNull(record.endMileage) ? '正常' : '异常'}</p>
                     <div style={{ marginBottom: '16px' }}>
                       <strong>车辆图片: </strong>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
@@ -463,19 +488,26 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       />
 
       {!isAdding && (
-        <Button
-          type="dashed"
-          style={{ marginTop: 20 }}
-          onClick={() => {
-            setIsAdding(true);
-            setExpandedRowKeys([]);
-            setSelectedImages([]);
-            form.resetFields();
-            setFileList([]); // 重置fileList
-          }}
-        >
-          <PlusOutlined /> 新增使用记录
-        </Button>
+        <div>
+          <Button
+            type="dashed"
+            style={{ marginTop: 20 }}
+            disabled={isCreateButtonDisabled}
+            onClick={() => {
+              setIsAdding(true);
+              setExpandedRowKeys([]);
+              setSelectedImages([]);
+              form.resetFields();
+              setFileList([]); // 重置fileList
+            }}
+          >
+            <PlusOutlined /> 新增使用记录
+           {isCreateButtonDisabled && ( <span style={{ marginLeft: 10, color: 'rgba(0, 0, 0, 0.45)' }}>
+              请先将第一条记录的结束里程数填写完整
+            </span>
+            )}
+          </Button>
+        </div>
       )}
 
       {isAdding && (
@@ -511,7 +543,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
               isAdmin && <ProFormSelect
                 name="responsiblePersonId"
                 label="使用者"
-                options={employeeOptions}
+                options={responsibleEmployeeOptions}
                 fieldProps={{
                   labelInValue: false, // 只显示label
                 }}

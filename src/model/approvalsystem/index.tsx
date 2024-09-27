@@ -7,7 +7,7 @@ export interface ApprovalInfoVO {
   approvalReceiverName: string;
   approvalType: number;
   approvalStatus: number;
-  approvalFileUrl: string;
+  approvalFileUrl: string[];
   updateTime: string;
   createTime: string;
 }
@@ -20,7 +20,7 @@ export interface AddApprovalInfoRequest {
   approvalReceiverName: string;
   approvalType: number;
   approvalStatus: number;
-  approvalFileUrl: string;
+  approvalFileUrl: string[];
 }
 
 // 对应于 UplodaFileUrlRequest DO

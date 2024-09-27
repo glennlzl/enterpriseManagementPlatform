@@ -90,6 +90,33 @@ export default [
     ],
   },
   {
+    path: '/project',
+    name: 'project.table-list',
+    icon: 'book',
+    routes: [
+      {
+        path: '/project/project-management',
+        name: '项目管理',
+        component: './project-management/project',
+      },
+      {
+        path: '/project/contract-type=management',
+        name: '合同管理',
+        component: './project-management/contract',
+      },
+      {
+        path: '/project/period-management',
+        name: '周期管理',
+        component: './project-management/period',
+      },
+      {
+        path: '/project/measurement-detail',
+        name: '计量支付',
+        component: './project-management/measurement-detail',
+      },
+    ],
+  },
+  {
     path: '/',
     redirect: '/welcome',
   },

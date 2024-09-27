@@ -22,6 +22,7 @@ import _ from 'lodash';
 import React, {useEffect, useMemo, useState} from 'react';
 import { DateTime } from 'luxon';
 import moment from 'moment';
+import {AddVehicleInfoRequest} from "@/model/vehicle-management-system";
 
 const VehicleManagement: React.FC = () => {
   const { initialState } = useModel('@@initialState');
@@ -62,6 +63,7 @@ const VehicleManagement: React.FC = () => {
     setCreateModalOpen,
     setEditModalOpen,
     filters,
+    setCurrentVehicle
   } = useVehicleSystem(initialState.currentUser?.id || '');
 
   const intl = useIntl();
@@ -294,16 +296,17 @@ const VehicleManagement: React.FC = () => {
       onFilter: (value, record) => {
         if (!value || value.length === 0) return true;
         const [start, end] = value;
-        // 将日期字符串解析为 moment 对象
-        const recordDate = moment(record.purchaseDate, 'YYYY-MM-DD');
-        // 检查日期是否有效
-        if (!recordDate.isValid()) {
+
+        const recordDate = DateTime.fromISO(record.purchaseDate);
+        const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+        const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+        if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
           return false;
         }
-        const startDate = moment(start, 'YYYY-MM-DD').startOf('day');
-        const endDate = moment(end, 'YYYY-MM-DD').endOf('day');
-        console.log(startDate, endDate);
-        return recordDate.isBetween(startDate, endDate, 'day', '[]');
+
+        // 比较日期范围，忽略时间部分
+        return recordDate >= startDate && recordDate <= endDate;
       },
     },
     {
@@ -332,12 +335,147 @@ const VehicleManagement: React.FC = () => {
       width: '120px',
     },
     {
+      title: <FormattedMessage id="交强险日期" />,
+      dataIndex: 'trafficInsuranceDate',
+      valueType: 'text',
+      sorter: (a: VehicleInfo, b: VehicleInfo) => a.trafficInsurance.localeCompare(b.trafficInsuranceDate),
+      width: '150px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+        const [startDate, endDate] = selectedKeys[0] || [];
+        return (
+          <div style={{ padding: 8 }}>
+            <DatePicker.RangePicker
+              value={[
+                startDate ? moment(startDate, 'YYYY-MM-DD') : null,
+                endDate ? moment(endDate, 'YYYY-MM-DD') : null,
+              ]}
+              onChange={(dates) => {
+                if (dates) {
+                  setSelectedKeys([
+                    dates.map((date) => date.format('YYYY-MM-DD')),
+                  ]);
+                } else {
+                  setSelectedKeys([]);
+                }
+              }}
+              style={{ marginBottom: 8, display: 'block' }}
+              format="YYYY-MM-DD"
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+                style={{ width: 90 }}
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  if (clearFilters) {
+                    clearFilters();
+                  }
+                  confirm();
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        );
+      },
+      onFilter: (value, record) => {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+
+        const recordDate = DateTime.fromISO(record.trafficInsuranceDate);
+        const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+        const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+        if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+          return false;
+        }
+
+        // 比较日期范围，忽略时间部分
+        return recordDate >= startDate && recordDate <= endDate;
+      },
+    },
+    {
       title: <FormattedMessage id="是否有商业险" />,
       dataIndex: 'commercialInsurance',
       valueType: 'text',
       render: (value: number) => (value === 1 ? '是' : '否'),
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.commercialInsurance - b.commercialInsurance,
       width: '120px',
+    },
+    {
+      title: <FormattedMessage id="商业险日期" />,
+      dataIndex: 'commercialInsuranceDate',
+      valueType: 'text',
+      sorter: (a: VehicleInfo, b: VehicleInfo) => a.commercialInsuranceDate.localeCompare(b.commercialInsuranceDate),
+      width: '150px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+        const [startDate, endDate] = selectedKeys[0] || [];
+        return (
+          <div style={{ padding: 8 }}>
+            <DatePicker.RangePicker
+              value={[
+                startDate ? moment(startDate, 'YYYY-MM-DD') : null,
+                endDate ? moment(endDate, 'YYYY-MM-DD') : null,
+              ]}
+              onChange={(dates) => {
+                if (dates) {
+                  setSelectedKeys([
+                    dates.map((date) => date.format('YYYY-MM-DD')),
+                  ]);
+                } else {
+                  setSelectedKeys([]);
+                }
+              }}
+              style={{ marginBottom: 8, display: 'block' }}
+              format="YYYY-MM-DD"
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+                style={{ width: 90 }}
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  if (clearFilters) {
+                    clearFilters();
+                  }
+                  confirm();
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        );
+      },
+      onFilter: (value, record) => {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+        const recordDate = DateTime.fromISO(record.commercialInsuranceDate);
+        const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+        const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+        if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+          return false;
+        }
+
+        // 比较日期范围，忽略时间部分
+        return recordDate >= startDate && recordDate <= endDate;
+      },
     },
     {
       title: <FormattedMessage id="是否安装GPS" />,
@@ -367,7 +505,7 @@ const VehicleManagement: React.FC = () => {
       title: <FormattedMessage id="上次保养公里数" />,
       dataIndex: 'lastMaintenanceMileage',
       valueType: 'text',
-      width: '120px',
+      width: '150px',
       sorter: (a, b) => Number(a.lastMaintenanceMileage) - Number(b.lastMaintenanceMileage),
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <div style={{ padding: 8 }}>
@@ -436,7 +574,7 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'currentMileage',
       valueType: 'text',
       sorter: (a, b) => Number(a.currentMileage) - Number(b.currentMileage),
-      width: '120px',
+      width: '150px',
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <div style={{ padding: 8 }}>
           <Row gutter={8}>
@@ -548,7 +686,7 @@ const VehicleManagement: React.FC = () => {
                 style={{ width: 90 }}
               >
                 重置
-              </Button>
+              </Button>VehicleDrawer
             </Space>
           </div>
         </div>
@@ -773,7 +911,8 @@ const VehicleManagement: React.FC = () => {
         setShowMore={setShowMore}
         form={form}
         employeeOptions={employeeOptions}
-        refreshCurrentInfo={() => fetchVehicleList(isWarning)}
+        setVehicleInfo={setCurrentVehicle}
+        fetchVehicleList={fetchVehicleList}
       />
 
       {/* 新增车辆 Modal */}
@@ -788,10 +927,8 @@ const VehicleManagement: React.FC = () => {
               name: selectedEmployee?.name || 'Unknown',
             };
           });
-
           const selectedType = JSON.parse(values.vehicleTypeSelection);
-
-          const data = {
+          const data   = {
             ...values,
             driverList: selectedDrivers,
             purchaseDate: formatDate(values.purchaseDate),
@@ -806,8 +943,9 @@ const VehicleManagement: React.FC = () => {
             responsiblePersonMobile: selectedEmployee?.mobile || '',
             registrantId: initialState.currentUser?.id || 0,
             registrant: initialState.currentUser?.name || '',
+            nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval),
           };
-          await handleAddVehicle(data);
+          await handleAddVehicle(data as AddVehicleInfoRequest);
           setCreateModalOpen(false);  // 关闭模态框
         }}
         stepsProps={{
@@ -1040,6 +1178,7 @@ const VehicleManagement: React.FC = () => {
             registrantId: initialState.currentUser?.id || 0,
             registrant: initialState.currentUser?.name || '',
             id: currentVehicle?.id || 0, // 更新时需要车辆 ID
+            nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval),
           };
           await handleEditVehicle(data);
         }}
