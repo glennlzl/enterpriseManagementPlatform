@@ -4,12 +4,14 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import { Button, message, Popconfirm, Form, Input, Space, Modal, Select } from 'antd';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, message} from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import { PeriodInfoVO } from "@/model/project/Model.period";
-import { usePeriodInfo } from "@/hooks/project/Hook.usePeriodInfo";
-import PeriodInfoForm from "@/pages/project-management/period/component/PeriodInfoForm";
+import { PeriodInfoVO } from '@/model/project/Model.period';
+import { usePeriodInfo } from '@/hooks/project/Hook.usePeriodInfo';
+import PeriodInfoForm from '@/pages/project-management/period/component/PeriodInfoForm';
+import {isLogin} from "@/api/usermanagement";
+import {history} from "@@/core/history";
 
 const { Option } = Select;
 
@@ -37,9 +39,11 @@ const PeriodInfoTable: React.FC = () => {
     onSelectChange,
   } = usePeriodInfo();
 
+  // 打开或关闭模态框
   const handleModalOpen = (open: boolean, record?: PeriodInfoVO) => {
     setModalOpen(open);
-    if (record) {
+    if (open && record) {
+      // 编辑周期信息
       setCurrentPeriod(record);
       form.setFieldsValue({
         ...record,
@@ -47,15 +51,37 @@ const PeriodInfoTable: React.FC = () => {
         endDate: record.endDate ? moment(record.endDate) : undefined,
       });
     } else {
+      // 新增周期信息
       setCurrentPeriod(null);
       form.resetFields();
     }
   };
 
-  // 更新后的 columns 数组，包含所有的字段
+  const downloadFromOSS = async (fileUrl: string) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      message.error('请重新登录');
+      history.push('/user/login');
+    }
+    try {
+      // 通过文件URL直接下载
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const fileName = fileUrl.split('/').pop();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = fileName || 'downloaded_file';
+      link.click();
+    } catch (err) {
+      console.error('文件下载失败:', err);
+      throw err;
+    }
+  };
+
+  // 定义表格的列
   const columns: ProColumns<PeriodInfoVO>[] = [
     {
-      title: 'ID',
+      title: '编号',
       dataIndex: 'id',
       valueType: 'text',
       fixed: 'left',
@@ -107,20 +133,6 @@ const PeriodInfoTable: React.FC = () => {
       width: 120,
     },
     {
-      title: '关联项目ID',
-      dataIndex: 'relatedProjectId',
-      valueType: 'digit',
-      width: 100,
-      render: (_, record) => record.relatedProjectId || '-',
-    },
-    {
-      title: '关联合同ID',
-      dataIndex: 'relatedContractId',
-      valueType: 'digit',
-      width: 100,
-      render: (_, record) => record.relatedContractId || '-',
-    },
-    {
       title: '是否归档',
       dataIndex: 'isArchived',
       render: (_, record) => (record.isArchived ? '是' : '否'),
@@ -129,15 +141,41 @@ const PeriodInfoTable: React.FC = () => {
     {
       title: '附件列表',
       dataIndex: 'attachmentList',
-      render: (_, record) => (
-        <Space>
-          {record.attachmentList?.map((file, index) => (
-            <a key={index} href={file} target="_blank" rel="noopener noreferrer">
-              附件{index + 1}
-            </a>
-          )) || '-'}
-        </Space>
-      ),
+      valueType: 'text',
+      render: (_, record) =>
+        record.attachmentList && record.attachmentList.length > 0 ? (
+          record.attachmentList.map((url: string, index: number) => {
+            if (!url) {
+              return null; // 或者返回一个占位符
+            }
+
+            // 提取并解码文件名
+            const decodedFileName = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
+
+            return (
+              <div key={index}>
+                <a
+                  href="#"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    await downloadFromOSS(url); // 调用下载函数
+                  }}
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: 'inline-block',
+                    maxWidth: '100%',
+                  }}
+                >
+                  {decodedFileName}
+                </a>
+              </div>
+            );
+          })
+        ) : (
+          '-'
+        ),
       width: 200,
       ellipsis: true,
     },
@@ -161,13 +199,16 @@ const PeriodInfoTable: React.FC = () => {
       width: 250,
       render: (_, record) => (
         <Space>
-          <a onClick={() => handleModalOpen(true, record)}>编辑</a>
+          {/* 更新操作 */}
+          <a onClick={() => handleModalOpen(true, record)}>更新</a>
+          {/* 删除操作 */}
           <Popconfirm
             title="确定要删除这个周期信息吗？"
             onConfirm={() => handleDeletePeriod(record.id!)}
           >
             <a>删除</a>
           </Popconfirm>
+          {/* 归档操作，仅在未归档时显示 */}
           {!record.isArchived && (
             <Popconfirm
               title="确定要归档这个周期信息吗？"
@@ -181,8 +222,8 @@ const PeriodInfoTable: React.FC = () => {
     },
   ];
 
-  // 使用 useMemo 优化性能（可选）
-  const memoizedColumns = useMemo(() => columns, [columns]);
+  // 使用 useMemo 优化性能
+  const memoizedColumns = useMemo(() => columns, [selectedRowKeys]);
 
   return (
     <PageContainer breadcrumbRender={false}>
@@ -238,9 +279,26 @@ const PeriodInfoTable: React.FC = () => {
             周期信息管理
             {selectedRowKeys.length > 0 && (
               <>
-                {/* 可以添加批量操作按钮 */}
-                <Button onClick={() => message.info('批量操作功能待实现')} style={{ marginLeft: 16 }}>
+                {/* 批量归档和删除操作 */}
+                <Button
+                  onClick={() => {
+                    selectedRowKeys.forEach((id) => {
+                      handleArchivePeriod(id);
+                    });
+                  }}
+                  style={{ marginLeft: 16 }}
+                >
                   批量归档
+                </Button>
+                <Button
+                  onClick={() => {
+                    selectedRowKeys.forEach((id) => {
+                      handleDeletePeriod(id);
+                    });
+                  }}
+                  style={{ marginLeft: 16 }}
+                >
+                  批量删除
                 </Button>
               </>
             )}
@@ -271,7 +329,7 @@ const PeriodInfoTable: React.FC = () => {
 
       {/* 新增/编辑周期信息的弹窗 */}
       <Modal
-        title={currentPeriod ? '编辑周期信息' : '新增周期信息'}
+        title={currentPeriod ? '更新周期信息' : '新增周期信息'}
         visible={modalOpen}
         onCancel={() => handleModalOpen(false)}
         onOk={() => {
@@ -281,6 +339,7 @@ const PeriodInfoTable: React.FC = () => {
               handleAddOrUpdatePeriod({
                 ...currentPeriod,
                 ...values,
+                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => attachment.response) : [],
                 startDate: values.startDate
                   ? values.startDate.format('YYYY-MM-DD')
                   : undefined,

@@ -32,7 +32,7 @@ export function useProjectInfo() {
       const data = await queryProjectInfoList(initialState.currentUser?.id || '', generalQueryCondition);
       setProjectList(data || []);
     } catch (error) {
-
+      setProjectList([]);
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export function useProjectInfo() {
     try {
       await addProjectInfo(projectData);
       message.success('添加项目成功');
-      await fetchProjectList(initialState.currentUser?.id || '');
+      await fetchProjectList();
     } catch (error) {
       message.error(error);
     }

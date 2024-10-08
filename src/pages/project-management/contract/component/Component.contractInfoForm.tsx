@@ -13,13 +13,28 @@ import {
   Modal,
   Space,
   Popconfirm,
+  message,
+  Upload,
 } from 'antd';
 import type { FormInstance } from 'antd/lib/form';
 import moment from 'moment';
-import { EmployeeSimpleInfoResponse } from "@/api/usermanagement";
-import { ProjectInfoVO } from "@/model/project/Modal.project";
-import type {ContractInfoVO, MeasurementItemVO} from "@/model/project/Model.contract";
-import { useContractInfo } from '@/hooks/project/Hook.useContractInfo';
+import {
+  EmployeeSimpleInfoResponse,
+  fetchOssStsAccessInfo,
+  OssStsAccessInfo,
+} from '@/api/usermanagement';
+import { ProjectInfoVO } from '@/model/project/Modal.project';
+import type { ContractInfoVO, MeasurementItemVO } from '@/model/project/Model.contract';
+import {
+  addMeasurementItem,
+  updateMeasurementItem,
+  deleteMeasurementItem,
+} from '@/api/project-managerment/Api.measurement-item';
+import OSS from 'ali-oss';
+import _ from 'lodash';
+import { UploadOutlined } from '@ant-design/icons';
+
+const OSSClient = OSS.default || OSS;
 
 interface ContractInfoFormProps {
   form: FormInstance;
@@ -36,18 +51,18 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
                                                              projectList,
                                                              currentContract,
                                                            }) => {
-  // 从 Hook 中获取测量项管理函数
-  const {
-    handleAddMeasurementItem,
-    handleUpdateMeasurementItem,
-    handleDeleteMeasurementItem,
-  } = useContractInfo();
-
   // 管理测量项的状态
-  const [measurementItems, setMeasurementItems] = useState<MeasurementItemVO[]>([]);
+  const [contractCostItems, setContractCostItems] = useState<MeasurementItemVO[]>([]);
+  const [projectScheduleItems, setProjectScheduleItems] = useState<MeasurementItemVO[]>([]);
+
   const [measurementModalVisible, setMeasurementModalVisible] = useState<boolean>(false);
-  const [currentMeasurementItem, setCurrentMeasurementItem] = useState<MeasurementItemVO | null>(null);
+  const [currentMeasurementItem, setCurrentMeasurementItem] = useState<MeasurementItemVO | null>(
+    null,
+  );
   const [measurementForm] = Form.useForm();
+  const [measurementType, setMeasurementType] = useState<'contractCost' | 'projectSchedule'>(
+    'contractCost',
+  );
 
   // 自定义校验，确保开始日期早于结束日期
   const validateStartEndDate = (_: any, value: any) => {
@@ -61,12 +76,79 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
 
   // 如果有当前合同，初始化测量项
   useEffect(() => {
-    if (currentContract && currentContract.contractCost) {
-      setMeasurementItems(currentContract.contractCost);
+    if (currentContract) {
+      setContractCostItems(currentContract.contractCost || []);
+      setProjectScheduleItems(currentContract.projectSchedule || []);
     } else {
-      setMeasurementItems([]);
+      setContractCostItems([]);
+      setProjectScheduleItems([]);
     }
   }, [currentContract]);
+
+  // 将测量项数据同步到表单中，以便在提交时获取
+  useEffect(() => {
+    form.setFieldsValue({
+      contractCost: contractCostItems,
+      projectSchedule: projectScheduleItems,
+    });
+  }, [contractCostItems, projectScheduleItems]);
+
+  // 附件上传相关状态
+  const [fileList, setFileList] = useState<any[]>([]);
+
+  // 上传到OSS
+  const uploadFileToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+    const client = new OSSClient({
+      region: 'oss-cn-beijing',
+      accessKeyId: ossStsAccessInfo.accessKeyId,
+      accessKeySecret: ossStsAccessInfo.accessKeySecret,
+      stsToken: ossStsAccessInfo.securityToken,
+      bucket: 'rohana-erp',
+    });
+
+    try {
+      const result = await client.put(`files/${file.name}`, file);
+      return result.url;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  };
+
+  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+    try {
+      const ossStsAccessInfo = await fetchOssStsAccessInfo();
+      const fileUrl = await uploadFileToOss(file, ossStsAccessInfo);
+
+      setFileList((prevList) => [...prevList, { uid: file.uid, name: file.name, url: fileUrl }]);
+      // 更新表单中的 attachmentList
+      const currentUrls = form.getFieldValue('attachmentList') || [];
+      form.setFieldsValue({
+        attachmentList: [...currentUrls, fileUrl],
+      });
+
+      onSuccess(fileUrl);
+    } catch (error) {
+      onError(error);
+    }
+  };
+
+  const handleRemove = (file: any) => {
+    setFileList((prevList) => prevList.filter((item) => item.uid !== file.uid));
+
+    // 更新表单中的 attachmentList
+    const currentUrls = form.getFieldValue('attachmentList') || [];
+    const updatedUrls = currentUrls.filter((url: string) => url !== file.url);
+    form.setFieldsValue({
+      attachmentList: updatedUrls,
+    });
+  };
+
+  const uploadProps = {
+    customRequest: handleUpload,
+    onRemove: handleRemove,
+    multiple: true,
+    fileList,
+  };
 
   // 添加或编辑测量项
   const handleMeasurementOk = async () => {
@@ -75,36 +157,60 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       if (currentMeasurementItem) {
         // 编辑测量项
         const updatedItem = { ...currentMeasurementItem, ...values };
-        await handleUpdateMeasurementItem(updatedItem);
-        setMeasurementItems((prevItems) =>
-          prevItems.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
-        );
+        // 调用后端 API 更新测量项
+        await updateMeasurementItem(updatedItem);
+        if (measurementType === 'contractCost') {
+          setContractCostItems((prevItems) =>
+            prevItems.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
+          );
+        } else {
+          setProjectScheduleItems((prevItems) =>
+            prevItems.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
+          );
+        }
+        message.success('测量项更新成功');
       } else {
         // 添加测量项
-        const newItem = await handleAddMeasurementItem(values);
-        setMeasurementItems((prevItems) => [...prevItems, newItem]);
+        // 调用后端 API 添加测量项
+        const newItem = await addMeasurementItem(values);
+        if (measurementType === 'contractCost') {
+          setContractCostItems((prevItems) => [...prevItems, newItem]);
+        } else {
+          setProjectScheduleItems((prevItems) => [...prevItems, newItem]);
+        }
+        message.success('测量项添加成功');
       }
       setMeasurementModalVisible(false);
       setCurrentMeasurementItem(null);
       measurementForm.resetFields();
     } catch (error) {
-      // 错误已经在 Hook 中处理
+      message.error('操作失败，请重试');
     }
   };
 
   // 删除测量项
-  const handleDeleteMeasurement = async (id: number) => {
+  const handleDeleteMeasurement = async (id: number, type: 'contractCost' | 'projectSchedule') => {
     try {
-      await handleDeleteMeasurementItem(id);
-      setMeasurementItems((prevItems) => prevItems.filter((item) => item.id !== id));
+      // 调用后端 API 删除测量项
+      await deleteMeasurementItem(id);
+      if (type === 'contractCost') {
+        setContractCostItems((prevItems) => prevItems.filter((item) => item.id !== id));
+      } else {
+        setProjectScheduleItems((prevItems) => prevItems.filter((item) => item.id !== id));
+      }
+      message.success('测量项删除成功');
     } catch (error) {
-      // 错误已经在 Hook 中处理
+      message.error('删除测量项失败');
     }
   };
 
   // 编辑测量项
-  const handleEditMeasurementItem = (record: MeasurementItemVO) => {
+  const handleEditMeasurementItem = (
+    record: MeasurementItemVO,
+    type: 'contractCost' | 'projectSchedule',
+  ) => {
     setCurrentMeasurementItem(record);
+    setMeasurementType(type);
     measurementForm.setFieldsValue(record);
     setMeasurementModalVisible(true);
   };
@@ -151,10 +257,10 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       key: 'action',
       render: (_: any, record: MeasurementItemVO) => (
         <Space>
-          <a onClick={() => handleEditMeasurementItem(record)}>编辑</a>
+          <a onClick={() => handleEditMeasurementItem(record, measurementType)}>编辑</a>
           <Popconfirm
             title="确定要删除这个测量项吗？"
-            onConfirm={() => handleDeleteMeasurement(record.id!)}
+            onConfirm={() => handleDeleteMeasurement(record.id!, measurementType)}
           >
             <a>删除</a>
           </Popconfirm>
@@ -162,11 +268,6 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       ),
     },
   ];
-
-  // 将测量项数据同步到表单中，以便在提交时获取
-  useEffect(() => {
-    form.setFieldsValue({ contractCost: measurementItems });
-  }, [measurementItems]);
 
   return (
     <Form form={form} layout="vertical">
@@ -222,10 +323,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            label="合同序号"
-            name="contractOrder"
-          >
+          <Form.Item label="合同序号" name="contractOrder">
             <InputNumber style={{ width: '100%' }} placeholder="请输入合同序号" />
           </Form.Item>
         </Col>
@@ -309,7 +407,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
               showSearch
               labelInValue
               filterOption={(input, option) =>
-                option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                option?.label.toLowerCase().includes(input.toLowerCase())
               }
             >
               {employeeList.map((emp) => (
@@ -320,51 +418,66 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
             </Select>
           </Form.Item>
         </Col>
-        <Col span={8}>
-          <Form.Item
-            label="关联项目"
-            name="relatedProjectId"
-            rules={[{ required: true, message: '请选择关联项目' }]}
-          >
-            <Select
-              placeholder="请选择关联项目"
-              optionLabelProp="label"
-              showSearch
-              filterOption={(input, option) =>
-                option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {projectList.map((project) => (
-                <Option key={project.id} value={project.id} label={project.name}>
-                  {project.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
       </Row>
 
-      {/*/!* 合同内容部分 *!/*/}
-      {/*<Divider orientation="left">合同内容</Divider>*/}
-      {/*<Form.Item label="合同内容" name="extend">*/}
-      {/*  <TextArea placeholder="请输入合同内容" rows={4} />*/}
-      {/*</Form.Item>*/}
+      {/* 附件上传 */}
+      <Divider orientation="left">附件上传</Divider>
+      <Form.Item
+        label="附件列表"
+        name="attachmentList"
+        valuePropName="fileList"
+        getValueFromEvent={(e) => e && e.fileList}
+      >
+        <Upload {...uploadProps}>
+          <Button icon={<UploadOutlined />}>点击上传文件</Button>
+        </Upload>
+      </Form.Item>
 
-      {/* 测量项管理部分 */}
-      <Divider orientation="left">测量项管理</Divider>
+      {/* 隐藏的表单项，用于验证测量项列表不为空 */}
+      <Form.Item name="contractCost" style={{ display: 'none' }}>
+        <Input />
+      </Form.Item>
+      <Form.Item name="projectSchedule" style={{ display: 'none' }}>
+        <Input />
+      </Form.Item>
+
+      {/* 测量项管理部分 - 合同成本 */}
+      <Divider orientation="left">合同成本</Divider>
       <Button
         type="dashed"
         onClick={() => {
+          setMeasurementType('contractCost');
           setCurrentMeasurementItem(null);
           measurementForm.resetFields();
           setMeasurementModalVisible(true);
         }}
         style={{ width: '100%', marginBottom: 16 }}
       >
-        添加测量项
+        添加合同成本项
       </Button>
       <Table
-        dataSource={measurementItems}
+        dataSource={contractCostItems}
+        columns={measurementColumns}
+        rowKey="id"
+        pagination={false}
+      />
+
+      {/* 测量项管理部分 - 项目进度 */}
+      <Divider orientation="left">项目进度</Divider>
+      <Button
+        type="dashed"
+        onClick={() => {
+          setMeasurementType('projectSchedule');
+          setCurrentMeasurementItem(null);
+          measurementForm.resetFields();
+          setMeasurementModalVisible(true);
+        }}
+        style={{ width: '100%', marginBottom: 16 }}
+      >
+        添加项目进度项
+      </Button>
+      <Table
+        dataSource={projectScheduleItems}
         columns={measurementColumns}
         rowKey="id"
         pagination={false}
@@ -387,18 +500,18 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="测量单位类型"
+                label="项目类型"
                 name="itemType"
-                rules={[{ required: true, message: '请输入测量单位类型' }]}
+                rules={[{ required: true, message: '请输入项目类型' }]}
               >
                 <Input placeholder="请输入项目类型" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="测量单位名称"
+                label="项目名称"
                 name="itemName"
-                rules={[{ required: true, message: '请输入测量单位' }]}
+                rules={[{ required: true, message: '请输入项目名称' }]}
               >
                 <Input placeholder="请输入项目名称" />
               </Form.Item>
@@ -407,16 +520,16 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="测量单位价格"
+                label="项目价格"
                 name="itemPrice"
-                rules={[{ required: true, message: '请输入测量单位价格' }]}
+                rules={[{ required: true, message: '请输入项目价格' }]}
               >
-                <InputNumber style={{ width: '100%' }} placeholder="请输入测量单位价格" />
+                <InputNumber style={{ width: '100%' }} placeholder="请输入项目价格" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="项目项目单位"
+                label="项目单位"
                 name="itemUnit"
                 rules={[{ required: true, message: '请输入项目单位' }]}
               >
@@ -426,12 +539,13 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="合同成本类型" name="contractCostType">
+              <Form.Item label="合同成本类型" name="contractCostType" rules={[{ required: true, message: '请输入项目类型' }]}
+              >
                 <Input placeholder="请输入合同成本类型" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="交易类型" name="transactionType">
+              <Form.Item label="交易类型" name="transactionType" rules={[{ required: true, message: '请输入项目类型' }]}>
                 <Input placeholder="请输入交易类型" />
               </Form.Item>
             </Col>

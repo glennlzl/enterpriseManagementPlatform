@@ -4,16 +4,16 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import { Button, Popconfirm, Form, Input, Space, Modal, Select } from 'antd';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, Table, message} from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import {useContractInfo} from "@/hooks/project/Hook.useContractInfo";
-import {AddOrUpdateContractInfoRequest, ContractInfoVO} from "@/model/project/Model.contract";
-import ContractInfoForm from "@/pages/project-management/contract/component/Component.contractInfoForm";
-import {useModel} from "@@/exports";
-import {queryProjectInfoList} from "@/api/project-managerment/Api.project";
-import {ProjectInfoVO} from "@/model/project/Modal.project";
-import {EmployeeSimpleInfoResponse, queryAllEmployeeSimpleInfo} from "@/api/usermanagement";
+import { useContractInfo } from '@/hooks/project/Hook.useContractInfo';
+import { AddOrUpdateContractInfoRequest, ContractInfoVO, MeasurementItemVO } from '@/model/project/Model.contract';
+import ContractInfoForm from '@/pages/project-management/contract/component/Component.contractInfoForm';
+import {history, useModel} from '@@/exports';
+import { queryProjectInfoList } from '@/api/project-managerment/Api.project';
+import { ProjectInfoVO } from '@/model/project/Modal.project';
+import {EmployeeSimpleInfoResponse, isLogin, queryAllEmployeeSimpleInfo} from '@/api/usermanagement';
 
 const { Option } = Select;
 
@@ -42,6 +42,10 @@ const ContractInfoTable: React.FC = () => {
   const [employeeList, setEmployeeList] = useState<EmployeeSimpleInfoResponse[]>([]);
   const [projectList, setProjectList] = useState<ProjectInfoVO[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(undefined);
+
+  const [detailModalOpen, setDetailModalOpen] = useState<boolean>(false);
+  const [detailTitle, setDetailTitle] = useState<string>('');
+  const [detailData, setDetailData] = useState<MeasurementItemVO[]>([]);
 
   const { initialState } = useModel('@@initialState');
   const userId = initialState?.currentUser?.id;
@@ -93,6 +97,72 @@ const ContractInfoTable: React.FC = () => {
     }
   };
 
+  const showDetailModal = (title: string, data: MeasurementItemVO[]) => {
+    setDetailTitle(title);
+    setDetailData(data);
+    setDetailModalOpen(true);
+  };
+
+  const downloadFromOSS = async (fileUrl: string) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      message.error('请重新登录');
+      history.push('/user/login');
+    }
+    try {
+      // 通过文件URL直接下载
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const fileName = fileUrl.split('/').pop();
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = fileName || 'downloaded_file';
+      link.click();
+    } catch (err) {
+      console.error('文件下载失败:', err);
+      throw err;
+    }
+  };
+
+  // 定义测量项的列
+  const measurementColumns: ProColumns<MeasurementItemVO>[] = [
+    {
+      title: '项目类型',
+      dataIndex: 'itemType',
+      key: 'itemType',
+    },
+    {
+      title: '项目名称',
+      dataIndex: 'itemName',
+      key: 'itemName',
+    },
+    {
+      title: '项目价格',
+      dataIndex: 'itemPrice',
+      key: 'itemPrice',
+    },
+    {
+      title: '项目单位',
+      dataIndex: 'itemUnit',
+      key: 'itemUnit',
+    },
+    {
+      title: '合同成本类型',
+      dataIndex: 'contractCostType',
+      key: 'contractCostType',
+    },
+    {
+      title: '交易类型',
+      dataIndex: 'transactionType',
+      key: 'transactionType',
+    },
+    {
+      title: '设计数量',
+      dataIndex: 'designCount',
+      key: 'designCount',
+    },
+  ];
+
   const columns: ProColumns<ContractInfoVO>[] = [
     {
       title: '序号',
@@ -123,6 +193,12 @@ const ContractInfoTable: React.FC = () => {
       width: 100,
     },
     {
+      title: '承包商',
+      dataIndex: 'contractor',
+      valueType: 'text',
+      width: 120,
+    },
+    {
       title: '合同金额',
       dataIndex: 'contractAmount',
       valueType: 'text',
@@ -141,10 +217,141 @@ const ContractInfoTable: React.FC = () => {
       width: 120,
     },
     {
-      title: '负责人',
+      title: '合同序号',
+      dataIndex: 'contractOrder',
+      valueType: 'digit',
+      width: 100,
+    },
+    {
+      title: '合同临时价格',
+      dataIndex: 'contractProvisionalPrice',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '合同期限类型',
+      dataIndex: 'contractTermType',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '监理单位',
+      dataIndex: 'supervisingOrganization',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '监测单位',
+      dataIndex: 'monitoringOrganization',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '咨询单位',
+      dataIndex: 'consultingOrganization',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '账户名称',
+      dataIndex: 'accountName',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '开户行',
+      dataIndex: 'accountBank',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '账号',
+      dataIndex: 'accountNumber',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '财务负责人',
+      dataIndex: 'financialResponsiblePerson',
+      valueType: 'text',
+      width: 150,
+    },
+    {
+      title: '合同成本',
+      dataIndex: 'contractCost',
+      valueType: 'text',
+      width: 150,
+      render: (_, record) => (
+        <a onClick={() => showDetailModal('合同成本详情', record.contractCost || [])}>查看详情</a>
+      ),
+    },
+    {
+      title: '项目进度',
+      dataIndex: 'projectSchedule',
+      valueType: 'text',
+      width: 150,
+      render: (_, record) => (
+        <a onClick={() => showDetailModal('项目进度详情', record.projectSchedule || [])}>查看详情</a>
+      ),
+    },
+    {
+      title: '负责人列表',
       dataIndex: 'adminList',
       valueType: 'text',
       render: (_, record) => record.adminList?.map((admin) => admin.name).join(', ') || '-',
+      width: 150,
+    },
+    {
+      title: '附件列表',
+      dataIndex: 'attachmentList',
+      valueType: 'text',
+      render: (_, record) =>
+        record.attachmentList && record.attachmentList.length > 0 ? (
+          record.attachmentList.map((url: string, index: number) => {
+            if (!url) {
+              return null; // 或者返回一个占位符
+            }
+
+            // 提取并解码文件名
+            const decodedFileName = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
+
+            return (
+              <div key={index}>
+                <a
+                  href="#"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    await downloadFromOSS(url); // 调用下载函数
+                  }}
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: 'inline-block',
+                    maxWidth: '100%',
+                  }}
+                >
+                  {decodedFileName}
+                </a>
+              </div>
+            );
+          })
+        ) : (
+          '-'
+        ),
+      width: 200,
+      ellipsis: true,
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updateTime',
+      valueType: 'dateTime',
+      width: 150,
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      valueType: 'dateTime',
       width: 150,
     },
     {
@@ -233,7 +440,7 @@ const ContractInfoTable: React.FC = () => {
           </div>
         }
         columns={columns}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 'max-content' }}
         actionRef={actionRef}
         rowKey="id"
         search={false}
@@ -266,20 +473,27 @@ const ContractInfoTable: React.FC = () => {
           form
             .validateFields()
             .then((values: any) => {
-              const formattedValues : AddOrUpdateContractInfoRequest = {
+              const formattedValues: AddOrUpdateContractInfoRequest = {
                 ...values,
+                projectSchedule: values.projectSchedule,
+                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => attachment.response) : [],
                 startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
                 endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : undefined,
-                projectId: selectedProjectId,
-                financialResponsiblePerson: values.financialResponsiblePerson.label,
-                financialResponsiblePersonId: values.financialResponsiblePerson.key,
-                financialResponsiblePersonMobile: values.financialResponsiblePerson.value,
-                relatedProjectId: values.relatedProjectId.value,
+                relatedProjectId: selectedProjectId,
+                financialResponsiblePerson: values.financialResponsiblePerson
+                  ? values.financialResponsiblePerson.label
+                  : undefined,
+                financialResponsiblePersonId: values.financialResponsiblePerson
+                  ? values.financialResponsiblePerson.key
+                  : undefined,
+                financialResponsiblePersonMobile: values.financialResponsiblePerson
+                  ? values.financialResponsiblePerson.value
+                  : undefined,
+                contractCost: values.contractCost ? values.contractCost : undefined,
                 adminList: values.adminList
                   ? employeeList.filter((emp) => values.adminList.includes(emp.id))
                   : undefined,
               };
-              console.log(employeeList);
               handleAddContract(formattedValues);
               handleModalOpen('createModalOpen', false);
             })
@@ -305,13 +519,21 @@ const ContractInfoTable: React.FC = () => {
               const formattedValues = {
                 ...currentContract,
                 ...values,
+                projectSchedule: values.projectSchedule,
+                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => attachment.response) : [],
                 startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
                 endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : undefined,
-                projectId: selectedProjectId,
-                financialResponsiblePerson: values.financialResponsiblePerson.label,
-                financialResponsiblePersonId: values.financialResponsiblePerson.key,
-                financialResponsiblePersonMobile: values.financialResponsiblePerson.value,
-                relatedProjectId: values.relatedProjectId.value,
+                relatedProjectId: selectedProjectId,
+                financialResponsiblePerson: values.financialResponsiblePerson
+                  ? values.financialResponsiblePerson.label
+                  : undefined,
+                financialResponsiblePersonId: values.financialResponsiblePerson
+                  ? values.financialResponsiblePerson.key
+                  : undefined,
+                financialResponsiblePersonMobile: values.financialResponsiblePerson
+                  ? values.financialResponsiblePerson.value
+                  : undefined,
+                contractCost: values.contractCost ? values.contractCost : undefined,
                 adminList: values.adminList
                   ? employeeList.filter((emp) => values.adminList.includes(emp.id))
                   : undefined,
@@ -324,7 +546,12 @@ const ContractInfoTable: React.FC = () => {
             });
         }}
       >
-        <ContractInfoForm form={form} employeeList={employeeList}  projectList={projectList}/>
+        <ContractInfoForm
+          form={form}
+          employeeList={employeeList}
+          projectList={projectList}
+          currentContract={currentContract || undefined}
+        />
       </Modal>
 
       {/* 授权合同的弹窗 */}
@@ -362,7 +589,7 @@ const ContractInfoTable: React.FC = () => {
               optionLabelProp="label"
               showSearch
               filterOption={(input, option) =>
-                option?.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                option?.children.toLowerCase().includes(input.toLowerCase())
               }
             >
               {employeeList.map((admin) => (
@@ -373,6 +600,22 @@ const ContractInfoTable: React.FC = () => {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 查看详情的模态框 */}
+      <Modal
+        title={detailTitle}
+        visible={detailModalOpen}
+        onCancel={() => setDetailModalOpen(false)}
+        footer={null}
+        width={800}
+      >
+        <Table
+          dataSource={detailData}
+          columns={measurementColumns}
+          rowKey="id"
+          pagination={false}
+        />
       </Modal>
     </PageContainer>
   );

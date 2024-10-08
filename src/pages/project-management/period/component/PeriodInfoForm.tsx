@@ -1,8 +1,13 @@
-import React from 'react';
-import { Form, Input, DatePicker, Upload, Button, Select, message } from 'antd';
+import React, {useState} from 'react';
+import {Form, Input, DatePicker, Upload, Button, Select, message, UploadProps} from 'antd';
 import type { FormInstance } from 'antd/lib/form';
 import { UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import OSS from 'ali-oss';
+import {fetchOssStsAccessInfo, OssStsAccessInfo} from "@/api/usermanagement";
+import _ from "lodash";
+
+const OSSClient = OSS.default || OSS;
 
 interface PeriodInfoFormProps {
   form: FormInstance;
@@ -22,12 +27,60 @@ const PeriodInfoForm: React.FC<PeriodInfoFormProps> = ({ form }) => {
     return Promise.resolve();
   };
 
-  // 附件上传处理，将上传的文件列表转换为所需的格式
-  const normFile = (e: any) => {
-    if (Array.isArray(e)) {
-      return e;
+  const [fileList, setFileList] = useState<any[]>([]);
+
+  const uploadImageToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+    const client = new OSSClient({
+      region: 'oss-cn-beijing',
+      accessKeyId: ossStsAccessInfo.accessKeyId,
+      accessKeySecret: ossStsAccessInfo.accessKeySecret,
+      stsToken: ossStsAccessInfo.securityToken,
+      bucket: 'rohana-erp',
+    });
+
+    try {
+      const result = await client.put(`files/${file.name}`, file);
+      return result.url;
+    } catch (err) {
+      return Promise.reject(err);
     }
-    return e && e.fileList;
+  };
+
+  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+    try {
+      const ossStsAccessInfo = await fetchOssStsAccessInfo();
+      const fileUrl = await uploadImageToOss(file, ossStsAccessInfo);
+
+      setFileList((prevList) => [...prevList, fileUrl]);
+      // 更新表单中的 attachmentList
+      const currentUrls = form.getFieldValue('attachmentList') || [];
+      console.log(currentUrls);
+      form.setFieldsValue({
+        attachmentList: _.isUndefined(currentUrls) ? [...currentUrls, fileUrl] : [fileUrl],
+      });
+
+      onSuccess(fileUrl);
+    } catch (error) {
+      onError(error);
+    }
+  };
+
+  const handleRemove = (file: any) => {
+    setFileList((prevList) => prevList.filter((item) => item.uid !== file.uid));
+
+    // 更新表单中的 attachmentList
+    const currentUrls = form.getFieldValue('attachmentList') || [];
+    const updatedUrls = currentUrls.filter((url: string) => url !== file.url);
+    form.setFieldsValue({
+      attachmentList: updatedUrls,
+    });
+  };
+
+  const uploadProps: UploadProps = {
+    customRequest: handleUpload,
+    onRemove: handleRemove,
+    multiple: true,
+    fileList,
   };
 
   return (
@@ -52,9 +105,9 @@ const PeriodInfoForm: React.FC<PeriodInfoFormProps> = ({ form }) => {
 
       {/* 流水号 */}
       <Form.Item
-        label="流水号"
+        label="周期编号"
         name="serialNumber"
-        rules={[{ required: true, message: '请输入流水号' }]}
+        rules={[{ required: true, message: '请输入周期编号' }]}
       >
         <Input placeholder="请输入流水号" />
       </Form.Item>
@@ -101,25 +154,17 @@ const PeriodInfoForm: React.FC<PeriodInfoFormProps> = ({ form }) => {
         <Select placeholder="请选择周期状态">
           <Option value="进行中">进行中</Option>
           <Option value="已完成">已完成</Option>
-          <Option value="已归档">已归档</Option>
         </Select>
       </Form.Item>
 
-      {/* 附件列表 */}
       <Form.Item
         label="附件列表"
         name="attachmentList"
         valuePropName="fileList"
-        getValueFromEvent={normFile}
+        getValueFromEvent={(e) => e && e.fileList}
       >
-        <Upload
-          name="files"
-          action="/api/upload" // 请根据实际情况修改上传地址
-          listType="picture"
-          multiple
-          // 你可以添加其他 Upload 属性，如 beforeUpload、onChange 等
-        >
-          <Button icon={<UploadOutlined />}>上传附件</Button>
+        <Upload {...uploadProps}>
+          <Button icon={<UploadOutlined />}>点击上传文件</Button>
         </Upload>
       </Form.Item>
     </Form>

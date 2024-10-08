@@ -17,7 +17,7 @@ import {
   ReviewRequest,
 } from '@/model/project/Model.measurement-detail';
 import { ProjectInfoVO } from '@/model/project/Modal.project';
-import { ContractInfoVO } from '@/model/project/Model.contract';
+import { ContractInfoVO, MeasurementItemVO } from '@/model/project/Model.contract';
 import { PeriodInfoVO } from '@/model/project/Model.period';
 
 export function useMeasurementDetail() {
@@ -33,6 +33,11 @@ export function useMeasurementDetail() {
   const [currentMeasurementDetail, setCurrentMeasurementDetail] = useState<MeasurementDetailVO | null>(null);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
 
+  // 新增的状态
+  const [selectedContract, setSelectedContract] = useState<ContractInfoVO | null>(null);
+  const [measurementItemList, setMeasurementItemList] = useState<MeasurementItemVO[]>([]);
+  const [measurementItemTreeData, setMeasurementItemTreeData] = useState<any[]>([]);
+
   const [selectedItemId, setSelectedItemId] = useState<number | undefined>(undefined);
 
   const { initialState } = useModel('@@initialState');
@@ -40,20 +45,47 @@ export function useMeasurementDetail() {
 
   // 获取项目列表
   const fetchProjectList = async () => {
+    if (!userId) {
+      message.error('用户信息未加载');
+      return;
+    }
     try {
+      setLoading(true);
       const data = await queryProjectInfoList(userId);
       setProjectList(data || []);
       if (data && data.length > 0) {
         setSelectedProjectId(data[0].id);
+      } else {
+        setSelectedProjectId(undefined);
+        setContractList([]);
+        setSelectedContractId(undefined);
+        setPeriodList([]);
+        setMeasurementDetailList([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error fetching project list:', error);
+      setProjectList([]);
+      setContractList([]);
+      setPeriodList([]);
+      setMeasurementDetailList([]);
       message.error('获取项目列表失败');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 获取合同列表
   const fetchContractList = async (projectId: number) => {
+    if (!projectId || !userId) {
+      message.error('项目ID或用户ID缺失');
+      setContractList([]);
+      setSelectedContractId(undefined);
+      setPeriodList([]);
+      setMeasurementDetailList([]);
+      return;
+    }
     try {
+      setLoading(true);
       const data = await queryContractInfoList(projectId, userId);
       setContractList(data || []);
       if (data && data.length > 0) {
@@ -61,33 +93,56 @@ export function useMeasurementDetail() {
       } else {
         setSelectedContractId(undefined);
         setPeriodList([]);
-        setSelectedPeriodId(undefined);
+        setMeasurementDetailList([]);
       }
-    } catch (error) {
-      message.error('获取合同列表失败');
+    } catch (error: any) {
+      console.error('Error fetching contract list:', error);
+      setContractList([]);
+      setSelectedContractId(undefined);
+      setPeriodList([]);
+      setMeasurementDetailList([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   // 获取周期信息列表
   const fetchPeriodList = async (generalQueryCondition?: string) => {
     if (selectedProjectId === undefined || selectedContractId === undefined) {
+      console.warn('selectedProjectId 或 selectedContractId 未定义');
+      setPeriodList([]);
+      setSelectedPeriodId(undefined);
+      setMeasurementDetailList([]);
       return;
     }
     setLoading(true);
     try {
+      console.log('Fetching period list with:', {
+        selectedProjectId,
+        selectedContractId,
+        generalQueryCondition,
+      });
       const data = await queryPeriodInfoList(
         selectedProjectId,
         selectedContractId,
         generalQueryCondition,
       );
+      console.log('Received period list:', data);
       setPeriodList(data || []);
       if (data && data.length > 0) {
         setSelectedPeriodId(data[0].id);
       } else {
         setSelectedPeriodId(undefined);
+        setMeasurementDetailList([]);
       }
-    } catch (error) {
-      // 错误处理
+    } catch (error: any) {
+      console.error('Error fetching period list:', error);
+      setPeriodList([]);
+      setSelectedPeriodId(undefined);
+      setMeasurementDetailList([]);
+      if (error.response && error.response.status !== 404) {
+        message.error('获取周期信息列表失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,21 +158,35 @@ export function useMeasurementDetail() {
       selectedContractId === undefined ||
       selectedPeriodId === undefined
     ) {
+      console.warn('selectedProjectId、selectedContractId 或 selectedPeriodId 未定义');
+      setMeasurementDetailList([]);
       return;
     }
     setLoading(true);
     try {
-      const data = await queryMeasurementDetailList(
+      console.log('Fetching measurement detail list with:', {
         selectedProjectId,
         selectedContractId,
         selectedPeriodId,
         itemId,
-        '1', // 根据需要调整 type 参数
+        generalQueryCondition,
+      });
+      const data = await queryMeasurementDetailList(
+        selectedProjectId,
+        selectedContractId,
+        selectedPeriodId,
+        25,
+        '2', // 根据需要调整 type 参数
         generalQueryCondition,
       );
+      console.log('Received measurement detail list:', data);
       setMeasurementDetailList(data || []);
-    } catch (error) {
-      // 错误处理
+    } catch (error: any) {
+      console.error('Error fetching measurement detail list:', error);
+      setMeasurementDetailList([]);
+      if (error.response && error.response.status !== 404) {
+        message.error('获取计量明细列表失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -127,7 +196,16 @@ export function useMeasurementDetail() {
   const handleAddOrUpdateMeasurementDetail = async (
     values: AddOrUpdateMeasurementDetailRequest,
   ) => {
+    if (
+      selectedProjectId === undefined ||
+      selectedContractId === undefined ||
+      selectedPeriodId === undefined
+    ) {
+      message.error('项目、合同或周期信息未选择');
+      return;
+    }
     try {
+      setLoading(true);
       const measurementData: AddOrUpdateMeasurementDetailRequest = {
         ...currentMeasurementDetail,
         ...values,
@@ -144,25 +222,41 @@ export function useMeasurementDetail() {
       }
       setModalOpen(false);
       fetchMeasurementDetailList(undefined, selectedItemId);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error adding/updating measurement detail:', error);
       message.error('操作失败');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 删除计量明细
   const handleDeleteMeasurementDetail = async (id: number) => {
+    if (!id) {
+      message.error('计量明细ID缺失');
+      return;
+    }
     try {
+      setLoading(true);
       await deleteMeasurementDetail(id);
       message.success('删除计量明细成功');
       fetchMeasurementDetailList(undefined, selectedItemId);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error deleting measurement detail:', error);
       message.error('删除失败');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 审核或驳回计量明细
   const handleReviewMeasurementDetail = async (id: number, status: number) => {
+    if (!id) {
+      message.error('计量明细ID缺失');
+      return;
+    }
     try {
+      setLoading(true);
       const reviewData: ReviewRequest = {
         id,
         isPass: status === 1,
@@ -170,9 +264,34 @@ export function useMeasurementDetail() {
       await reviewMeasurementDetail(reviewData);
       message.success(status === 1 ? '审核成功' : '驳回成功');
       fetchMeasurementDetailList(undefined, selectedItemId);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error reviewing measurement detail:', error);
       message.error('操作失败');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // 更新测量项列表和树形数据
+  const updateMeasurementItems = (contract: ContractInfoVO | null) => {
+    if (contract) {
+      const items = contract.projectSchedule || [];
+      setMeasurementItemList(items);
+      const treeData = generateTreeData(items);
+      setMeasurementItemTreeData(treeData);
+    } else {
+      setMeasurementItemList([]);
+      setMeasurementItemTreeData([]);
+    }
+  };
+
+  // 生成树形数据的函数
+  const generateTreeData = (items: MeasurementItemVO[]): any[] => {
+    return items.map((item) => ({
+      title: item.name || '', // 根据你的实际字段
+      key: item.id?.toString() || '',
+      children: item.children ? generateTreeData(item.children) : [],
+    }));
   };
 
   // 初始化加载数据
@@ -184,24 +303,46 @@ export function useMeasurementDetail() {
   useEffect(() => {
     if (selectedProjectId !== undefined) {
       fetchContractList(selectedProjectId);
+    } else {
+      setContractList([]);
+      setSelectedContractId(undefined);
+      setPeriodList([]);
+      setMeasurementDetailList([]);
+      setSelectedContract(null);
+      updateMeasurementItems(null);
     }
   }, [selectedProjectId]);
 
-  // 当选择合同时，获取对应的周期列表
+  // 当选择合同时，获取对应的周期列表，并更新选定的合同和测量项
   useEffect(() => {
     if (selectedContractId !== undefined) {
       fetchPeriodList();
+      const contract = contractList.find((c) => c.id === selectedContractId) || null;
+      setSelectedContract(contract);
+      updateMeasurementItems(contract);
+    } else {
+      setPeriodList([]);
+      setSelectedPeriodId(undefined);
+      setMeasurementDetailList([]);
+      setSelectedContract(null);
+      updateMeasurementItems(null);
     }
-  }, [selectedContractId]);
+  }, [selectedContractId, contractList]);
 
   // 当选择周期时，获取对应的计量明细列表
   useEffect(() => {
-    fetchMeasurementDetailList(undefined, selectedItemId);
+    if (selectedPeriodId !== undefined) {
+      fetchMeasurementDetailList(undefined, selectedItemId);
+    } else {
+      setMeasurementDetailList([]);
+    }
   }, [selectedPeriodId]);
 
   // 当 selectedItemId 变化时，获取计量明细列表
   useEffect(() => {
-    fetchMeasurementDetailList(undefined, selectedItemId);
+    if (selectedPeriodId !== undefined) {
+      fetchMeasurementDetailList(undefined, selectedItemId);
+    }
   }, [selectedItemId]);
 
   // 处理行选择变化
@@ -233,5 +374,7 @@ export function useMeasurementDetail() {
     onSelectChange,
     selectedItemId,
     setSelectedItemId,
+    measurementItemList,
+    measurementItemTreeData,
   };
 }

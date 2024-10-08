@@ -99,7 +99,11 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
           </Form.Item>
         </Col>
         <Col span={12}>
-          <Form.Item label="类型" name="type">
+          <Form.Item
+            label="类型"
+            name="type"
+            rules={[{ required: true, message: '请输入项目类型' }]}
+          >
             <Input placeholder="请输入项目类型" />
           </Form.Item>
         </Col>
@@ -107,12 +111,14 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
 
       <Row gutter={16}>
         <Col span={12}>
-          <Form.Item label="施工单位" name="constructionOrganization">
+          <Form.Item label="施工单位" name="constructionOrganization" rules={[{ required: true, message: '请输入施工单位' }]}
+          >
             <Input placeholder="请输入施工单位" />
           </Form.Item>
         </Col>
         <Col span={12}>
-          <Form.Item label="流水号" name="serialNumber">
+          <Form.Item label="项目编号" name="serialNumber"  rules={[{ required: true, message: '请输入项目编号' }]}
+          >
             <InputNumber style={{ width: '100%' }} placeholder="请输入流水号" />
           </Form.Item>
         </Col>
@@ -167,10 +173,6 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
           <Form.Item
             label="开始日期"
             name="startDate"
-            rules={[
-              { required: true, message: '请选择开始日期' },
-              { validator: validateStartEndDate },
-            ]}
           >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
@@ -182,10 +184,6 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
           <Form.Item
             label="结束日期"
             name="endDate"
-            rules={[
-              { required: true, message: '请选择结束日期' },
-              { validator: validateStartEndDate },
-            ]}
           >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>

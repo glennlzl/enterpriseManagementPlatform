@@ -578,7 +578,6 @@ const ProjectInfoTable: React.FC = () => {
       width: 200,
       ellipsis: true,
     },
-
     {
       title: '操作',
       dataIndex: 'option',

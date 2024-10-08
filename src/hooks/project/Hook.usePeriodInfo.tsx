@@ -31,36 +31,53 @@ export function usePeriodInfo() {
   // 获取项目列表
   const fetchProjectList = async () => {
     try {
+      setLoading(true);
       const data = await queryProjectInfoList(userId);
       setProjectList(data || []);
       if (data && data.length > 0) {
         setSelectedProjectId(data[0].id); // 设置默认项目
+      } else {
+        setSelectedProjectId(undefined);
+        setContractList([]);
+        setSelectedContractId(undefined);
+        setPeriodList([]);
       }
     } catch (error) {
-      message.error('获取项目列表失败');
+      setProjectList([]);
+      setContractList([]);
+      setPeriodList([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   // 获取合同列表
   const fetchContractList = async (projectId: number) => {
     try {
+      setLoading(true);
       const data = await queryContractInfoList(projectId, userId);
       setContractList(data || []);
       if (data && data.length > 0) {
         setSelectedContractId(data[0].id); // 设置默认选中的合同为第一个合同
       } else {
         setSelectedContractId(undefined); // 如果没有合同，重置选中的合同
+        setPeriodList([]);
       }
     } catch (error) {
-      message.error('获取合同列表失败');
+      setContractList([]);
+      setSelectedContractId(undefined);
+      setPeriodList([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   // 获取周期信息列表
   const fetchPeriodList = async (generalQueryCondition?: string) => {
-    if (selectedProjectId === undefined || selectedContractId === undefined) {
-      return;
-    }
+    // if (!selectedProjectId || !selectedContractId) {
+    //   setPeriodList([]);
+    //   return;
+    // }
     setLoading(true);
     try {
       const data = await queryPeriodInfoList(
@@ -69,8 +86,9 @@ export function usePeriodInfo() {
         generalQueryCondition,
       );
       setPeriodList(data || []);
-    } catch (error) {
-      message.error('获取周期信息列表失败');
+    } catch (error: any) {
+      console.error('Error fetching period list:', error);
+      setPeriodList([]);
     } finally {
       setLoading(false);
     }
@@ -130,13 +148,17 @@ export function usePeriodInfo() {
   useEffect(() => {
     if (selectedProjectId !== undefined) {
       fetchContractList(selectedProjectId);
+    } else {
+      setContractList([]);
+      setSelectedContractId(undefined);
+      setPeriodList([]);
     }
   }, [selectedProjectId]);
 
-  // 当选择合同或项目时，获取对应的周期列表
+  // 当选择合同时，获取对应的周期列表
   useEffect(() => {
     fetchPeriodList();
-  }, [selectedProjectId, selectedContractId]);
+  }, [selectedContractId]);
 
   // 处理行选择变化
   const onSelectChange = (newSelectedRowKeys: number[]) => {

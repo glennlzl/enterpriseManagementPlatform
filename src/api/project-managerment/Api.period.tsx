@@ -128,7 +128,6 @@ export async function queryPeriodInfoList(
       }
     })
     .catch((error) => {
-      message.error(`获取周期信息列表失败：${error}`);
       throw error;
     });
 }
