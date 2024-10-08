@@ -1,7 +1,7 @@
 import { request } from '@umijs/max';
-import {API_BASE_URL} from "@/api/apporvalsystem";
 import {AddOrUpdateMeasurementItemRequest} from "@/model/project/Model.measurement-item";
 import {MeasurementItemVO} from "@/model/project/Model.contract";
+import {GENERAL_API_BASE_URL} from "@/api/usermanagement";
 
 export interface ApiResponse<T> {
   code: number;
@@ -12,14 +12,13 @@ export interface ApiResponse<T> {
   dataType?: number;
 }
 
-
 /** 添加计量项 POST /api/business/measurement-item/addMeasurementItem */
 export async function addMeasurementItem(
   addMeasurementItemRequest: AddOrUpdateMeasurementItemRequest,
   options?: { [key: string]: any },
 ) {
   return request<ApiResponse<MeasurementItemVO>>(
-    `${API_BASE_URL}/business/measurement-item/addMeasurementItem`,
+    `${GENERAL_API_BASE_URL}/business/measurement-item/addMeasurementItem`,
     {
       method: 'POST',
       data: addMeasurementItemRequest,
@@ -46,7 +45,7 @@ export async function updateMeasurementItem(
   options?: { [key: string]: any },
 ) {
   return request<ApiResponse<MeasurementItemVO>>(
-    `${API_BASE_URL}/business/measurement-item/updateMeasurementItem`,
+    `${GENERAL_API_BASE_URL}/business/measurement-item/updateMeasurementItem`,
     {
       method: 'POST',
       data: updateMeasurementItemRequest,
@@ -70,7 +69,7 @@ export async function updateMeasurementItem(
 /** 删除计量项 GET /api/business/measurement-item/deleteMeasurementItem */
 export async function deleteMeasurementItem(id: number, options?: { [key: string]: any }) {
   return request<ApiResponse<boolean>>(
-    `${API_BASE_URL}/business/measurement-item/deleteMeasurementItem`,
+    `${GENERAL_API_BASE_URL}/business/measurement-item/deleteMeasurementItem`,
     {
       method: 'GET',
       params: { id },

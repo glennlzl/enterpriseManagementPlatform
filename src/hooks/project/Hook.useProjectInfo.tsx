@@ -23,6 +23,7 @@ export function useProjectInfo() {
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const actionRef = useRef<ActionType>();
+  const userId = initialState.currentUser.id;
 
   // 获取项目列表
   const fetchProjectList = async (generalQueryCondition?: string) => {
@@ -126,8 +127,6 @@ export function useProjectInfo() {
         { label: '监管级别', value: 'regulatoryLevel' },
         { label: '技术级别', value: 'techLevel' },
         { label: '位置', value: 'location' },
-        { label: '管理员列表', value: 'adminList' },
-        { label: '附件列表', value: 'attachmentList' },
         { label: '更新时间', value: 'updateTime' },
         { label: '创建时间', value: 'createTime' },
       ];
@@ -177,5 +176,6 @@ export function useProjectInfo() {
     reloadData,
     handleAuthorizeProject,
     actionRef,
+    userId
   };
 }

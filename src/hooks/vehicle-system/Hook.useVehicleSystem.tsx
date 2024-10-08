@@ -76,10 +76,10 @@ export const useVehicleSystem = (userId: number) => {
 
   useEffect(() => {
     const loginCheck = isLogin();
-    // if (!loginCheck) {
-    //   message.error('请重新登录');
-    //   history.push('/user/login');
-    // }
+    if (!loginCheck) {
+      message.error('请重新登录');
+      history.push('/user/login');
+    }
     fetchVehicleList(isWarning);
     const vehicleTypeFilters = _.uniqBy(vehicleList.map(item => ({ text: item.vehicleType, value: item.vehicleType })), 'value');
     const registrantFilters = _.uniqBy(vehicleList.map(item => ({ text: item.registrant, value: item.registrant })), 'value');

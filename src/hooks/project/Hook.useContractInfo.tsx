@@ -9,8 +9,14 @@ import {
   updateContractInfo
 } from "@/api/project-managerment/Api.contract";
 import {useModel} from "@@/exports";
-import {AddOrUpdateContractInfoRequest, ContractInfoVO} from "@/model/project/Model.contract";
+import {AddOrUpdateContractInfoRequest, ContractInfoVO, MeasurementItemVO} from "@/model/project/Model.contract";
 import {EmployeeSimpleInfoResponse} from "@/api/usermanagement";
+import {
+  addMeasurementItem,
+  deleteMeasurementItem,
+  updateMeasurementItem
+} from "@/api/project-managerment/Api.measurement-item";
+import {AddOrUpdateMeasurementItemRequest} from "@/model/project/Model.measurement-item";
 
 export function useContractInfo() {
   const [contractList, setContractList] = useState<ContractInfoVO[]>([]);
@@ -161,6 +167,46 @@ export function useContractInfo() {
     }
   };
 
+  // 管理测量项的状态
+  const [measurementItems, setMeasurementItems] = useState<MeasurementItemVO[]>([]);
+
+  // 添加测量项
+  const handleAddMeasurementItem = async (measurementItemData: AddOrUpdateMeasurementItemRequest) => {
+    try {
+      const newItem = await addMeasurementItem(measurementItemData);
+      setMeasurementItems((prevItems) => [...prevItems, newItem]);
+      message.success('添加测量项成功');
+    } catch (error) {
+      message.error('添加测量项失败');
+    }
+  };
+
+  // 更新测量项
+  const handleUpdateMeasurementItem = async (measurementItemData: AddOrUpdateMeasurementItemRequest) => {
+    try {
+      await updateMeasurementItem(measurementItemData);
+      setMeasurementItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === measurementItemData.id ? measurementItemData : item
+        )
+      );
+      message.success('更新测量项成功');
+    } catch (error) {
+      message.error('更新测量项失败');
+    }
+  };
+
+  // 删除测量项
+  const handleDeleteMeasurementItem = async (id: number) => {
+    try {
+      await deleteMeasurementItem(id);
+      setMeasurementItems((prevItems) => prevItems.filter((item) => item.id !== id));
+      message.success('删除测量项成功');
+    } catch (error) {
+      message.error('删除测量项失败');
+    }
+  };
+
   return {
     contractList,
     loading,
@@ -170,11 +216,15 @@ export function useContractInfo() {
     handleDeleteContract,
     handleBatchDelete,
     handleBatchExport,
-    handleAuthorizeContract, // 新增
+    handleAuthorizeContract,
     selectedRowKeys,
     setSelectedRowKeys,
     onSelectChange,
     reloadData,
     actionRef,
+    measurementItems,
+    handleAddMeasurementItem,
+    handleUpdateMeasurementItem,
+    handleDeleteMeasurementItem
   };
 }

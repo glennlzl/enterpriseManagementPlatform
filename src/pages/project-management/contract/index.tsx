@@ -7,15 +7,13 @@ import {
 import { Button, Popconfirm, Form, Input, Space, Modal, Select } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import {useContractInfo} from "@/hooks/project/Hook,useContractInfo";
+import {useContractInfo} from "@/hooks/project/Hook.useContractInfo";
 import {AddOrUpdateContractInfoRequest, ContractInfoVO} from "@/model/project/Model.contract";
 import ContractInfoForm from "@/pages/project-management/contract/component/Component.contractInfoForm";
 import {useModel} from "@@/exports";
 import {queryProjectInfoList} from "@/api/project-managerment/Api.project";
 import {ProjectInfoVO} from "@/model/project/Modal.project";
 import {EmployeeSimpleInfoResponse, queryAllEmployeeSimpleInfo} from "@/api/usermanagement";
-import MeasurementItemTable from "@/pages/project-management/contract/component/Component.measurementItemTable";
-import _ from 'lodash';
 
 const { Option } = Select;
 
@@ -262,6 +260,8 @@ const ContractInfoTable: React.FC = () => {
         title="新增合同"
         visible={createModalOpen}
         onCancel={() => handleModalOpen('createModalOpen', false)}
+        width={1500}
+        destroyOnClose
         onOk={() => {
           form
             .validateFields()
@@ -294,6 +294,8 @@ const ContractInfoTable: React.FC = () => {
       {/* 编辑合同的弹窗 */}
       <Modal
         title="编辑合同"
+        width={1500}
+        destroyOnClose
         visible={editModalOpen}
         onCancel={() => handleModalOpen('editModalOpen', false)}
         onOk={() => {
@@ -372,28 +374,6 @@ const ContractInfoTable: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-
-      {/* 项目进度管理 */}
-      {currentContract && (
-        <MeasurementItemTable
-          title="项目进度管理"
-          measurementItems={currentContract.projectSchedule || []}
-          contractId={currentContract.id}
-          type="projectSchedule"
-          onRefresh={() => reloadData(selectedProjectId)}
-        />
-      )}
-
-      {/* 合同成本管理 */}
-      {currentContract && (
-        <MeasurementItemTable
-          title="合同成本管理"
-          measurementItems={currentContract.contractCost || []}
-          contractId={currentContract.id}
-          type="contractCost"
-          onRefresh={() => reloadData(selectedProjectId)}
-        />
-      )}
     </PageContainer>
   );
 };
