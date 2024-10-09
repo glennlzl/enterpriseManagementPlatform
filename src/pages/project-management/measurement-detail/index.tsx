@@ -19,7 +19,6 @@ import { MeasurementDetailVO } from '@/model/project/Model.measurement-detail';
 import MeasurementDetailForm from '@/pages/project-management/measurement-detail/component/Component.measurementDetailForm';
 import moment from 'moment';
 import { OperationLogVO } from '@/model/project/Model.operation';
-
 const { Option } = Select;
 const { DirectoryTree } = Tree;
 const { Sider, Content } = Layout;
@@ -81,11 +80,14 @@ const MeasurementDetailTable: React.FC = () => {
         type: type,
         item: item,
       });
-      // 移除 fetchMeasurementDetailList 的调用
-      // fetchMeasurementDetailList();
     } else {
-      setSelectedItem(undefined);
-      // fetchMeasurementDetailList();
+      // 父节点被点击
+      const type = info.node.key === 'cost-folder' ? 'cost' : 'material';
+      setSelectedItem({
+        id: undefined, // id 为空
+        type: type, // 类型为 'cost' 或 'material'
+        item: undefined,
+      });
     }
   };
 
@@ -373,7 +375,7 @@ const MeasurementDetailTable: React.FC = () => {
       width: 120,
       valueEnum: {
         0: { text: '未审核', status: 'Default' },
-        1: { text: '已审核', status: 'Success' },
+        1: { text: '通过', status: 'Success' },
         2: { text: '驳回', status: 'Error' },
       },
       sorter: (a, b) => (a.measurementStatus || 0) - (b.measurementStatus || 0),
@@ -562,10 +564,10 @@ const MeasurementDetailTable: React.FC = () => {
                   type="default"
                   key="export"
                   onClick={handleExportReport}
-                  disabled={!selectedContractId || !selectedPeriodId}
+                  disabled={!selectedContractId || !selectedPeriodId || !selectedItem}
                 >
                   导出报表
-                </Button>,
+                </Button>
               ]}
             />
 
