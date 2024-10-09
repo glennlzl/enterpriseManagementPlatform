@@ -15,7 +15,7 @@ import {
   ProFormText,
   ProTable, StepsForm,
 } from '@ant-design/pro-components';
-import {ProForm, ProFormDatePicker, ProFormDigit} from '@ant-design/pro-form/lib';
+import { ProFormDatePicker, ProFormDigit } from '@ant-design/pro-form/lib';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import {
   Button,
@@ -30,9 +30,9 @@ import {
   Modal,
   InputNumber,
   DatePicker,
-  Divider, Select
-} from 'antd';
-import _ from 'lodash';
+  Select,
+  Divider,
+} from 'antd';import _ from 'lodash';
 import React, {useEffect, useMemo, useState} from 'react';
 import { DateTime } from 'luxon';
 import moment from 'moment';
@@ -48,8 +48,13 @@ const VehicleManagement: React.FC = () => {
   const [showMore, setShowMore] = useState(false);
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
   const [editingKey, setEditingKey] = useState<number | null>(null); // 用于控制是否处于编辑模式
+  const [currentCreateStep, setCurrentCreateStep] = useState(0);
+  const [currentEditStep, setCurrentEditStep] = useState(0);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [createForm] = Form.useForm();
+
 
   const {
     vehicleList,
@@ -107,13 +112,27 @@ const VehicleManagement: React.FC = () => {
     }
   };
 
-  // 处理表单输入变化
-  const handleFormChange = (changedValues: any) => {
-    const newQueryParams = { ...queryParams, ...changedValues };
-    setQueryParams(newQueryParams);
-
-    actionRef.current?.reload();
-  };
+  useEffect(() => {
+    if (editModalOpen && currentVehicle) {
+      editForm.setFieldsValue({
+        ...currentVehicle,
+        purchaseDate: currentVehicle.purchaseDate ? moment(currentVehicle.purchaseDate) : null,
+        trafficInsuranceDate: currentVehicle.trafficInsuranceDate
+          ? moment(currentVehicle.trafficInsuranceDate)
+          : null,
+        commercialInsuranceDate: currentVehicle.commercialInsuranceDate
+          ? moment(currentVehicle.commercialInsuranceDate)
+          : null,
+        vehicleTypeSelection: currentVehicle
+          ? `${currentVehicle.vehicleType} - ${currentVehicle.vehicleSerialNumber} - ${currentVehicle.vehicleBrand} - ${currentVehicle.approvedLoadCapacity || ''
+          }`
+          : '',
+        responsiblePersonId: currentVehicle.responsiblePersonId,
+        driverList: currentVehicle.driverList?.map((driver) => driver.id),
+        gps: currentVehicle.gps || 0,
+      });
+    }
+  }, [currentVehicle, editModalOpen]);
 
 
   const formatDate = (dateString: string) => {
@@ -929,38 +948,38 @@ const VehicleManagement: React.FC = () => {
 
       {/* 新增车辆 Modal */}
       <Modal
-        width={800}
-        destroyOnClose
         open={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
+        onOk={() => createForm.submit()}
         title={intl.formatMessage({
           id: '新增车辆信息',
         })}
-        footer={null}
-        onCancel={() => {
-          setCreateModalOpen(false);
-        }}
+        destroyOnClose
+        width={800}
       >
         <Form
-          form={form}
-          layout="vertical"
+          form={createForm}
           onFinish={async (values) => {
-            // 处理表单提交逻辑
-            const selectedEmployee = employeeOptions.find((emp) => emp.value === values.responsiblePersonId);
+            const selectedEmployee = employeeOptions.find(
+              (emp) => emp.value === values.responsiblePersonId,
+            );
 
-            const selectedDrivers = values.driverList?.map((id) => {
+            const selectedDrivers = (values.driverList || []).map((id) => {
               const selectedEmployee = employeeOptions.find((emp) => emp.value === id);
               return {
                 id: selectedEmployee?.value || 0,
                 name: selectedEmployee?.name || 'Unknown',
               };
-            }) || [];
+            });
             const selectedType = JSON.parse(values.vehicleTypeSelection);
-            const data   = {
+            const data = {
               ...values,
               driverList: selectedDrivers,
-              purchaseDate: formatDate(values.purchaseDate),
-              trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
-              commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
+              purchaseDate: formatDate(values.purchaseDate.format('YYYY-MM-DD')),
+              trafficInsuranceDate: formatDate(values.trafficInsuranceDate.format('YYYY-MM-DD')),
+              commercialInsuranceDate: formatDate(
+                values.commercialInsuranceDate.format('YYYY-MM-DD'),
+              ),
               vehicleType: selectedType.vehicleType,
               vehicleSerialNumber: selectedType.vehicleSerialNumber,
               vehicleBrand: selectedType.vehicleBrand,
@@ -970,18 +989,24 @@ const VehicleManagement: React.FC = () => {
               responsiblePersonMobile: selectedEmployee?.mobile || '',
               registrantId: initialState.currentUser?.id || 0,
               registrant: initialState.currentUser?.name || '',
-              nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval || 0),
+              nextMaintenanceMileage:
+                Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval),
             };
             await handleAddVehicle(data as AddVehicleInfoRequest);
-            setCreateModalOpen(false);  // 关闭模态框
+            setCreateModalOpen(false); // 关闭模态框
+            createForm.resetFields(); // 重置表单
           }}
+          initialValues={{
+            gps: 0,
+          }}
+          layout="vertical"
         >
           <Divider>车辆基本信息</Divider>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="车辆编号"
                 name="vehicleNumber"
+                label="车辆编号"
                 rules={[{ required: true, message: '请输入车辆编号' }]}
               >
                 <Input placeholder="请输入车辆编号" />
@@ -989,32 +1014,20 @@ const VehicleManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="工程车编号"
                 name="engineeingVehicleNumber"
+                label="工程车编号"
                 rules={[{ required: true, message: '请输入工程车编号' }]}
               >
                 <Input placeholder="请输入工程车编号" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="车牌号码"
                 name="licenseNumber"
+                label="车牌号码"
                 rules={[{ required: true, message: '请输入车牌号码' }]}
               >
                 <Input placeholder="请输入车牌号码" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="发动机号后6位"
-                name="engineNumber"
-                rules={[{ required: true, message: '请输入发动机号后6位' }]}
-              >
-                <Input placeholder="请输入发动机号后6位" />
               </Form.Item>
             </Col>
           </Row>
@@ -1023,37 +1036,42 @@ const VehicleManagement: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="车辆类型选择"
+                name="engineNumber"
+                label="发动机号后6位"
+                rules={[{ required: true, message: '请输入发动机号后6位' }]}
+              >
+                <Input placeholder="请输入发动机号后6位" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
                 name="vehicleTypeSelection"
+                label="车辆类型选择"
                 rules={[{ required: true, message: '请选择车辆类型' }]}
               >
                 <Select
                   options={vehicleTypeOptions}
                   placeholder="请选择车辆类型"
-                  fieldNames={{ label: 'label', value: 'value' }}
                   showSearch
                   filterOption={(input, option) =>
-                    option?.label.toLowerCase().includes(input.toLowerCase())
+                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="购车日期"
                 name="purchaseDate"
+                label="购车日期"
                 rules={[{ required: true, message: '请选择购车日期' }]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} placeholder="请选择购车日期" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="年检月份"
                 name="auditMonth"
+                label="年检月份"
                 rules={[{ required: true, message: '请输入年检月份' }]}
               >
                 <Input placeholder="请输入年检月份" />
@@ -1061,14 +1079,11 @@ const VehicleManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="是否年检"
                 name="isAudited"
+                label="是否年检"
                 rules={[{ required: true, message: '请选择是否年检' }]}
               >
-                <Select placeholder="请选择是否年检">
-                  <Option value={1}>是</Option>
-                  <Option value={0}>否</Option>
-                </Select>
+                <Select options={[{ label: '是', value: 1 }, { label: '否', value: 0 }]} placeholder="请选择" />
               </Form.Item>
             </Col>
           </Row>
@@ -1077,41 +1092,39 @@ const VehicleManagement: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="交强险日期"
                 name="trafficInsuranceDate"
+                label="交强险日期"
                 rules={[{ required: true, message: '请输入交强险日期' }]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker
+                  format="YYYY-MM-DD"
+                  style={{ width: '100%' }}
+                  placeholder="请输入交强险日期"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="商业险日期"
                 name="commercialInsuranceDate"
+                label="商业险日期"
                 rules={[{ required: true, message: '请输入商业险日期' }]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker
+                  format="YYYY-MM-DD"
+                  style={{ width: '100%' }}
+                  placeholder="请输入商业险日期"
+                />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                label="是否安装GPS"
-                name="gps"
-                rules={[{ required: true, message: '请选择是否安装GPS' }]}
-              >
-                <Select placeholder="请选择是否安装GPS">
-                  <Option value={1}>是</Option>
-                  <Option value={0}>否</Option>
-                </Select>
+              <Form.Item name="gps" label="是否安装GPS">
+                <Select options={[{ label: '是', value: 1 }, { label: '否', value: 0 }]} placeholder="请选择" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="机械邦"
                 name="mechanicalBond"
+                label="机械邦"
                 rules={[{ required: true, message: '请输入机械邦信息' }]}
               >
                 <Input placeholder="请输入机械邦信息" />
@@ -1123,127 +1136,81 @@ const VehicleManagement: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="使用项目"
                 name="usageProject"
+                label="使用项目"
                 rules={[{ required: true, message: '请输入使用项目' }]}
               >
                 <Input placeholder="请输入使用项目" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="上次保养公里数"
-                name="lastMaintenanceMileage"
-              >
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入上次保养公里数" />
+              <Form.Item name="lastMaintenanceMileage" label="上次保养公里数">
+                <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入上次保养公里数" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                label="当前公里数"
-                name="currentMileage"
-              >
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入当前公里数" />
+              <Form.Item name="currentMileage" label="当前公里数">
+                <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入当前公里数" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="负责人"
                 name="responsiblePersonId"
+                label="负责人"
                 rules={[{ required: true, message: '请选择负责人' }]}
               >
                 <Select
                   options={employeeOptions}
                   placeholder="请选择负责人"
-                  fieldNames={{ label: 'label', value: 'value' }}
                   showSearch
                   filterOption={(input, option) =>
-                    option?.label.toLowerCase().includes(input.toLowerCase())
+                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
                 />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={24}>
-              <Form.Item
-                label="司机"
-                name="driverList"
-              >
+              <Form.Item name="driverList" label="司机">
                 <Select
                   mode="multiple"
                   options={employeeOptions}
                   placeholder="请选择司机"
-                  fieldNames={{ label: 'label', value: 'value' }}
                   showSearch
                   filterOption={(input, option) =>
-                    option?.label.toLowerCase().includes(input.toLowerCase())
+                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
                 />
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item style={{ textAlign: 'right' }}>
-            <Button type="primary" htmlType="submit">
-              提交
-            </Button>
-          </Form.Item>
         </Form>
       </Modal>
 
       {/* 编辑车辆 Modal */}
       <Modal
-        width={800}
-        destroyOnClose
         open={editModalOpen}
+        onCancel={() => setEditModalOpen(false)}
+        onOk={() => editForm.submit()}
         title={intl.formatMessage({
           id: '编辑车辆信息',
         })}
-        footer={null}
-        onCancel={() => {
-          setEditModalOpen(false);
-        }}
+        destroyOnClose
+        width={800}
       >
         <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            ...currentVehicle,
-            vehicleTypeSelection: JSON.stringify({
-              vehicleType: currentVehicle?.vehicleType || '',
-              vehicleSerialNumber: currentVehicle?.vehicleSerialNumber || '',
-              vehicleBrand: currentVehicle?.vehicleBrand || '',
-              approvedLoadCapacity: currentVehicle?.approvedLoadCapacity || '',
-              maintenanceInterval: currentVehicle?.maintenanceInterval || '',
-            }),
-            purchaseDate: currentVehicle?.purchaseDate ? moment(currentVehicle.purchaseDate, 'YYYY-MM-DD') : null,
-            trafficInsuranceDate: currentVehicle?.trafficInsuranceDate ? moment(currentVehicle.trafficInsuranceDate, 'YYYY-MM-DD') : null,
-            commercialInsuranceDate: currentVehicle?.commercialInsuranceDate ? moment(currentVehicle.commercialInsuranceDate, 'YYYY-MM-DD') : null,
-          }}
+          form={editForm}
           onFinish={async (values) => {
-            // 处理表单提交逻辑
             const selectedEmployee = employeeOptions.find(
               (emp) => emp.value === values.responsiblePersonId,
             );
 
-            let selectedDrivers;
-
-            if (_.isUndefined(values.driverList)) {
-              selectedDrivers = [];
-            } else {
-              selectedDrivers = values.driverList.map((id: number) => {
-                const employee = employeeOptions.find((emp) => emp.value === id);
-                return {
-                  id: employee?.value || 0,
-                  name: employee?.name || 'Unknown',
-                };
-              });
-            }
+            const selectedDrivers = (values.driverList || []).map((id: number) => {
+              const employee = employeeOptions.find((emp) => emp.value === id);
+              return {
+                id: employee?.value || 0,
+                name: employee?.name || 'Unknown',
+              };
+            });
 
             let selectedType;
 
@@ -1261,9 +1228,11 @@ const VehicleManagement: React.FC = () => {
             const data: UpdateVehicleInfoRequest = {
               ...values,
               driverList: selectedDrivers,
-              purchaseDate: formatDate(values.purchaseDate),
-              trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
-              commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
+              purchaseDate: formatDate(values.purchaseDate.format('YYYY-MM-DD')),
+              trafficInsuranceDate: formatDate(values.trafficInsuranceDate.format('YYYY-MM-DD')),
+              commercialInsuranceDate: formatDate(
+                values.commercialInsuranceDate.format('YYYY-MM-DD'),
+              ),
               vehicleType: selectedType.vehicleType,
               vehicleSerialNumber: selectedType.vehicleSerialNumber,
               vehicleBrand: selectedType.vehicleBrand,
@@ -1274,17 +1243,21 @@ const VehicleManagement: React.FC = () => {
               registrantId: initialState.currentUser?.id || 0,
               registrant: initialState.currentUser?.name || '',
               id: currentVehicle?.id || 0, // 更新时需要车辆 ID
-              nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval || 0),
+              nextMaintenanceMileage:
+                Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval),
             };
             await handleEditVehicle(data);
+            setEditModalOpen(false); // 关闭模态框
+            editForm.resetFields(); // 重置表单
           }}
+          layout="vertical"
         >
           <Divider>车辆基本信息</Divider>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="车辆编号"
                 name="vehicleNumber"
+                label="车辆编号"
                 rules={[{ required: true, message: '请输入车辆编号' }]}
               >
                 <Input placeholder="请输入车辆编号" />
@@ -1292,32 +1265,20 @@ const VehicleManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="工程车编号"
                 name="engineeingVehicleNumber"
+                label="工程车编号"
                 rules={[{ required: true, message: '请输入工程车编号' }]}
               >
                 <Input placeholder="请输入工程车编号" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="车牌号码"
                 name="licenseNumber"
+                label="车牌号码"
                 rules={[{ required: true, message: '请输入车牌号码' }]}
               >
                 <Input placeholder="请输入车牌号码" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="发动机号后6位"
-                name="engineNumber"
-                rules={[{ required: true, message: '请输入发动机号后6位' }]}
-              >
-                <Input placeholder="请输入发动机号后6位" />
               </Form.Item>
             </Col>
           </Row>
@@ -1326,37 +1287,42 @@ const VehicleManagement: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="车辆类型选择"
+                name="engineNumber"
+                label="发动机号后6位"
+                rules={[{ required: true, message: '请输入发动机号后6位' }]}
+              >
+                <Input placeholder="请输入发动机号后6位" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
                 name="vehicleTypeSelection"
+                label="车辆类型选择"
                 rules={[{ required: true, message: '请选择车辆类型' }]}
               >
                 <Select
                   options={vehicleTypeOptions}
                   placeholder="请选择车辆类型"
-                  fieldNames={{ label: 'label', value: 'value' }}
                   showSearch
                   filterOption={(input, option) =>
-                    option?.label.toLowerCase().includes(input.toLowerCase())
+                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="购车日期"
                 name="purchaseDate"
+                label="购车日期"
                 rules={[{ required: true, message: '请选择购车日期' }]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} placeholder="请选择购车日期" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="年检月份"
                 name="auditMonth"
+                label="年检月份"
                 rules={[{ required: true, message: '请输入年检月份' }]}
               >
                 <Input placeholder="请输入年检月份" />
@@ -1364,14 +1330,11 @@ const VehicleManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="是否年检"
                 name="isAudited"
+                label="是否年检"
                 rules={[{ required: true, message: '请选择是否年检' }]}
               >
-                <Select placeholder="请选择是否年检">
-                  <Option value={1}>是</Option>
-                  <Option value={0}>否</Option>
-                </Select>
+                <Select options={[{ label: '是', value: 1 }, { label: '否', value: 0 }]} placeholder="请选择" />
               </Form.Item>
             </Col>
           </Row>
@@ -1380,41 +1343,39 @@ const VehicleManagement: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="交强险日期"
                 name="trafficInsuranceDate"
+                label="交强险日期"
                 rules={[{ required: true, message: '请输入交强险日期' }]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker
+                  format="YYYY-MM-DD"
+                  style={{ width: '100%' }}
+                  placeholder="请输入交强险日期"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="商业险日期"
                 name="commercialInsuranceDate"
+                label="商业险日期"
                 rules={[{ required: true, message: '请输入商业险日期' }]}
               >
-                <DatePicker style={{ width: '100%' }} />
+                <DatePicker
+                  format="YYYY-MM-DD"
+                  style={{ width: '100%' }}
+                  placeholder="请输入商业险日期"
+                />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                label="是否安装GPS"
-                name="gps"
-                rules={[{ required: true, message: '请选择是否安装GPS' }]}
-              >
-                <Select placeholder="请选择是否安装GPS">
-                  <Option value={1}>是</Option>
-                  <Option value={0}>否</Option>
-                </Select>
+              <Form.Item name="gps" label="是否安装GPS">
+                <Select options={[{ label: '是', value: 1 }, { label: '否', value: 0 }]} placeholder="请选择" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="机械邦"
                 name="mechanicalBond"
+                label="机械邦"
                 rules={[{ required: true, message: '请输入机械邦信息' }]}
               >
                 <Input placeholder="请输入机械邦信息" />
@@ -1426,79 +1387,55 @@ const VehicleManagement: React.FC = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="使用项目"
                 name="usageProject"
+                label="使用项目"
                 rules={[{ required: true, message: '请输入使用项目' }]}
               >
                 <Input placeholder="请输入使用项目" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="上次保养公里数"
-                name="lastMaintenanceMileage"
-              >
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入上次保养公里数" />
+              <Form.Item name="lastMaintenanceMileage" label="上次保养公里数">
+                <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入上次保养公里数" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                label="当前公里数"
-                name="currentMileage"
-              >
-                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入当前公里数" />
+              <Form.Item name="currentMileage" label="当前公里数">
+                <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入当前公里数" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="负责人"
                 name="responsiblePersonId"
+                label="负责人"
                 rules={[{ required: true, message: '请选择负责人' }]}
               >
                 <Select
                   options={employeeOptions}
                   placeholder="请选择负责人"
-                  fieldNames={{ label: 'label', value: 'value' }}
                   showSearch
                   filterOption={(input, option) =>
-                    option?.label.toLowerCase().includes(input.toLowerCase())
+                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
                 />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={24}>
-              <Form.Item
-                label="司机"
-                name="driverList"
-              >
+              <Form.Item name="driverList" label="司机">
                 <Select
                   mode="multiple"
                   options={employeeOptions}
                   placeholder="请选择司机"
-                  fieldNames={{ label: 'label', value: 'value' }}
                   showSearch
                   filterOption={(input, option) =>
-                    option?.label.toLowerCase().includes(input.toLowerCase())
+                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
                   }
                 />
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item style={{ textAlign: 'right' }}>
-            <Button type="primary" htmlType="submit">
-              提交
-            </Button>
-          </Form.Item>
         </Form>
       </Modal>
-
     </PageContainer>
   );
 };

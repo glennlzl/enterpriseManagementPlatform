@@ -26,7 +26,7 @@ export interface AddApprovalInfoRequest {
 // 对应于 UplodaFileUrlRequest DO
 export interface UplodaFileUrlRequest {
   id: number;
-  fileUrl: string;
+  fileUrl: string[];
 }
 
 export interface UpdateCommentRequest {
