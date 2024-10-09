@@ -13,6 +13,8 @@ import {
   queryPeriodInfoList,
   updatePeriodInfo,
 } from "@/api/project-managerment/Api.period";
+import {OperationLogVO} from "@/model/project/Model.operation";
+import {deleteOperationLog, queryOperationLogList} from "@/api/project-managerment/Api.operation";
 
 export function usePeriodInfo() {
   const [periodList, setPeriodList] = useState<PeriodInfoVO[]>([]);
@@ -165,6 +167,45 @@ export function usePeriodInfo() {
     setSelectedRowKeys(newSelectedRowKeys);
   };
 
+
+  const [operationLogModalOpen, setOperationLogModalOpen] = useState<boolean>(false);
+  const [operationLogs, setOperationLogs] = useState<OperationLogVO[]>([]);
+  const [currentPeriodForLogs, setCurrentPeriodForLogs] = useState<PeriodInfoVO | null>(null);
+  const [operationLogLoading, setOperationLogLoading] = useState<boolean>(false);
+
+  // 获取操作日志的函数
+  const fetchOperationLogs = async (period: PeriodInfoVO) => {
+    try {
+      setOperationLogLoading(true);
+      const logs = await queryOperationLogList('周期', period.id!);
+      setOperationLogs(logs);
+    } catch (error) {
+      message.error(`获取操作日志失败：${error}`);
+    } finally {
+      setOperationLogLoading(false);
+    }
+  };
+
+  // 删除操作日志的函数
+  const handleDeleteOperationLog = async (record: OperationLogVO) => {
+    try {
+      await deleteOperationLog(record.id);
+      message.success('删除成功');
+      if (currentPeriodForLogs) {
+        fetchOperationLogs(currentPeriodForLogs);
+      }
+    } catch (error) {
+      message.error(`删除失败：${error}`);
+    }
+  };
+
+  // 打开操作日志模态框的函数
+  const handleOpenOperationLogModal = (period: PeriodInfoVO) => {
+    setCurrentPeriodForLogs(period);
+    setOperationLogModalOpen(true);
+    fetchOperationLogs(period);
+  };
+
   return {
     periodList,
     loading,
@@ -184,5 +225,11 @@ export function usePeriodInfo() {
     handleDeletePeriod,
     handleArchivePeriod,
     onSelectChange,
+    operationLogModalOpen,
+    setOperationLogModalOpen,
+    operationLogs,
+    operationLogLoading,
+    handleDeleteOperationLog,
+    handleOpenOperationLogModal,
   };
 }

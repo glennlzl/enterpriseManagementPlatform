@@ -14,6 +14,7 @@ import {history, useModel} from '@@/exports';
 import { queryProjectInfoList } from '@/api/project-managerment/Api.project';
 import { ProjectInfoVO } from '@/model/project/Modal.project';
 import {EmployeeSimpleInfoResponse, isLogin, queryAllEmployeeSimpleInfo} from '@/api/usermanagement';
+import {OperationLogVO} from "@/model/project/Model.operation";
 
 const { Option } = Select;
 
@@ -31,6 +32,12 @@ const ContractInfoTable: React.FC = () => {
     onSelectChange,
     actionRef,
     reloadData,
+    operationLogModalOpen,
+    setOperationLogModalOpen,
+    operationLogs,
+    operationLogLoading,
+    handleDeleteOperationLog,
+    handleOpenOperationLogModal,
   } = useContractInfo();
 
   const [form] = Form.useForm();
@@ -123,6 +130,188 @@ const ContractInfoTable: React.FC = () => {
       throw err;
     }
   };
+
+
+// 字段名到中文列名的映射
+  const fieldNameMap: { [key: string]: { label: string; isDate?: boolean } } = {
+    id: { label: '序号' },
+    name: { label: '合同名称' },
+    contractSerialNumber: { label: '合同编号' },
+    type: { label: '合同类型' },
+    contractor: { label: '承包商' },
+    contractAmount: { label: '合同金额' },
+    startDate: { label: '开始日期', isDate: true },
+    endDate: { label: '结束日期', isDate: true },
+    contractOrder: { label: '合同序号' },
+    contractProvisionalPrice: { label: '合同临时价格' },
+    contractTermType: { label: '合同期限类型' },
+    supervisingOrganization: { label: '监理单位' },
+    monitoringOrganization: { label: '监测单位' },
+    consultingOrganization: { label: '咨询单位' },
+    accountName: { label: '账户名称' },
+    accountBank: { label: '开户行' },
+    accountNumber: { label: '账号' },
+    financialResponsiblePerson: { label: '财务负责人' },
+    projectSchedule: { label: '项目进度' },
+    contractCost: { label: '合同成本' },
+    adminList: { label: '负责人列表' },
+    attachmentList: { label: '附件列表' },
+    updateTime: { label: '更新时间', isDate: true },
+    createTime: { label: '创建时间', isDate: true },
+    // 对于测量项的字段
+    itemType: { label: '项目类型' },
+    itemName: { label: '项目名称' },
+    itemPrice: { label: '项目价格' },
+    itemUnit: { label: '项目单位' },
+    designCount: { label: '设计数量' },
+    transactionType: { label: '交易类型' },
+    contractCostType: { label: '合同成本类型' },
+    // 其他字段...
+  };
+
+// 格式化值的函数
+  const formatValue = (value: any, fieldKey?: string): string => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      return '-';
+    } else if (Array.isArray(value)) {
+      return value
+        .map((item) => {
+          if (typeof item === 'object') {
+            // 提取对象中的关键字段，排除不需要显示的字段
+            const itemDetails = Object.keys(item)
+              .filter((key) => key !== 'itemType' && key !== 'contractCostType') // 排除字段
+              .map((key) => {
+                const fieldInfo = fieldNameMap[key] || { label: key };
+                const fieldLabel = fieldInfo.label;
+                const fieldValue = formatValue(item[key], key);
+                return `${fieldLabel}: ${fieldValue}`;
+              })
+              .join(', ');
+            return `{ ${itemDetails} }`;
+          } else {
+            return String(item);
+          }
+        })
+        .join('; ');
+    } else if (typeof value === 'object') {
+      // 对象，提取关键字段
+      const objectDetails = Object.keys(value)
+        .filter((key) => key !== 'itemType' && key !== 'contractCostType') // 排除字段
+        .map((key) => {
+          const fieldInfo = fieldNameMap[key] || { label: key };
+          const fieldLabel = fieldInfo.label;
+          const fieldValue = formatValue(value[key], key);
+          return `${fieldLabel}: ${fieldValue}`;
+        })
+        .join(', ');
+      return `{ ${objectDetails} }`;
+    } else if (
+      fieldKey &&
+      fieldNameMap[fieldKey] &&
+      fieldNameMap[fieldKey].isDate &&
+      typeof value === 'number'
+    ) {
+      // 如果是时间字段，且值是数字，则格式化为日期
+      return moment(value).format('YYYY-MM-DD HH:mm:ss');
+    } else {
+      return String(value);
+    }
+  };
+
+
+// 解析操作日志记录的函数
+  const parseOperationRecord = (record: OperationLogVO) => {
+    try {
+      const operationFieldArray = JSON.parse(record.operationField);
+      const operationFieldOriginalValueArray = JSON.parse(record.operationFieldOriginalValue);
+      const operationFieldNewValueArray = JSON.parse(record.operationFieldNewValue);
+
+      const parsedOriginalValues = operationFieldOriginalValueArray.map((value) =>
+        JSON.parse(value)
+      );
+      const parsedNewValues = operationFieldNewValueArray.map((value) =>
+        JSON.parse(value)
+      );
+
+      const changes = operationFieldArray.map((field: string, index: number) => ({
+        field,
+        originalValue: parsedOriginalValues[index],
+        newValue: parsedNewValues[index],
+      }));
+
+      return changes;
+    } catch (error) {
+      console.error('解析操作记录失败:', error);
+      return [];
+    }
+  };
+
+// 定义操作日志的列
+  const operationLogColumns: ProColumns<OperationLogVO>[] = [
+    {
+      title: '操作人',
+      dataIndex: 'operator',
+      key: 'operator',
+    },
+    {
+      title: '操作类型',
+      dataIndex: 'operationType',
+      key: 'operationType',
+    },
+    {
+      title: '操作时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      render: (text) => moment(text).format('YYYY-MM-DD HH:mm:ss'),
+    },
+    {
+      title: '修改详情',
+      key: 'operationDetail',
+      width: 600,
+      render: (_, record) => {
+        const changes = parseOperationRecord(record);
+        return changes.map((change, index) => {
+          // 使用字段名映射获取中文列名
+          const fieldInfo = fieldNameMap[change.field] || { label: change.field };
+          const fieldName = fieldInfo.label;
+
+          // 将 originalValue 和 newValue 转换为易读的字符串
+          const originalValueText = formatValue(change.originalValue, change.field);
+          const newValueText = formatValue(change.newValue, change.field);
+          return (
+            <div key={index} style={{ marginBottom: '8px' }}>
+              <strong>{fieldName}:</strong>
+              <div>
+                <span style={{ color: 'red' }}>原始值:</span> {originalValueText}
+              </div>
+              <div>
+                <span style={{ color: 'green' }}>新值:</span> {newValueText}
+              </div>
+            </div>
+          );
+        });
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_, record) => (
+        <Popconfirm
+          title="确定要删除这条操作日志吗？"
+          onConfirm={() => handleDeleteOperationLog(record)}
+          okText="确定"
+          cancelText="取消"
+        >
+          <a>删除</a>
+        </Popconfirm>
+      ),
+    },
+  ];
 
   // 定义测量项的列
   const measurementColumns: ProColumns<MeasurementItemVO>[] = [
@@ -371,6 +560,13 @@ const ContractInfoTable: React.FC = () => {
           </a>
           <a
             onClick={() => {
+              handleOpenOperationLogModal(record);
+            }}
+          >
+            日志
+          </a>
+          <a
+            onClick={() => {
               handleModalOpen('authorizeModalOpen', true, record);
             }}
           >
@@ -614,6 +810,22 @@ const ContractInfoTable: React.FC = () => {
           dataSource={detailData}
           columns={measurementColumns}
           rowKey="id"
+          pagination={false}
+        />
+      </Modal>
+
+      <Modal
+        title="操作日志"
+        visible={operationLogModalOpen}
+        onCancel={() => setOperationLogModalOpen(false)}
+        footer={null}
+        width={800}
+      >
+        <Table
+          dataSource={operationLogs}
+          columns={operationLogColumns}
+          rowKey="id"
+          loading={operationLogLoading}
           pagination={false}
         />
       </Modal>

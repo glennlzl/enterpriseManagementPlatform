@@ -15,9 +15,23 @@ import {
   ProFormText,
   ProTable, StepsForm,
 } from '@ant-design/pro-components';
-import { ProFormDatePicker, ProFormDigit } from '@ant-design/pro-form/lib';
+import {ProForm, ProFormDatePicker, ProFormDigit} from '@ant-design/pro-form/lib';
 import { FormattedMessage, useIntl } from '@umijs/max';
-import {Button, Space, Switch, message, Form, Input, Row, Col, Tooltip, Modal, InputNumber, DatePicker} from 'antd';
+import {
+  Button,
+  Space,
+  Switch,
+  message,
+  Form,
+  Input,
+  Row,
+  Col,
+  Tooltip,
+  Modal,
+  InputNumber,
+  DatePicker,
+  Divider, Select
+} from 'antd';
 import _ from 'lodash';
 import React, {useEffect, useMemo, useState} from 'react';
 import { DateTime } from 'luxon';
@@ -34,8 +48,6 @@ const VehicleManagement: React.FC = () => {
   const [showMore, setShowMore] = useState(false);
   const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
   const [editingKey, setEditingKey] = useState<number | null>(null); // 用于控制是否处于编辑模式
-  const [currentCreateStep, setCurrentCreateStep] = useState(0);
-  const [currentEditStep, setCurrentEditStep] = useState(0);
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [form] = Form.useForm();
 
@@ -916,468 +928,577 @@ const VehicleManagement: React.FC = () => {
       />
 
       {/* 新增车辆 Modal */}
-      <StepsForm
-        onFinish={async (values) => {
-          const selectedEmployee = employeeOptions.find((emp) => emp.value === values.responsiblePersonId);
-
-          const selectedDrivers = values.driverList.map((id) => {
-            const selectedEmployee = employeeOptions.find((emp) => emp.value === id);
-            return {
-              id: selectedEmployee?.value || 0,
-              name: selectedEmployee?.name || 'Unknown',
-            };
-          });
-          const selectedType = JSON.parse(values.vehicleTypeSelection);
-          const data   = {
-            ...values,
-            driverList: selectedDrivers,
-            purchaseDate: formatDate(values.purchaseDate),
-            trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
-            commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
-            vehicleType: selectedType.vehicleType,
-            vehicleSerialNumber: selectedType.vehicleSerialNumber,
-            vehicleBrand: selectedType.vehicleBrand,
-            approvedLoadCapacity: selectedType.approvedLoadCapacity,
-            responsiblePersonName: selectedEmployee?.name || '',
-            responsiblePersonId: selectedEmployee?.value || 0,
-            responsiblePersonMobile: selectedEmployee?.mobile || '',
-            registrantId: initialState.currentUser?.id || 0,
-            registrant: initialState.currentUser?.name || '',
-            nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval),
-          };
-          await handleAddVehicle(data as AddVehicleInfoRequest);
-          setCreateModalOpen(false);  // 关闭模态框
-        }}
-        stepsProps={{
-          size: 'medium',
-        }}
-        current={currentCreateStep}
-        onCurrentChange={setCurrentCreateStep}
-        stepsFormRender={(dom, submitter) => {
-          return (
-            <Modal
-              width={800}
-              style={{
-                body: {
-                  padding: '80px 80px 80px',
-                },
-              }}
-
-              destroyOnClose
-              open={createModalOpen}
-              title={intl.formatMessage({
-                id: '新增车辆信息',
-              })}
-              afterClose={() => {setCurrentCreateStep(0);}}
-              footer={submitter}
-              onCancel={() => {
-                setCurrentCreateStep(0);
-                setCreateModalOpen(false);
-              }
-              } // 关闭模态框
-            >
-              {dom}
-            </Modal>
-          );
+      <Modal
+        width={800}
+        destroyOnClose
+        open={createModalOpen}
+        title={intl.formatMessage({
+          id: '新增车辆信息',
+        })}
+        footer={null}
+        onCancel={() => {
+          setCreateModalOpen(false);
         }}
       >
-        {/* Step 1: 基本信息 */}
-        <StepsForm.StepForm
-          title="车辆基本信息"
-        >
-          <ProFormText
-            name="vehicleNumber"
-            label="车辆编号"
-            width="xl"
-            rules={[{ required: true, message: '请输入车辆编号' }]}
-          />
-          <ProFormText
-            name="engineeingVehicleNumber"
-            label="工程车编号"
-            width="xl"
-            rules={[{ required: true, message: '请输入工程车编号' }]}
-          />
-          <ProFormText
-            name="licenseNumber"
-            label="车牌号码"
-            width="xl"
-            rules={[{ required: true, message: '请输入车牌号码' }]}
-          />
-        </StepsForm.StepForm>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={async (values) => {
+            // 处理表单提交逻辑
+            const selectedEmployee = employeeOptions.find((emp) => emp.value === values.responsiblePersonId);
 
-        {/* Step 2: 维护信息 */}
-        <StepsForm.StepForm
-          title="维护信息"
-        >
-          <ProFormText
-            name="engineNumber"
-            label="发动机号后6位"
-            rules={[{ required: true, message: '请输入发动机号后6位' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            name="vehicleTypeSelection"
-            label="车辆类型选择"
-            options={vehicleTypeOptions}
-            rules={[{ required: true, message: '请选择车辆类型' }]}
-            width="xl"
-            fieldProps={{
-              dropdownMatchSelectWidth: false, // 只显示label
-            }}
-          />
-          <ProFormDatePicker
-            name="purchaseDate"
-            label="购车日期"
-            rules={[{ required: true, message: '请选择购车日期' }]}
-            width="xl"
-          />
-          <ProFormText
-            name="auditMonth"
-            label="年检月份"
-            rules={[{ required: true, message: '请输入年检月份' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            name="isAudited"
-            label="是否年检"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            rules={[{ required: true, message: '请选择是否年检' }]}
-            width="xl"
-          />
-        </StepsForm.StepForm>
-
-        {/* Step 3: 保险与其他 */}
-        <StepsForm.StepForm
-          title="保险与其他信息"
-        >
-          <ProFormDatePicker
-            name="trafficInsuranceDate"
-            label="交强险日期"
-            rules={[{ required: true, message: '请输入交强险日期' }]}
-            width="xl"
-          />
-          <ProFormDatePicker
-            name="commercialInsuranceDate"
-            label="商业险日期"
-            rules={[{ required: true, message: '请输入商业险日期' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            name="gps"
-            label="是否安装GPS"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            width="xl"
-          />
-          <ProFormText
-            name="mechanicalBond"
-            label="机械邦"
-            rules={[{ required: true, message: '请输入机械邦信息' }]}
-            width="xl"
-          />
-        </StepsForm.StepForm>
-
-        {/* Step 4: 使用与管理信息 */}
-        <StepsForm.StepForm
-          title="使用与管理信息"
-        >
-          <ProFormText
-            name="usageProject"
-            label="使用项目"
-            rules={[{ required: true, message: '请输入使用项目' }]}
-            width="xl"
-          />
-          <ProFormDigit
-            name="lastMaintenanceMileage"
-            label="上次保养公里数"
-            min={0}
-            width="xl"
-          />
-          <ProFormDigit
-            name="currentMileage"
-            label="当前公里数"
-            min={0}
-            width="xl"
-          />
-          <ProFormSelect
-            name="responsiblePersonId"
-            label="负责人"
-            options={employeeOptions}
-            fieldProps={{
-              labelInValue: false, // 只显示label
-            }}
-            rules={[{ required: true, message: '请选择负责人' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            mode="multiple"  // 多选模式
-            name="driverList"
-            label="司机"
-            options={employeeOptions}
-            allowClear
-            width="xl"
-          />
-        </StepsForm.StepForm>
-      </StepsForm>
-
-      {/* 编辑车辆 step */}
-      <StepsForm
-        onFinish={async (values) => {
-
-          const selectedEmployee = employeeOptions.find(
-            (emp) => emp.value === values.responsiblePersonId,
-          );
-
-          let selectedDrivers;
-
-          if (_.isUndefined(values.driverList)) {
-            selectedDrivers = [];
-          } else {
-            selectedDrivers = values.driverList.map((id: number) => {
-              const employee = employeeOptions.find((emp) => emp.value === id);
+            const selectedDrivers = values.driverList?.map((id) => {
+              const selectedEmployee = employeeOptions.find((emp) => emp.value === id);
               return {
-                id: employee?.value || 0,
-                name: employee?.name || 'Unknown',
+                id: selectedEmployee?.value || 0,
+                name: selectedEmployee?.name || 'Unknown',
               };
-            });
-          }
+            }) || [];
+            const selectedType = JSON.parse(values.vehicleTypeSelection);
+            const data   = {
+              ...values,
+              driverList: selectedDrivers,
+              purchaseDate: formatDate(values.purchaseDate),
+              trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
+              commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
+              vehicleType: selectedType.vehicleType,
+              vehicleSerialNumber: selectedType.vehicleSerialNumber,
+              vehicleBrand: selectedType.vehicleBrand,
+              approvedLoadCapacity: selectedType.approvedLoadCapacity,
+              responsiblePersonName: selectedEmployee?.name || '',
+              responsiblePersonId: selectedEmployee?.value || 0,
+              responsiblePersonMobile: selectedEmployee?.mobile || '',
+              registrantId: initialState.currentUser?.id || 0,
+              registrant: initialState.currentUser?.name || '',
+              nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval || 0),
+            };
+            await handleAddVehicle(data as AddVehicleInfoRequest);
+            setCreateModalOpen(false);  // 关闭模态框
+          }}
+        >
+          <Divider>车辆基本信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="车辆编号"
+                name="vehicleNumber"
+                rules={[{ required: true, message: '请输入车辆编号' }]}
+              >
+                <Input placeholder="请输入车辆编号" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="工程车编号"
+                name="engineeingVehicleNumber"
+                rules={[{ required: true, message: '请输入工程车编号' }]}
+              >
+                <Input placeholder="请输入工程车编号" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          let selectedType;
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="车牌号码"
+                name="licenseNumber"
+                rules={[{ required: true, message: '请输入车牌号码' }]}
+              >
+                <Input placeholder="请输入车牌号码" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="发动机号后6位"
+                name="engineNumber"
+                rules={[{ required: true, message: '请输入发动机号后6位' }]}
+              >
+                <Input placeholder="请输入发动机号后6位" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          try {
-            // 尝试解析 `vehicleTypeSelection` 字段
-            selectedType = JSON.parse(values.vehicleTypeSelection);
-          } catch (error) {
-            // 如果解析失败，则使用初始值
-            selectedType = {
+          <Divider>维护信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="车辆类型选择"
+                name="vehicleTypeSelection"
+                rules={[{ required: true, message: '请选择车辆类型' }]}
+              >
+                <Select
+                  options={vehicleTypeOptions}
+                  placeholder="请选择车辆类型"
+                  fieldNames={{ label: 'label', value: 'value' }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.label.toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="购车日期"
+                name="purchaseDate"
+                rules={[{ required: true, message: '请选择购车日期' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="年检月份"
+                name="auditMonth"
+                rules={[{ required: true, message: '请输入年检月份' }]}
+              >
+                <Input placeholder="请输入年检月份" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="是否年检"
+                name="isAudited"
+                rules={[{ required: true, message: '请选择是否年检' }]}
+              >
+                <Select placeholder="请选择是否年检">
+                  <Option value={1}>是</Option>
+                  <Option value={0}>否</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>保险与其他信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="交强险日期"
+                name="trafficInsuranceDate"
+                rules={[{ required: true, message: '请输入交强险日期' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="商业险日期"
+                name="commercialInsuranceDate"
+                rules={[{ required: true, message: '请输入商业险日期' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="是否安装GPS"
+                name="gps"
+                rules={[{ required: true, message: '请选择是否安装GPS' }]}
+              >
+                <Select placeholder="请选择是否安装GPS">
+                  <Option value={1}>是</Option>
+                  <Option value={0}>否</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="机械邦"
+                name="mechanicalBond"
+                rules={[{ required: true, message: '请输入机械邦信息' }]}
+              >
+                <Input placeholder="请输入机械邦信息" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>使用与管理信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="使用项目"
+                name="usageProject"
+                rules={[{ required: true, message: '请输入使用项目' }]}
+              >
+                <Input placeholder="请输入使用项目" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="上次保养公里数"
+                name="lastMaintenanceMileage"
+              >
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入上次保养公里数" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="当前公里数"
+                name="currentMileage"
+              >
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入当前公里数" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="负责人"
+                name="responsiblePersonId"
+                rules={[{ required: true, message: '请选择负责人' }]}
+              >
+                <Select
+                  options={employeeOptions}
+                  placeholder="请选择负责人"
+                  fieldNames={{ label: 'label', value: 'value' }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.label.toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                label="司机"
+                name="driverList"
+              >
+                <Select
+                  mode="multiple"
+                  options={employeeOptions}
+                  placeholder="请选择司机"
+                  fieldNames={{ label: 'label', value: 'value' }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.label.toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item style={{ textAlign: 'right' }}>
+            <Button type="primary" htmlType="submit">
+              提交
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 编辑车辆 Modal */}
+      <Modal
+        width={800}
+        destroyOnClose
+        open={editModalOpen}
+        title={intl.formatMessage({
+          id: '编辑车辆信息',
+        })}
+        footer={null}
+        onCancel={() => {
+          setEditModalOpen(false);
+        }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            ...currentVehicle,
+            vehicleTypeSelection: JSON.stringify({
               vehicleType: currentVehicle?.vehicleType || '',
               vehicleSerialNumber: currentVehicle?.vehicleSerialNumber || '',
               vehicleBrand: currentVehicle?.vehicleBrand || '',
               approvedLoadCapacity: currentVehicle?.approvedLoadCapacity || '',
+              maintenanceInterval: currentVehicle?.maintenanceInterval || '',
+            }),
+            purchaseDate: currentVehicle?.purchaseDate ? moment(currentVehicle.purchaseDate, 'YYYY-MM-DD') : null,
+            trafficInsuranceDate: currentVehicle?.trafficInsuranceDate ? moment(currentVehicle.trafficInsuranceDate, 'YYYY-MM-DD') : null,
+            commercialInsuranceDate: currentVehicle?.commercialInsuranceDate ? moment(currentVehicle.commercialInsuranceDate, 'YYYY-MM-DD') : null,
+          }}
+          onFinish={async (values) => {
+            // 处理表单提交逻辑
+            const selectedEmployee = employeeOptions.find(
+              (emp) => emp.value === values.responsiblePersonId,
+            );
+
+            let selectedDrivers;
+
+            if (_.isUndefined(values.driverList)) {
+              selectedDrivers = [];
+            } else {
+              selectedDrivers = values.driverList.map((id: number) => {
+                const employee = employeeOptions.find((emp) => emp.value === id);
+                return {
+                  id: employee?.value || 0,
+                  name: employee?.name || 'Unknown',
+                };
+              });
+            }
+
+            let selectedType;
+
+            try {
+              selectedType = JSON.parse(values.vehicleTypeSelection);
+            } catch (error) {
+              selectedType = {
+                vehicleType: currentVehicle?.vehicleType || '',
+                vehicleSerialNumber: currentVehicle?.vehicleSerialNumber || '',
+                vehicleBrand: currentVehicle?.vehicleBrand || '',
+                approvedLoadCapacity: currentVehicle?.approvedLoadCapacity || '',
+              };
+            }
+
+            const data: UpdateVehicleInfoRequest = {
+              ...values,
+              driverList: selectedDrivers,
+              purchaseDate: formatDate(values.purchaseDate),
+              trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
+              commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
+              vehicleType: selectedType.vehicleType,
+              vehicleSerialNumber: selectedType.vehicleSerialNumber,
+              vehicleBrand: selectedType.vehicleBrand,
+              approvedLoadCapacity: selectedType.approvedLoadCapacity,
+              responsiblePersonName: selectedEmployee?.name || '',
+              responsiblePersonId: selectedEmployee?.value || 0,
+              responsiblePersonMobile: selectedEmployee?.mobile || '',
+              registrantId: initialState.currentUser?.id || 0,
+              registrant: initialState.currentUser?.name || '',
+              id: currentVehicle?.id || 0, // 更新时需要车辆 ID
+              nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval || 0),
             };
-          }
-
-          const data: UpdateVehicleInfoRequest = {
-            ...values,
-            driverList: selectedDrivers,
-            purchaseDate: formatDate(values.purchaseDate),
-            trafficInsuranceDate: formatDate(values.trafficInsuranceDate),
-            commercialInsuranceDate: formatDate(values.commercialInsuranceDate),
-            vehicleType: selectedType.vehicleType,
-            vehicleSerialNumber: selectedType.vehicleSerialNumber,
-            vehicleBrand: selectedType.vehicleBrand,
-            approvedLoadCapacity: selectedType.approvedLoadCapacity,
-            responsiblePersonName: selectedEmployee?.name || '',
-            responsiblePersonId: selectedEmployee?.value || 0,
-            responsiblePersonMobile: selectedEmployee?.mobile || '',
-            registrantId: initialState.currentUser?.id || 0,
-            registrant: initialState.currentUser?.name || '',
-            id: currentVehicle?.id || 0, // 更新时需要车辆 ID
-            nextMaintenanceMileage: Number(values.lastMaintenanceMileage) + Number(selectedType.maintenanceInterval),
-          };
-          await handleEditVehicle(data);
-        }}
-        stepsProps={{
-          size: 'medium',
-        }}
-        current={currentEditStep}
-        onCurrentChange={setCurrentEditStep}
-        stepsFormRender={(dom, submitter) => {
-          return (
-            <Modal
-              width={800}
-              style={{
-                body: {
-                  padding: '80px 80px 80px',
-                },
-              }}
-              key={currentVehicle?.id || 'new'}  // 使用 key 来强制重新渲染
-              destroyOnClose
-              open={editModalOpen}
-              title={intl.formatMessage({
-                id: '编辑车辆信息',
-              })}
-              afterClose={() => {setCurrentEditStep(0);}}
-              footer={submitter}
-              onCancel={() => {
-                setCurrentEditStep(0);
-                setEditModalOpen(false);
-              }
-              } // 关闭模态框
-            >
-              {dom}
-            </Modal>
-          );
-        }}
-        initialValues={{
-          ...currentVehicle,
-          vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
-        }}
-      >
-        {/* Step 1: 基本信息 */}
-        <StepsForm.StepForm
-          title="车辆基本信息"
-          initialValues={{
-            ...currentVehicle,
-            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
+            await handleEditVehicle(data);
           }}
         >
-          <ProFormText
-            name="vehicleNumber"
-            label="车辆编号"
-            width="xl"
-            rules={[{ required: true, message: '请输入车辆编号' }]}
-          />
-          <ProFormText
-            name="engineeingVehicleNumber"
-            label="工程车编号"
-            width="xl"
-            rules={[{ required: true, message: '请输入工程车编号' }]}
-          />
-          <ProFormText
-            name="licenseNumber"
-            label="车牌号码"
-            width="xl"
-            rules={[{ required: true, message: '请输入车牌号码' }]}
-          />
-        </StepsForm.StepForm>
+          <Divider>车辆基本信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="车辆编号"
+                name="vehicleNumber"
+                rules={[{ required: true, message: '请输入车辆编号' }]}
+              >
+                <Input placeholder="请输入车辆编号" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="工程车编号"
+                name="engineeingVehicleNumber"
+                rules={[{ required: true, message: '请输入工程车编号' }]}
+              >
+                <Input placeholder="请输入工程车编号" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {/* Step 2: 维护信息 */}
-        <StepsForm.StepForm
-          title="维护信息"
-          initialValues={{
-            ...currentVehicle,
-            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
-          }}
-        >
-          <ProFormText
-            name="engineNumber"
-            label="发动机号后6位"
-            rules={[{ required: true, message: '请输入发动机号后6位' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            name="vehicleTypeSelection"
-            label="车辆类型选择"
-            options={vehicleTypeOptions}
-            rules={[{ required: true, message: '请选择车辆类型' }]}
-            width="xl"
-            fieldProps={{
-              dropdownMatchSelectWidth: false, // 只显示label
-            }}
-          />
-          <ProFormDatePicker
-            name="purchaseDate"
-            label="购车日期"
-            rules={[{ required: true, message: '请选择购车日期' }]}
-            width="xl"
-          />
-          <ProFormText
-            name="auditMonth"
-            label="年检月份"
-            rules={[{ required: true, message: '请输入年检月份' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            name="isAudited"
-            label="是否年检"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            rules={[{ required: true, message: '请选择是否年检' }]}
-            width="xl"
-          />
-        </StepsForm.StepForm>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="车牌号码"
+                name="licenseNumber"
+                rules={[{ required: true, message: '请输入车牌号码' }]}
+              >
+                <Input placeholder="请输入车牌号码" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="发动机号后6位"
+                name="engineNumber"
+                rules={[{ required: true, message: '请输入发动机号后6位' }]}
+              >
+                <Input placeholder="请输入发动机号后6位" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {/* Step 3: 保险与其他 */}
-        <StepsForm.StepForm
-          title="保险与其他信息"
-          initialValues={{
-            ...currentVehicle,
-            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
-          }}
-        >
-          <ProFormDatePicker
-            name="trafficInsuranceDate"
-            label="交强险日期"
-            rules={[{ required: true, message: '请输入交强险日期' }]}
-            width="xl"
-          />
-          <ProFormDatePicker
-            name="commercialInsuranceDate"
-            label="商业险日期"
-            rules={[{ required: true, message: '请输入商业险日期' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            name="gps"
-            label="是否安装GPS"
-            options={[
-              { label: '是', value: 1 },
-              { label: '否', value: 0 },
-            ]}
-            width="xl"
-          />
-          <ProFormText
-            name="mechanicalBond"
-            label="机械邦"
-            rules={[{ required: true, message: '请输入机械邦信息' }]}
-            width="xl"
-          />
-        </StepsForm.StepForm>
+          <Divider>维护信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="车辆类型选择"
+                name="vehicleTypeSelection"
+                rules={[{ required: true, message: '请选择车辆类型' }]}
+              >
+                <Select
+                  options={vehicleTypeOptions}
+                  placeholder="请选择车辆类型"
+                  fieldNames={{ label: 'label', value: 'value' }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.label.toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="购车日期"
+                name="purchaseDate"
+                rules={[{ required: true, message: '请选择购车日期' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {/* Step 4: 使用与管理信息 */}
-        <StepsForm.StepForm
-          title="使用与管理信息"
-          initialValues={{
-            ...currentVehicle,
-            vehicleTypeSelection: `${!(currentVehicle) || currentVehicle.vehicleType || ''} - ${!(currentVehicle) || currentVehicle.vehicleSerialNumber || ''} - ${!(currentVehicle) || currentVehicle.vehicleBrand || ''} - ${!(currentVehicle) || currentVehicle.approvedLoadCapacity || ''}`, // 设置默认值
-          }}
-        >
-          <ProFormText
-            name="usageProject"
-            label="使用项目"
-            rules={[{ required: true, message: '请输入使用项目' }]}
-            width="xl"
-          />
-          <ProFormDigit
-            name="lastMaintenanceMileage"
-            label="上次保养公里数"
-            min={0}
-            width="xl"
-          />
-          <ProFormDigit
-            name="currentMileage"
-            label="当前公里数"
-            min={0}
-            width="xl"
-          />
-          <ProFormSelect
-            name="responsiblePersonId"
-            label="负责人"
-            options={employeeOptions}
-            fieldProps={{
-              labelInValue: false, // 只显示label
-            }}
-            rules={[{ required: true, message: '请选择负责人' }]}
-            width="xl"
-          />
-          <ProFormSelect
-            mode="multiple"  // 多选模式
-            name="driverList"
-            label="司机"
-            options={employeeOptions}
-            allowClear
-            width="xl"
-          />
-        </StepsForm.StepForm>
-      </StepsForm>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="年检月份"
+                name="auditMonth"
+                rules={[{ required: true, message: '请输入年检月份' }]}
+              >
+                <Input placeholder="请输入年检月份" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="是否年检"
+                name="isAudited"
+                rules={[{ required: true, message: '请选择是否年检' }]}
+              >
+                <Select placeholder="请选择是否年检">
+                  <Option value={1}>是</Option>
+                  <Option value={0}>否</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>保险与其他信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="交强险日期"
+                name="trafficInsuranceDate"
+                rules={[{ required: true, message: '请输入交强险日期' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="商业险日期"
+                name="commercialInsuranceDate"
+                rules={[{ required: true, message: '请输入商业险日期' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="是否安装GPS"
+                name="gps"
+                rules={[{ required: true, message: '请选择是否安装GPS' }]}
+              >
+                <Select placeholder="请选择是否安装GPS">
+                  <Option value={1}>是</Option>
+                  <Option value={0}>否</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="机械邦"
+                name="mechanicalBond"
+                rules={[{ required: true, message: '请输入机械邦信息' }]}
+              >
+                <Input placeholder="请输入机械邦信息" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>使用与管理信息</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="使用项目"
+                name="usageProject"
+                rules={[{ required: true, message: '请输入使用项目' }]}
+              >
+                <Input placeholder="请输入使用项目" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="上次保养公里数"
+                name="lastMaintenanceMileage"
+              >
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入上次保养公里数" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="当前公里数"
+                name="currentMileage"
+              >
+                <InputNumber style={{ width: '100%' }} min={0} placeholder="请输入当前公里数" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="负责人"
+                name="responsiblePersonId"
+                rules={[{ required: true, message: '请选择负责人' }]}
+              >
+                <Select
+                  options={employeeOptions}
+                  placeholder="请选择负责人"
+                  fieldNames={{ label: 'label', value: 'value' }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.label.toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                label="司机"
+                name="driverList"
+              >
+                <Select
+                  mode="multiple"
+                  options={employeeOptions}
+                  placeholder="请选择司机"
+                  fieldNames={{ label: 'label', value: 'value' }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    option?.label.toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item style={{ textAlign: 'right' }}>
+            <Button type="primary" htmlType="submit">
+              提交
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
     </PageContainer>
   );
 };

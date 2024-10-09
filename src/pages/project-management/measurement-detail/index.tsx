@@ -11,6 +11,7 @@ import {
   Modal,
   Select,
   message,
+  Table,
   Tree,
   Row,
   Col,
@@ -52,6 +53,12 @@ const MeasurementDetailTable: React.FC = () => {
     measurementItemList,
     measurementItemTreeData,
     fetchMeasurementDetailList,
+    operationLogModalOpen,
+    setOperationLogModalOpen,
+    operationLogs,
+    operationLogLoading,
+    handleDeleteOperationLog,
+    handleOpenOperationLogModal,
   } = useMeasurementDetail();
 
   // 当选择树节点时触发
@@ -88,6 +95,178 @@ const MeasurementDetailTable: React.FC = () => {
     label: item.name!, // 用于选中后显示的内容
     item, // 将整个 item 对象传递给子组件
   }));
+
+  // 字段名到中文列名的映射
+  const fieldNameMap: { [key: string]: { label: string; isDate?: boolean } } = {
+    id: { label: '序号' },
+    measurementItemId: { label: '测量项' },
+    subItemNumber: { label: '子目号' },
+    position: { label: '位置' },
+    price: { label: '单价' },
+    unit: { label: '单位' },
+    currentCount: { label: '当前数量' },
+    totalCount: { label: '累计数量' },
+    remainingCount: { label: '剩余数量' },
+    currentAmount: { label: '当前金额' },
+    upperLimitQuantity: { label: '上限数量' },
+    measurementStatus: { label: '状态' },
+    measurementComment: { label: '审核意见' },
+    measurementBillNumber: { label: '计量单号' },
+    measurementType: { label: '计量类型' },
+    extend: { label: '扩展字段' },
+    contractCostType: { label: '合同费用类型' },
+    transactionType: { label: '交易类型' },
+    attachmentList: { label: '附件列表' },
+    updateTime: { label: '更新时间', isDate: true },
+    createTime: { label: '创建时间', isDate: true },
+    // 根据需要添加更多字段
+  };
+
+  // 格式化值的函数
+  const formatValue = (value: any, fieldKey?: string): string => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      return '-';
+    } else if (Array.isArray(value)) {
+      return value
+        .map((item) => {
+          if (typeof item === 'object') {
+            // 提取对象中的关键字段
+            const itemDetails = Object.keys(item)
+              .map((key) => {
+                const fieldInfo = fieldNameMap[key] || { label: key };
+                const fieldLabel = fieldInfo.label;
+                const fieldValue = formatValue(item[key], key);
+                return `${fieldLabel}: ${fieldValue}`;
+              })
+              .join(', ');
+            return `{ ${itemDetails} }`;
+          } else {
+            return String(item);
+          }
+        })
+        .join('; ');
+    } else if (typeof value === 'object') {
+      // 对象，提取关键字段
+      const objectDetails = Object.keys(value)
+        .map((key) => {
+          const fieldInfo = fieldNameMap[key] || { label: key };
+          const fieldLabel = fieldInfo.label;
+          const fieldValue = formatValue(value[key], key);
+          return `${fieldLabel}: ${fieldValue}`;
+        })
+        .join(', ');
+      return `{ ${objectDetails} }`;
+    } else if (
+      fieldKey &&
+      fieldNameMap[fieldKey] &&
+      fieldNameMap[fieldKey].isDate &&
+      typeof value === 'number'
+    ) {
+      // 如果是时间字段，且值是数字，则格式化为日期
+      return moment(value).format('YYYY-MM-DD HH:mm:ss');
+    } else {
+      return String(value);
+    }
+  };
+
+  // 解析操作日志记录的函数
+  const parseOperationRecord = (record: OperationLogVO) => {
+    try {
+      const operationFieldArray = JSON.parse(record.operationField);
+      const operationFieldOriginalValueArray = JSON.parse(record.operationFieldOriginalValue);
+      const operationFieldNewValueArray = JSON.parse(record.operationFieldNewValue);
+
+      const parsedOriginalValues = operationFieldOriginalValueArray.map((value) =>
+        JSON.parse(value)
+      );
+      const parsedNewValues = operationFieldNewValueArray.map((value) =>
+        JSON.parse(value)
+      );
+
+      const changes = operationFieldArray.map((field: string, index: number) => ({
+        field,
+        originalValue: parsedOriginalValues[index],
+        newValue: parsedNewValues[index],
+      }));
+
+      return changes;
+    } catch (error) {
+      console.error('解析操作记录失败:', error);
+      return [];
+    }
+  };
+
+  // 定义操作日志的列
+  const operationLogColumns: ProColumns<OperationLogVO>[] = [
+    {
+      title: '操作人',
+      dataIndex: 'operator',
+      key: 'operator',
+      width: 100,
+    },
+    {
+      title: '操作类型',
+      dataIndex: 'operationType',
+      key: 'operationType',
+      width: 100,
+    },
+    {
+      title: '操作时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      render: (text) => moment(text).format('YYYY-MM-DD HH:mm:ss'),
+      width: 160,
+    },
+    {
+      title: '修改详情',
+      key: 'operationDetail',
+      width: 400,
+      render: (_, record) => {
+        const changes = parseOperationRecord(record);
+        return changes.map((change, index) => {
+          // 使用字段名映射获取中文列名
+          const fieldInfo = fieldNameMap[change.field] || { label: change.field };
+          const fieldName = fieldInfo.label;
+
+          // 将 originalValue 和 newValue 转换为易读的字符串
+          const originalValueText = formatValue(change.originalValue, change.field);
+          const newValueText = formatValue(change.newValue, change.field);
+          return (
+            <div key={index} style={{ marginBottom: '8px' }}>
+              <strong>{fieldName}:</strong>
+              <div>
+                <span style={{ color: 'red' }}>原始值:</span> {originalValueText}
+              </div>
+              <div>
+                <span style={{ color: 'green' }}>新值:</span> {newValueText}
+              </div>
+            </div>
+          );
+        });
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_, record) => (
+        <Popconfirm
+          title="确定要删除这条操作日志吗？"
+          onConfirm={() => handleDeleteOperationLog(record)}
+          okText="确定"
+          cancelText="取消"
+        >
+          <a>删除</a>
+        </Popconfirm>
+      ),
+    },
+  ];
+
 
   // 表格列定义，包含所有字段
   const columns: ProColumns<MeasurementDetailVO>[] = [
@@ -259,6 +438,7 @@ const MeasurementDetailTable: React.FC = () => {
           >
             <a>删除</a>
           </Popconfirm>
+          <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
           {record.measurementStatus === 0 && (
             <>
               <a onClick={() => handleReviewMeasurementDetail(record.id!, 1)}>审核</a>
@@ -402,6 +582,23 @@ const MeasurementDetailTable: React.FC = () => {
               <MeasurementDetailForm
                 form={form}
                 measurementItems={measurementItems}
+              />
+            </Modal>
+            {/* 操作日志的模态框 */}
+            <Modal
+              title="操作日志"
+              visible={operationLogModalOpen}
+              onCancel={() => setOperationLogModalOpen(false)}
+              footer={null}
+              width={1000}
+            >
+              <Table
+                dataSource={operationLogs}
+                columns={operationLogColumns}
+                rowKey="id"
+                loading={operationLogLoading}
+                pagination={false}
+                scroll={{ x: 'max-content' }}
               />
             </Modal>
           </div>

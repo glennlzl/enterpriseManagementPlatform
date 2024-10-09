@@ -11,6 +11,8 @@ import {
 import {useModel} from "@@/exports";
 import {AddOrUpdateContractInfoRequest, ContractInfoVO} from "@/model/project/Model.contract";
 import {EmployeeSimpleInfoResponse} from "@/api/usermanagement";
+import {OperationLogVO} from "@/model/project/Model.operation";
+import {deleteOperationLog, queryOperationLogList} from "@/api/project-managerment/Api.operation";
 
 export function useContractInfo() {
   const [contractList, setContractList] = useState<ContractInfoVO[]>([]);
@@ -162,6 +164,44 @@ export function useContractInfo() {
     }
   };
 
+  const [operationLogModalOpen, setOperationLogModalOpen] = useState<boolean>(false);
+  const [operationLogs, setOperationLogs] = useState<OperationLogVO[]>([]);
+  const [currentContractForLogs, setCurrentContractForLogs] = useState<ContractInfoVO | null>(null);
+  const [operationLogLoading, setOperationLogLoading] = useState<boolean>(false);
+
+  // 新增的函数：获取操作日志
+  const fetchOperationLogs = async (contract: ContractInfoVO) => {
+    try {
+      setOperationLogLoading(true);
+      const logs = await queryOperationLogList('合同', contract.id!);
+      setOperationLogs(logs);
+    } catch (error) {
+      message.error(`获取操作日志失败：${error}`);
+    } finally {
+      setOperationLogLoading(false);
+    }
+  };
+
+  // 新增的函数：删除操作日志
+  const handleDeleteOperationLog = async (record: OperationLogVO) => {
+    try {
+      // await deleteOperationLog(record.id);
+      message.success('删除成功');
+      if (currentContractForLogs) {
+        fetchOperationLogs(currentContractForLogs);
+      }
+    } catch (error) {
+      message.error(`删除失败：${error}`);
+    }
+  };
+
+  // 新增的函数：打开操作日志模态框
+  const handleOpenOperationLogModal = (contract: ContractInfoVO) => {
+    setCurrentContractForLogs(contract);
+    setOperationLogModalOpen(true);
+    fetchOperationLogs(contract);
+  };
+
   return {
     contractList,
     loading,
@@ -176,6 +216,14 @@ export function useContractInfo() {
     setSelectedRowKeys,
     onSelectChange,
     reloadData,
-    actionRef
+    actionRef,
+    operationLogModalOpen,
+    setOperationLogModalOpen,
+    operationLogs,
+    currentContractForLogs,
+    operationLogLoading,
+    fetchOperationLogs,
+    handleDeleteOperationLog,
+    handleOpenOperationLogModal,
   };
 }

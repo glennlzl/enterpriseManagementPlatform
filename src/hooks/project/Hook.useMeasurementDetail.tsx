@@ -19,6 +19,8 @@ import {
 import { ProjectInfoVO } from '@/model/project/Modal.project';
 import { ContractInfoVO, MeasurementItemVO } from '@/model/project/Model.contract';
 import { PeriodInfoVO } from '@/model/project/Model.period';
+import {OperationLogVO} from "@/model/project/Model.operation";
+import {deleteOperationLog, queryOperationLogList} from "@/api/project-managerment/Api.operation";
 
 export function useMeasurementDetail() {
   const [measurementDetailList, setMeasurementDetailList] = useState<MeasurementDetailVO[]>([]);
@@ -176,7 +178,7 @@ export function useMeasurementDetail() {
         selectedContractId,
         selectedPeriodId,
         25,
-        '2', // 根据需要调整 type 参数
+        'cost', // 根据需要调整 type 参数
         generalQueryCondition,
       );
       console.log('Received measurement detail list:', data);
@@ -350,6 +352,44 @@ export function useMeasurementDetail() {
     setSelectedRowKeys(newSelectedRowKeys);
   };
 
+  const [operationLogModalOpen, setOperationLogModalOpen] = useState<boolean>(false);
+  const [operationLogs, setOperationLogs] = useState<OperationLogVO[]>([]);
+  const [currentMeasurementDetailForLogs, setCurrentMeasurementDetailForLogs] = useState<MeasurementDetailVO | null>(null);
+  const [operationLogLoading, setOperationLogLoading] = useState<boolean>(false);
+
+  // 获取操作日志的函数
+  const fetchOperationLogs = async (measurementDetail: MeasurementDetailVO) => {
+    try {
+      setOperationLogLoading(true);
+      const logs = await queryOperationLogList('计量', measurementDetail.id!);
+      setOperationLogs(logs);
+    } catch (error) {
+      message.error(`获取操作日志失败：${error}`);
+    } finally {
+      setOperationLogLoading(false);
+    }
+  };
+
+  // 删除操作日志的函数
+  const handleDeleteOperationLog = async (record: OperationLogVO) => {
+    try {
+      await deleteOperationLog(record.id);
+      message.success('删除成功');
+      if (currentMeasurementDetailForLogs) {
+        fetchOperationLogs(currentMeasurementDetailForLogs);
+      }
+    } catch (error) {
+      message.error(`删除失败：${error}`);
+    }
+  };
+
+  // 打开操作日志模态框的函数
+  const handleOpenOperationLogModal = (measurementDetail: MeasurementDetailVO) => {
+    setCurrentMeasurementDetailForLogs(measurementDetail);
+    setOperationLogModalOpen(true);
+    fetchOperationLogs(measurementDetail);
+  };
+
   return {
     measurementDetailList,
     loading,
@@ -376,5 +416,11 @@ export function useMeasurementDetail() {
     setSelectedItemId,
     measurementItemList,
     measurementItemTreeData,
+    operationLogModalOpen,
+    setOperationLogModalOpen,
+    operationLogs,
+    operationLogLoading,
+    handleDeleteOperationLog,
+    handleOpenOperationLogModal,
   };
 }
