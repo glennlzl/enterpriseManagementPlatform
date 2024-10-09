@@ -116,7 +116,7 @@ export async function queryMeasurementDetailList(
   projectId?: number,
   contractId?: number,
   periodId?: number,
-  itemId: number = 2,
+  itemId?: number,
   type: string = 'cost',
   generalQueryCondition?: string,
   options?: { [key: string]: any },

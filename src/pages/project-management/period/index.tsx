@@ -437,7 +437,7 @@ const PeriodInfoTable: React.FC = () => {
         }}
         style={{ marginBottom: 16 }}
       >
-        <Form.Item label="查询" name="generalQueryCondition">
+        <Form.Item label="查询" name="generalQueryCondition" style={{ width: 500 }}>
           <Input placeholder="请输入周期名称等信息" />
         </Form.Item>
       </Form>

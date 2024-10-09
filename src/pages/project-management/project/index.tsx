@@ -625,7 +625,7 @@ const ProjectInfoTable: React.FC = () => {
         }}
         style={{ marginBottom: 16 }}
       >
-        <Form.Item label="查询" name="generalQueryCondition">
+        <Form.Item label="查询" name="generalQueryCondition" style={{ width: 500 }}>
           <Input placeholder="请输入项目名称、地区等信息" />
         </Form.Item>
       </Form>

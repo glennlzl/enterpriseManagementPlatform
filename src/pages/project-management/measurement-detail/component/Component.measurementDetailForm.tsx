@@ -1,31 +1,15 @@
-// MeasurementDetailForm.tsx
-
 import React from 'react';
-import { Form, Input, Upload, Button, Select, InputNumber, Row, Col, Divider } from 'antd';
+import { Form, Input, Upload, Button, InputNumber, Row, Col, Divider } from 'antd';
 import type { FormInstance } from 'antd/lib/form';
 import { UploadOutlined } from '@ant-design/icons';
+import { MeasurementItemVO } from '@/model/project/Model.contract'; // 引入 MeasurementItemVO 类型
 
 interface MeasurementDetailFormProps {
   form: FormInstance;
-  measurementItems: {
-    value: number;
-    label: string;
-    item: {
-      id?: number;
-      itemType?: string;
-      itemName?: string;
-      itemPrice?: number;
-      itemUnit?: string;
-      contractCostType?: string;
-      transactionType?: string;
-      designCount?: number;
-      updateTime?: string;
-      createTime?: string;
-    };
-  }[];
+  selectedMeasurementItem?: MeasurementItemVO; // 接收选中的测量项
 }
 
-const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({ form, measurementItems }) => {
+const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({ form, selectedMeasurementItem }) => {
   // 附件上传处理
   const normFile = (e: any) => {
     return Array.isArray(e) ? e : e && e.fileList;
@@ -36,32 +20,10 @@ const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({ form, mea
       {/* 基本信息 */}
       <Divider orientation="left">基本信息</Divider>
       <Row gutter={16}>
-        {/* 测量项 */}
+        {/* 测量项名称 */}
         <Col span={12}>
-          <Form.Item
-            label="测量项"
-            name="measurementItemId"
-            rules={[{ required: true, message: '请选择测量项' }]}
-          >
-            <Select
-              placeholder="请选择测量项"
-              showSearch
-              optionLabelProp="label"
-              filterOption={(input, option) =>
-                option?.label.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {measurementItems.map((item) => (
-                <Select.Option key={item.value} value={item.value} label={item.item.itemName}>
-                  <div>
-                    <strong>{item.item.itemName}</strong>
-                    <div style={{ fontSize: '12px', color: '#888' }}>
-                      类型: {item.item.itemType}, 单位: {item.item.itemUnit}, 价格: {item.item.itemPrice}
-                    </div>
-                  </div>
-                </Select.Option>
-              ))}
-            </Select>
+          <Form.Item label="测量项名称">
+            <Input value={selectedMeasurementItem?.itemName} readOnly />
           </Form.Item>
         </Col>
 

@@ -15,6 +15,7 @@ import { queryProjectInfoList } from '@/api/project-managerment/Api.project';
 import { ProjectInfoVO } from '@/model/project/Modal.project';
 import {EmployeeSimpleInfoResponse, isLogin, queryAllEmployeeSimpleInfo} from '@/api/usermanagement';
 import {OperationLogVO} from "@/model/project/Model.operation";
+import _ from 'lodash';
 
 const { Option } = Select;
 
@@ -53,6 +54,8 @@ const ContractInfoTable: React.FC = () => {
   const [detailModalOpen, setDetailModalOpen] = useState<boolean>(false);
   const [detailTitle, setDetailTitle] = useState<string>('');
   const [detailData, setDetailData] = useState<MeasurementItemVO[]>([]);
+  const [detailColumns, setDetailColumns] = useState<ProColumns<MeasurementItemVO>[]>([]); // 新增状态
+  const [detailType, setDetailType] = useState<'contractCost' | 'projectSchedule'>('contractCost'); // 新增状态
 
   const { initialState } = useModel('@@initialState');
   const userId = initialState?.currentUser?.id;
@@ -104,11 +107,6 @@ const ContractInfoTable: React.FC = () => {
     }
   };
 
-  const showDetailModal = (title: string, data: MeasurementItemVO[]) => {
-    setDetailTitle(title);
-    setDetailData(data);
-    setDetailModalOpen(true);
-  };
 
   const downloadFromOSS = async (fileUrl: string) => {
     const loginCheck = await isLogin();
@@ -136,17 +134,17 @@ const ContractInfoTable: React.FC = () => {
   const fieldNameMap: { [key: string]: { label: string; isDate?: boolean } } = {
     id: { label: '序号' },
     name: { label: '合同名称' },
-    contractSerialNumber: { label: '合同编号' },
+    contractSerialNumber: { label: '唯一码'},
     type: { label: '合同类型' },
-    contractor: { label: '承包商' },
+    contractor: { label: '乙方单位' },
     contractAmount: { label: '合同金额' },
     startDate: { label: '开始日期', isDate: true },
-    endDate: { label: '结束日期', isDate: true },
-    contractOrder: { label: '合同序号' },
-    contractProvisionalPrice: { label: '合同临时价格' },
+    endDate: { label: '完工日期', isDate: true },
+    contractOrder: { label: '合同排序' },
+    contractProvisionalPrice: { label: '暂估价' },
     contractTermType: { label: '合同期限类型' },
-    supervisingOrganization: { label: '监理单位' },
-    monitoringOrganization: { label: '监测单位' },
+    supervisingOrganization: { label: '总监单位' },
+    monitoringOrganization: { label: '监理单位' },
     consultingOrganization: { label: '咨询单位' },
     accountName: { label: '账户名称' },
     accountBank: { label: '开户行' },
@@ -313,44 +311,68 @@ const ContractInfoTable: React.FC = () => {
     },
   ];
 
-  // 定义测量项的列
-  const measurementColumns: ProColumns<MeasurementItemVO>[] = [
+// 定义合同成本的列
+  const contractCostColumns: ProColumns<MeasurementItemVO>[] = [
     {
-      title: '项目类型',
-      dataIndex: 'itemType',
-      key: 'itemType',
-    },
-    {
-      title: '项目名称',
+      title: '计量类目名称',
       dataIndex: 'itemName',
       key: 'itemName',
     },
     {
-      title: '项目价格',
-      dataIndex: 'itemPrice',
-      key: 'itemPrice',
-    },
-    {
-      title: '项目单位',
-      dataIndex: 'itemUnit',
-      key: 'itemUnit',
-    },
-    {
-      title: '合同成本类型',
+      title: '计量类目费用类型',
       dataIndex: 'contractCostType',
       key: 'contractCostType',
     },
     {
-      title: '交易类型',
+      title: '计量类目交易类型',
       dataIndex: 'transactionType',
       key: 'transactionType',
     },
+  ];
+
+  // 定义项目进度的列
+  const projectScheduleColumns: ProColumns<MeasurementItemVO>[] = [
     {
-      title: '设计数量',
+      title: '计量类目名称',
+      dataIndex: 'itemName',
+      key: 'itemName',
+    },
+    {
+      title: '计量类目单价',
+      dataIndex: 'itemPrice',
+      key: 'itemPrice',
+    },
+    {
+      title: '计量类目单位',
+      dataIndex: 'itemUnit',
+      key: 'itemUnit',
+    },
+    {
+      title: '计量类目设计数量',
       dataIndex: 'designCount',
       key: 'designCount',
     },
   ];
+
+  const showDetailModal = (
+    title: string,
+    data: MeasurementItemVO[],
+    type: 'contractCost' | 'projectSchedule',
+  ) => {
+    setDetailTitle(title);
+    setDetailData(data);
+    setDetailType(type);
+
+    // 根据类型设置对应的列
+    if (type === 'contractCost') {
+      setDetailColumns(contractCostColumns);
+    } else {
+      setDetailColumns(projectScheduleColumns);
+    }
+
+    setDetailModalOpen(true);
+  };
+
 
   const columns: ProColumns<ContractInfoVO>[] = [
     {
@@ -370,7 +392,7 @@ const ContractInfoTable: React.FC = () => {
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
-      title: '合同编号',
+      title: '唯一码',
       dataIndex: 'contractSerialNumber',
       valueType: 'text',
       width: 150,
@@ -382,13 +404,13 @@ const ContractInfoTable: React.FC = () => {
       width: 100,
     },
     {
-      title: '承包商',
+      title: '乙方单位',
       dataIndex: 'contractor',
       valueType: 'text',
       width: 120,
     },
     {
-      title: '合同金额',
+      title: '合同金额(元)',
       dataIndex: 'contractAmount',
       valueType: 'text',
       width: 120,
@@ -400,19 +422,19 @@ const ContractInfoTable: React.FC = () => {
       width: 120,
     },
     {
-      title: '结束日期',
+      title: '完工日期',
       dataIndex: 'endDate',
       valueType: 'date',
       width: 120,
     },
     {
-      title: '合同序号',
+      title: '合同排序',
       dataIndex: 'contractOrder',
       valueType: 'digit',
       width: 100,
     },
     {
-      title: '合同临时价格',
+      title: '暂估价',
       dataIndex: 'contractProvisionalPrice',
       valueType: 'text',
       width: 150,
@@ -424,13 +446,13 @@ const ContractInfoTable: React.FC = () => {
       width: 150,
     },
     {
-      title: '监理单位',
+      title: '总监单位',
       dataIndex: 'supervisingOrganization',
       valueType: 'text',
       width: 150,
     },
     {
-      title: '监测单位',
+      title: '监理单位',
       dataIndex: 'monitoringOrganization',
       valueType: 'text',
       width: 150,
@@ -471,7 +493,13 @@ const ContractInfoTable: React.FC = () => {
       valueType: 'text',
       width: 150,
       render: (_, record) => (
-        <a onClick={() => showDetailModal('合同成本详情', record.contractCost || [])}>查看详情</a>
+        <a
+          onClick={() =>
+            showDetailModal('合同成本详情', record.contractCost || [], 'contractCost')
+          }
+        >
+          查看详情
+        </a>
       ),
     },
     {
@@ -480,7 +508,13 @@ const ContractInfoTable: React.FC = () => {
       valueType: 'text',
       width: 150,
       render: (_, record) => (
-        <a onClick={() => showDetailModal('项目进度详情', record.projectSchedule || [])}>查看详情</a>
+        <a
+          onClick={() =>
+            showDetailModal('项目进度详情', record.projectSchedule || [], 'projectSchedule')
+          }
+        >
+          查看详情
+        </a>
       ),
     },
     {
@@ -613,7 +647,7 @@ const ContractInfoTable: React.FC = () => {
         }}
         style={{ marginBottom: 16 }}
       >
-        <Form.Item label="查询" name="generalQueryCondition">
+        <Form.Item label="查询" name="generalQueryCondition" style={{ width: 500 }}>
           <Input placeholder="请输入合同名称、编号等信息" />
         </Form.Item>
       </Form>
@@ -651,6 +685,7 @@ const ContractInfoTable: React.FC = () => {
           <Button
             type="primary"
             key="primary"
+            disabled={_.isEmpty(projectList)}
             onClick={() => handleModalOpen('createModalOpen', true)}
           >
             <PlusOutlined /> 新增合同
@@ -808,12 +843,13 @@ const ContractInfoTable: React.FC = () => {
       >
         <Table
           dataSource={detailData}
-          columns={measurementColumns}
+          columns={detailColumns}
           rowKey="id"
           pagination={false}
         />
       </Modal>
 
+      {/* 操作日志的模态框 */}
       <Modal
         title="操作日志"
         visible={operationLogModalOpen}

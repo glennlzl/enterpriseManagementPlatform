@@ -31,7 +31,6 @@ import {
   deleteMeasurementItem,
 } from '@/api/project-managerment/Api.measurement-item';
 import OSS from 'ali-oss';
-import _ from 'lodash';
 import { UploadOutlined } from '@ant-design/icons';
 
 const OSSClient = OSS.default || OSS;
@@ -150,14 +149,18 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
     fileList,
   };
 
-  // 添加或编辑测量项
+  // 添加或编辑计量项
   const handleMeasurementOk = async () => {
     try {
       const values = await measurementForm.validateFields();
+      // 根据 measurementType 设置 itemType
+      const itemType = measurementType === 'contractCost' ? 'cost' : 'material';
+      const measurementItemData = { ...values, itemType };
+
       if (currentMeasurementItem) {
-        // 编辑测量项
-        const updatedItem = { ...currentMeasurementItem, ...values };
-        // 调用后端 API 更新测量项
+        // 编辑计量项
+        const updatedItem = { ...currentMeasurementItem, ...measurementItemData };
+        // 调用后端 API 更新计量项
         await updateMeasurementItem(updatedItem);
         if (measurementType === 'contractCost') {
           setContractCostItems((prevItems) =>
@@ -168,17 +171,17 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
             prevItems.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
           );
         }
-        message.success('测量项更新成功');
+        message.success('计量项更新成功');
       } else {
-        // 添加测量项
-        // 调用后端 API 添加测量项
-        const newItem = await addMeasurementItem(values);
+        // 添加计量项
+        // 调用后端 API 添加计量项
+        const newItem = await addMeasurementItem(measurementItemData);
         if (measurementType === 'contractCost') {
           setContractCostItems((prevItems) => [...prevItems, newItem]);
         } else {
           setProjectScheduleItems((prevItems) => [...prevItems, newItem]);
         }
-        message.success('测量项添加成功');
+        message.success('计量项添加成功');
       }
       setMeasurementModalVisible(false);
       setCurrentMeasurementItem(null);
@@ -204,51 +207,71 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
     }
   };
 
-  // 编辑测量项
+  // 编辑计量项
   const handleEditMeasurementItem = (
     record: MeasurementItemVO,
     type: 'contractCost' | 'projectSchedule',
   ) => {
     setCurrentMeasurementItem(record);
     setMeasurementType(type);
-    measurementForm.setFieldsValue(record);
+    // 在设置表单值时，排除 itemType 字段
+    const { itemType, ...rest } = record;
+    measurementForm.setFieldsValue(rest);
     setMeasurementModalVisible(true);
   };
 
-  // 测量项的列定义
-  const measurementColumns = [
+
+  const contractCostColumns = [
     {
-      title: '项目类型',
-      dataIndex: 'itemType',
-      key: 'itemType',
-    },
-    {
-      title: '项目名称',
+      title: '计量类目名称',
       dataIndex: 'itemName',
       key: 'itemName',
     },
     {
-      title: '项目价格',
-      dataIndex: 'itemPrice',
-      key: 'itemPrice',
-    },
-    {
-      title: '项目单位',
-      dataIndex: 'itemUnit',
-      key: 'itemUnit',
-    },
-    {
-      title: '合同成本类型',
+      title: '计量类目费用类型',
       dataIndex: 'contractCostType',
       key: 'contractCostType',
     },
     {
-      title: '交易类型',
+      title: '计量类目交易类型',
       dataIndex: 'transactionType',
       key: 'transactionType',
     },
     {
-      title: '设计数量',
+      title: '操作',
+      key: 'action',
+      render: (_: any, record: MeasurementItemVO) => (
+        <Space>
+          <a onClick={() => handleEditMeasurementItem(record, 'contractCost')}>编辑</a>
+          <Popconfirm
+            title="确定要删除这个计量项吗？"
+            onConfirm={() => handleDeleteMeasurement(record.id!, 'contractCost')}
+          >
+            <a>删除</a>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const projectScheduleColumns = [
+    {
+      title: '计量类目名称',
+      dataIndex: 'itemName',
+      key: 'itemName',
+    },
+    {
+      title: '计量类目单价',
+      dataIndex: 'itemPrice',
+      key: 'itemPrice',
+    },
+    {
+      title: '计量类目单位',
+      dataIndex: 'itemUnit',
+      key: 'itemUnit',
+    },
+    {
+      title: '计量类目设计数量',
       dataIndex: 'designCount',
       key: 'designCount',
     },
@@ -257,10 +280,10 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       key: 'action',
       render: (_: any, record: MeasurementItemVO) => (
         <Space>
-          <a onClick={() => handleEditMeasurementItem(record, measurementType)}>编辑</a>
+          <a onClick={() => handleEditMeasurementItem(record, 'projectSchedule')}>编辑</a>
           <Popconfirm
-            title="确定要删除这个测量项吗？"
-            onConfirm={() => handleDeleteMeasurement(record.id!, measurementType)}
+            title="确定要删除这个计量项吗？"
+            onConfirm={() => handleDeleteMeasurement(record.id!, 'projectSchedule')}
           >
             <a>删除</a>
           </Popconfirm>
@@ -285,11 +308,11 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label="合同编号"
+            label="唯一码"
             name="contractSerialNumber"
-            rules={[{ required: true, message: '请输入合同编号' }]}
+            rules={[{ required: true, message: '请输入唯一码' }]}
           >
-            <Input placeholder="请输入合同编号" />
+            <Input placeholder="请输入唯一码" />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -306,7 +329,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            label="乙方"
+            label="乙方单位"
             name="contractor"
             rules={[{ required: true, message: '请输入乙方信息' }]}
           >
@@ -315,7 +338,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label="合同金额"
+            label="合同金额(元)"
             name="contractAmount"
             rules={[{ required: true, message: '请输入合同金额' }]}
           >
@@ -323,7 +346,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item label="合同序号" name="contractOrder">
+          <Form.Item label="合同排序" name="contractOrder">
             <InputNumber style={{ width: '100%' }} placeholder="请输入合同序号" />
           </Form.Item>
         </Col>
@@ -341,46 +364,51 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label="结束日期"
+            label="完工日期"
             name="endDate"
             rules={[{ validator: validateStartEndDate }]}
           >
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Col>
-        <Col span={8}>
-          <Form.Item label="合同临时价格" name="contractProvisionalPrice">
-            <Input placeholder="请输入合同临时价格" />
-          </Form.Item>
-        </Col>
       </Row>
 
       {/* 关联信息部分 */}
-      <Divider orientation="left">关联信息</Divider>
+      <Divider orientation="left">其他信息</Divider>
       <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item label="暂估价" name="contractProvisionalPrice">
+            <Input placeholder="请输入暂估价" />
+          </Form.Item>
+        </Col>
         <Col span={8}>
           <Form.Item label="合同期限类型" name="contractTermType">
             <Input placeholder="请输入合同期限类型" />
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item label="监理单位" name="supervisingOrganization">
+          <Form.Item label="总监单位" name="supervisingOrganization">
             <Input placeholder="请输入监理单位" />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item label="监测单位" name="monitoringOrganization">
-            <Input placeholder="请输入监测单位" />
           </Form.Item>
         </Col>
       </Row>
 
       <Row gutter={16}>
         <Col span={8}>
+          <Form.Item label="监理单位" name="monitoringOrganization">
+            <Input placeholder="请输入监测单位" />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
           <Form.Item label="咨询单位" name="consultingOrganization">
             <Input placeholder="请输入咨询单位" />
           </Form.Item>
         </Col>
+      </Row>
+
+      <Divider orientation="left">财务信息</Divider>
+
+      <Row gutter={16}>
         <Col span={8}>
           <Form.Item label="账户名称" name="accountName">
             <Input placeholder="请输入账户名称" />
@@ -391,9 +419,6 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
             <Input placeholder="请输入开户行" />
           </Form.Item>
         </Col>
-      </Row>
-
-      <Row gutter={16}>
         <Col span={8}>
           <Form.Item label="账号" name="accountNumber">
             <Input placeholder="请输入账号" />
@@ -457,7 +482,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       </Button>
       <Table
         dataSource={contractCostItems}
-        columns={measurementColumns}
+        columns={contractCostColumns}
         rowKey="id"
         pagination={false}
       />
@@ -478,14 +503,14 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       </Button>
       <Table
         dataSource={projectScheduleItems}
-        columns={measurementColumns}
+        columns={projectScheduleColumns}
         rowKey="id"
         pagination={false}
       />
 
-      {/* 添加或编辑测量项的模态框 */}
+      {/* 添加或编辑计量项的模态框 */}
       <Modal
-        title={currentMeasurementItem ? '编辑测量项' : '添加测量项'}
+        title={currentMeasurementItem ? '编辑计量项' : '添加计量项'}
         visible={measurementModalVisible}
         onOk={handleMeasurementOk}
         onCancel={() => {
@@ -497,62 +522,70 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
         width={600}
       >
         <Form form={measurementForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="项目类型"
-                name="itemType"
-                rules={[{ required: true, message: '请输入项目类型' }]}
-              >
-                <Input placeholder="请输入项目类型" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="项目名称"
-                name="itemName"
-                rules={[{ required: true, message: '请输入项目名称' }]}
-              >
-                <Input placeholder="请输入项目名称" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="项目价格"
-                name="itemPrice"
-                rules={[{ required: true, message: '请输入项目价格' }]}
-              >
-                <InputNumber style={{ width: '100%' }} placeholder="请输入项目价格" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="项目单位"
-                name="itemUnit"
-                rules={[{ required: true, message: '请输入项目单位' }]}
-              >
-                <Input placeholder="请输入项目单位" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="合同成本类型" name="contractCostType" rules={[{ required: true, message: '请输入项目类型' }]}
-              >
-                <Input placeholder="请输入合同成本类型" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="交易类型" name="transactionType" rules={[{ required: true, message: '请输入项目类型' }]}>
-                <Input placeholder="请输入交易类型" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item label="设计数量" name="designCount">
-            <InputNumber style={{ width: '100%' }} placeholder="请输入设计数量" />
+          <Form.Item
+            label="计量类目名称"
+            name="itemName"
+            rules={[{ required: true, message: '请输入计量类目名称' }]}
+          >
+            <Input placeholder="请输入计量类目名称" />
           </Form.Item>
+
+          {measurementType === 'contractCost' && (
+            <>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="计量类目费用类型"
+                    name="contractCostType"
+                    rules={[{ required: true, message: '请输入计量类目费用类型' }]}
+                  >
+                    <Input placeholder="请输入计量类目费用类型" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label="计量类目交易类型"
+                    name="transactionType"
+                    rules={[{ required: true, message: '请输入计量类目交易类型' }]}
+                  >
+                    <Input placeholder="请输入计量类目交易类型" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
+
+          {measurementType === 'projectSchedule' && (
+            <>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="计量类目单价"
+                    name="itemPrice"
+                    rules={[{ required: true, message: '请输入计量类目单价' }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} placeholder="请输入计量类目单价" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label="计量类目单位"
+                    name="itemUnit"
+                    rules={[{ required: true, message: '请输入计量类目单位' }]}
+                  >
+                    <Input placeholder="请输入计量类目单位" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item
+                label="计量类目设计数量"
+                name="designCount"
+                rules={[{ required: true, message: '请输入计量类目设计数量' }]}
+              >
+                <InputNumber style={{ width: '100%' }} placeholder="请输入计量类目设计数量" />
+              </Form.Item>
+            </>
+          )}
         </Form>
       </Modal>
     </Form>

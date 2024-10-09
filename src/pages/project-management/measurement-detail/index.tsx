@@ -1,5 +1,3 @@
-// MeasurementDetailTable.tsx
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ProTable, ProColumns, PageContainer } from '@ant-design/pro-components';
 import {
@@ -13,16 +11,18 @@ import {
   message,
   Table,
   Tree,
-  Row,
-  Col,
+  Layout,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useMeasurementDetail } from '@/hooks/project/Hook.useMeasurementDetail';
 import { MeasurementDetailVO } from '@/model/project/Model.measurement-detail';
 import MeasurementDetailForm from '@/pages/project-management/measurement-detail/component/Component.measurementDetailForm';
+import moment from 'moment';
+import { OperationLogVO } from '@/model/project/Model.operation';
 
 const { Option } = Select;
 const { DirectoryTree } = Tree;
+const { Sider, Content } = Layout;
 
 const MeasurementDetailTable: React.FC = () => {
   const [form] = Form.useForm();
@@ -44,32 +44,48 @@ const MeasurementDetailTable: React.FC = () => {
     setCurrentMeasurementDetail,
     modalOpen,
     setModalOpen,
+    fetchMeasurementDetailList,
     handleAddOrUpdateMeasurementDetail,
     handleDeleteMeasurementDetail,
     handleReviewMeasurementDetail,
     onSelectChange,
-    selectedItemId,
-    setSelectedItemId,
+    selectedItem,
+    setSelectedItem,
     measurementItemList,
     measurementItemTreeData,
-    fetchMeasurementDetailList,
     operationLogModalOpen,
     setOperationLogModalOpen,
     operationLogs,
     operationLogLoading,
     handleDeleteOperationLog,
     handleOpenOperationLogModal,
+    reviewModalVisible,
+    setReviewModalVisible,
+    currentReviewRecord,
+    reviewComment,
+    setReviewComment,
+    handleOpenReviewModal,
+    handleSubmitReview,
+    handleExportReport
   } = useMeasurementDetail();
 
-  // 当选择树节点时触发
   const onTreeSelect: React.ComponentProps<typeof DirectoryTree>['onSelect'] = (keys, info) => {
-    if (keys.length > 0) {
-      const itemId = parseInt(keys[0] as string, 10);
-      setSelectedItemId(itemId);
-      fetchMeasurementDetailList(undefined, itemId);
+    if (info.node.isLeaf) {
+      const selectedNode = info.node;
+      const itemId = selectedNode.itemId;
+      const type = selectedNode.type;
+      const item = selectedNode.item;
+
+      setSelectedItem({
+        id: itemId,
+        type: type,
+        item: item,
+      });
+      // 移除 fetchMeasurementDetailList 的调用
+      // fetchMeasurementDetailList();
     } else {
-      setSelectedItemId(undefined);
-      fetchMeasurementDetailList();
+      setSelectedItem(undefined);
+      // fetchMeasurementDetailList();
     }
   };
 
@@ -77,17 +93,26 @@ const MeasurementDetailTable: React.FC = () => {
   const handleModalOpen = useCallback(
     (open: boolean, record?: MeasurementDetailVO) => {
       setModalOpen(open);
-      if (record) {
-        setCurrentMeasurementDetail(record);
-        form.setFieldsValue({
-          ...record,
-        });
-      } else {
-        setCurrentMeasurementDetail(null);
-        form.resetFields();
+      if (open) {
+        if (record) {
+          setCurrentMeasurementDetail(record);
+          form.setFieldsValue({
+            ...record,
+          });
+        } else {
+          setCurrentMeasurementDetail(null);
+          form.resetFields();
+          if (selectedItem?.item) {
+            form.setFieldsValue({
+              unit: selectedItem.item.itemUnit,
+              price: selectedItem.item.itemPrice,
+              // 如果需要预填充其他字段，可以在这里添加
+            });
+          }
+        }
       }
     },
-    [form, setModalOpen, setCurrentMeasurementDetail],
+    [form, setModalOpen, setCurrentMeasurementDetail, selectedItem],
   );
 
   const measurementItems = measurementItemList.map((item) => ({
@@ -100,8 +125,8 @@ const MeasurementDetailTable: React.FC = () => {
   const fieldNameMap: { [key: string]: { label: string; isDate?: boolean } } = {
     id: { label: '序号' },
     measurementItemId: { label: '测量项' },
-    subItemNumber: { label: '子目号' },
-    position: { label: '位置' },
+    subItemNumber: { label: '分项(桩号) ' },
+    position: { label: '部位' },
     price: { label: '单价' },
     unit: { label: '单位' },
     currentCount: { label: '当前数量' },
@@ -119,7 +144,6 @@ const MeasurementDetailTable: React.FC = () => {
     attachmentList: { label: '附件列表' },
     updateTime: { label: '更新时间', isDate: true },
     createTime: { label: '创建时间', isDate: true },
-    // 根据需要添加更多字段
   };
 
   // 格式化值的函数
@@ -279,17 +303,7 @@ const MeasurementDetailTable: React.FC = () => {
       sorter: (a, b) => (a.id || 0) - (b.id || 0),
     },
     {
-      title: '测量项',
-      dataIndex: 'measurementItemId',
-      valueType: 'text',
-      width: 150,
-      render: (_, record) => {
-        const item = measurementItemList.find((item) => item.id === record.measurementItemId);
-        return item ? item.itemName : record.measurementItemId;
-      },
-    },
-    {
-      title: '子目号',
+      title: '分项(桩号)',
       dataIndex: 'subItemNumber',
       valueType: 'text',
       fixed: 'left',
@@ -297,7 +311,7 @@ const MeasurementDetailTable: React.FC = () => {
       sorter: (a, b) => (a.subItemNumber || '').localeCompare(b.subItemNumber || ''),
     },
     {
-      title: '位置',
+      title: '部位',
       dataIndex: 'position',
       valueType: 'text',
       width: 150,
@@ -318,35 +332,35 @@ const MeasurementDetailTable: React.FC = () => {
       sorter: (a, b) => (a.unit || '').localeCompare(b.unit || ''),
     },
     {
-      title: '当前数量',
+      title: '本期计量',
       dataIndex: 'currentCount',
       valueType: 'digit',
       width: 120,
       sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
     },
     {
-      title: '累计数量',
+      title: '总量',
       dataIndex: 'totalCount',
       valueType: 'digit',
       width: 120,
       sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
     },
     {
-      title: '剩余数量',
+      title: '本期余量',
       dataIndex: 'remainingCount',
       valueType: 'digit',
       width: 120,
       sorter: (a, b) => (a.remainingCount || 0) - (b.remainingCount || 0),
     },
     {
-      title: '当前金额',
+      title: '金额',
       dataIndex: 'currentAmount',
       valueType: 'money',
       width: 120,
       sorter: (a, b) => (a.currentAmount || 0) - (b.currentAmount || 0),
     },
     {
-      title: '上限数量',
+      title: '上限量·',
       dataIndex: 'upperLimitQuantity',
       valueType: 'digit',
       width: 120,
@@ -373,18 +387,6 @@ const MeasurementDetailTable: React.FC = () => {
     {
       title: '计量单号',
       dataIndex: 'measurementBillNumber',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '计量类型',
-      dataIndex: 'measurementType',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '扩展字段',
-      dataIndex: 'extend',
       valueType: 'text',
       width: 150,
     },
@@ -440,10 +442,7 @@ const MeasurementDetailTable: React.FC = () => {
           </Popconfirm>
           <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
           {record.measurementStatus === 0 && (
-            <>
-              <a onClick={() => handleReviewMeasurementDetail(record.id!, 1)}>审核</a>
-              <a onClick={() => handleReviewMeasurementDetail(record.id!, 2)}>驳回</a>
-            </>
+            <a onClick={() => handleOpenReviewModal(record)}>审核</a>
           )}
         </Space>
       ),
@@ -458,22 +457,22 @@ const MeasurementDetailTable: React.FC = () => {
 
   return (
     <PageContainer breadcrumbRender={false}>
-      <Row gutter={[16, 16]}>
-        {/* 左侧的 DirectoryTree 组件 */}
-        <Col flex="300px">
-          <div style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+      <Layout style={{ background: '#fff' }}>
+        {/* 左侧的 Sider 组件 */}
+        <Sider width={300} style={{ background: '#fff' }}>
+          <div style={{ padding: '16px' }}>
             <DirectoryTree
               multiple
               defaultExpandAll
               onSelect={onTreeSelect}
-              treeData={measurementItemTreeData} // 使用真实的树形数据
+              treeData={measurementItemTreeData}
             />
           </div>
-        </Col>
+        </Sider>
 
-        {/* 右侧的内容 */}
-        <Col flex="auto">
-          <div style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
+        {/* 右侧的 Content */}
+        <Layout style={{ background: '#fff' }}>
+          <Content style={{ padding: '16px' }}>
             {/* 项目、合同、周期选择器 */}
             <Form layout="inline" style={{ marginBottom: 16 }}>
               <Form.Item label="选择项目">
@@ -525,12 +524,12 @@ const MeasurementDetailTable: React.FC = () => {
               layout="inline"
               onValuesChange={(changedValues) => {
                 const { generalQueryCondition } = changedValues;
-                fetchMeasurementDetailList(generalQueryCondition, selectedItemId);
+                fetchMeasurementDetailList(generalQueryCondition);
               }}
               style={{ marginBottom: 16 }}
             >
               <Form.Item label="查询" name="generalQueryCondition">
-                <Input placeholder="请输入子目号、位置等信息" style={{ width: 300 }} />
+                <Input placeholder="请输入子目号、位置等信息" style={{ width: 500 }} />
               </Form.Item>
             </Form>
 
@@ -553,9 +552,19 @@ const MeasurementDetailTable: React.FC = () => {
                   type="primary"
                   key="primary"
                   onClick={() => handleModalOpen(true)}
-                  disabled={!selectedProjectId || !selectedContractId || !selectedPeriodId}
+                  disabled={
+                    !selectedProjectId || !selectedContractId || !selectedPeriodId || !selectedItem
+                  }
                 >
                   <PlusOutlined /> 新增计量明细
+                </Button>,
+                <Button
+                  type="default"
+                  key="export"
+                  onClick={handleExportReport}
+                  disabled={!selectedContractId || !selectedPeriodId}
+                >
+                  导出报表
                 </Button>,
               ]}
             />
@@ -579,11 +588,9 @@ const MeasurementDetailTable: React.FC = () => {
               }}
               width={800}
             >
-              <MeasurementDetailForm
-                form={form}
-                measurementItems={measurementItems}
-              />
+              <MeasurementDetailForm form={form} selectedMeasurementItem={selectedItem?.item} />
             </Modal>
+
             {/* 操作日志的模态框 */}
             <Modal
               title="操作日志"
@@ -601,9 +608,37 @@ const MeasurementDetailTable: React.FC = () => {
                 scroll={{ x: 'max-content' }}
               />
             </Modal>
-          </div>
-        </Col>
-      </Row>
+            {/* 审核模态框 */}
+            <Modal
+              title="审核计量明细"
+              visible={reviewModalVisible}
+              onCancel={() => setReviewModalVisible(false)}
+              footer={null}
+            >
+              <Form layout="vertical">
+                <Form.Item label="审核意见">
+                  <Input.TextArea
+                    rows={4}
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="请输入审核意见"
+                  />
+                </Form.Item>
+                <Form.Item>
+                  <Space>
+                    <Button type="primary" onClick={() => handleSubmitReview(1)}>
+                      同意
+                    </Button>
+                    <Button danger onClick={() => handleSubmitReview(2)}>
+                      驳回
+                    </Button>
+                  </Space>
+                </Form.Item>
+              </Form>
+            </Modal>
+          </Content>
+        </Layout>
+      </Layout>
     </PageContainer>
   );
 };
