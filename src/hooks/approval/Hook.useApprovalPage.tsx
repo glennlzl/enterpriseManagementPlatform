@@ -115,7 +115,7 @@ export const useApprovalPage = (userId: string) => {
         await fetchApprovalData();
         actionRef.current?.reload();
       } else {
-        message.error(error);
+        message.error('更新失败，请重试');
       }
     } catch (error) {
       message.error(error);
@@ -136,7 +136,7 @@ export const useApprovalPage = (userId: string) => {
         await fetchApprovalData();
         actionRef.current?.reload();
       } else {
-        message.error(error);
+        message.error('更新评论失败');
       }
     } catch (error) {
       message.error(error);

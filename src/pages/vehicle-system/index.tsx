@@ -516,7 +516,6 @@ const VehicleManagement: React.FC = () => {
       filters: filters.gpsFilters,
       onFilter: (value, record) => record.gps === value,
       width: '150px',
-      filterSearch: true,
     },
     {
       title: <FormattedMessage id="机械邦" />,
@@ -876,7 +875,7 @@ const VehicleManagement: React.FC = () => {
         headerTitle={
           <div>
             {intl.formatMessage({ id: '车辆管理', defaultMessage: '车辆管理' })}
-            <Tooltip title={intl.formatMessage({ id: '点击打开预警', defaultMessage: '点击显示警报中车辆' })}>
+            <Tooltip title={intl.formatMessage({ id: '点击打开预警', defaultMessage: '点击显示里程保养预警' })}>
               <Switch
                 style={{ marginLeft: 16 }}
                 checkedChildren="预警开"
@@ -1030,10 +1029,6 @@ const VehicleManagement: React.FC = () => {
                 <Input placeholder="请输入车牌号码" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Divider>维护信息</Divider>
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="engineNumber"
@@ -1059,6 +1054,10 @@ const VehicleManagement: React.FC = () => {
                 />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Divider>维护信息</Divider>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="purchaseDate"
@@ -1281,10 +1280,6 @@ const VehicleManagement: React.FC = () => {
                 <Input placeholder="请输入车牌号码" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Divider>维护信息</Divider>
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="engineNumber"
@@ -1310,6 +1305,10 @@ const VehicleManagement: React.FC = () => {
                 />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Divider>维护信息</Divider>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="purchaseDate"

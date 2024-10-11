@@ -1,6 +1,6 @@
 import {EmployeeSimpleInfoResponse} from "@/api/usermanagement";
 
-export interface MeasurementItemVO {
+export interface wMeasurementItemVO {
   id?: number;
   itemType?: string;
   itemName?: string;

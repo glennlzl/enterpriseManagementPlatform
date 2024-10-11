@@ -85,6 +85,39 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
     fileList,
   };
 
+  const projectTypes = [
+    '高速公路',
+    '国省干道',
+    '农村公路',
+    '市政项目',
+    '地铁项目',
+    '房建项目',
+    '水利项目',
+    '铁路项目',
+    '其他',
+    '产业园',
+    '城市更新',
+    '城市开发',
+    '矿产资源',
+    '流域治理',
+    '片区开发',
+    '生态环保',
+    '投资建设',
+    '土地治理',
+    '一级公路',
+  ];
+
+  const investmentTypes = [
+    '国有企业投资',
+    '社会投资',
+    '政府投资',
+  ];
+
+  const regulatoryLevels = [
+    '省监管计划内项目',
+    '计划外项目',
+  ];
+
   return (
     <Form form={form} layout="vertical">
       <Divider orientation="left">基本信息</Divider>
@@ -102,9 +135,15 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
           <Form.Item
             label="类型"
             name="type"
-            rules={[{ required: true, message: '请输入项目类型' }]}
+            rules={[{ required: true, message: '请选择项目类型' }]}
           >
-            <Input placeholder="请输入项目类型" />
+            <Select placeholder="请选择项目类型">
+              {projectTypes.map((type) => (
+                <Select.Option key={type} value={type}>
+                  {type}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Col>
       </Row>
@@ -153,8 +192,18 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
 
       <Row gutter={16}>
         <Col span={12}>
-          <Form.Item label="投资类型" name="investmentType">
-            <Input placeholder="请输入投资类型" />
+          <Form.Item
+            label="投资类型"
+            name="investmentType"
+            rules={[{ required: true, message: '请选择投资类型' }]}
+          >
+            <Select placeholder="请选择投资类型">
+              {investmentTypes.map((type) => (
+                <Select.Option key={type} value={type}>
+                  {type}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Col>
         <Col span={12}>
@@ -211,16 +260,26 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
               <Option value="已完成">已完成</Option>
             </Select>
           </Form.Item>
-          <Form.Item label="监管级别" name="regulatoryLevel">
-            <Input placeholder="请输入监管级别" />
+          <Form.Item
+            label="监管层级"
+            name="regulatoryLevel"
+            rules={[{ required: true, message: '请选择监管层级' }]}
+          >
+            <Select placeholder="请选择监管层级">
+              {regulatoryLevels.map((level) => (
+                <Select.Option key={level} value={level}>
+                  {level}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item label="技术级别" name="techLevel">
             <Input placeholder="请输入技术级别" />
           </Form.Item>
-          <Form.Item label="位置" name="location">
-            <Input placeholder="请输入位置" />
+          <Form.Item label="部位" name="location">
+            <Input placeholder="请输入部位" />
           </Form.Item>
           <Form.Item
             label="附件列表"

@@ -4,7 +4,7 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import {Button, Popconfirm, Form, Input, Space, Modal, Select, message, Table} from 'antd';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, message, Table, List, Popover} from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import { PeriodInfoVO } from '@/model/project/Model.period';
@@ -229,22 +229,7 @@ const PeriodInfoTable: React.FC = () => {
           );
         });
       },
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 80,
-      render: (_, record) => (
-        <Popconfirm
-          title="确定要删除这条操作日志吗？"
-          onConfirm={() => handleDeleteOperationLog(record)}
-          okText="确定"
-          cancelText="取消"
-        >
-          <a>删除</a>
-        </Popconfirm>
-      ),
-    },
+    }
   ];
 
   // 定义表格的列
@@ -312,39 +297,49 @@ const PeriodInfoTable: React.FC = () => {
       dataIndex: 'attachmentList',
       valueType: 'text',
       render: (_, record) =>
-        record.attachmentList && record.attachmentList.length > 0 ? (
-          record.attachmentList.map((url: string, index: number) => {
-            if (!url) {
-              return null; // 或者返回一个占位符
-            }
+        <Popover
+          content={
+            record.attachmentList && record.attachmentList.length > 0 ? (
+              record.attachmentList.map((url: string, index: number) => {
+                if (!url) {
+                  return null; // 或者返回一个占位符
+                }
 
-            // 提取并解码文件名
-            const decodedFileName = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
+                // 提取并解码文件名
+                const decodedFileName = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
 
-            return (
-              <div key={index}>
-                <a
-                  href="#"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    await downloadFromOSS(url); // 调用下载函数
-                  }}
-                  style={{
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: 'inline-block',
-                    maxWidth: '100%',
-                  }}
-                >
-                  {decodedFileName}
-                </a>
-              </div>
-            );
-          })
-        ) : (
-          '-'
-        ),
+                return (
+                  <div key={index}>
+                    <a
+                      href="#"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        await downloadFromOSS(url); // 调用下载函数
+                      }}
+                      style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'inline-block',
+                        maxWidth: '100%',
+                      }}
+                    >
+                      {decodedFileName}
+                    </a>
+                  </div>
+                );
+              })
+            ) : (
+              '-'
+            )
+          }
+          title="附件列表"
+          trigger="hover"
+        >
+          <Button type="link">
+            查看附件 ({record.attachmentList ? record.attachmentList.length : 0})
+          </Button>
+        </Popover>,
       width: 200,
       ellipsis: true,
     },
@@ -369,7 +364,9 @@ const PeriodInfoTable: React.FC = () => {
       render: (_, record) => (
         <Space>
           {/* 更新操作 */}
-          <a onClick={() => handleModalOpen(true, record)}>更新</a>
+          {!record.isArchived && (
+            <a onClick={() => handleModalOpen(true, record)}>更新</a>
+          )}
           {/* 删除操作 */}
           <Popconfirm
             title="确定要删除这个周期信息吗？"
@@ -513,6 +510,7 @@ const PeriodInfoTable: React.FC = () => {
                 startDate: values.startDate
                   ? values.startDate.format('YYYY-MM-DD')
                   : undefined,
+                periodStatus: currentPeriod ? currentPeriod.periodStatus : '进行中',
                 endDate: values.endDate
                   ? values.endDate.format('YYYY-MM-DD')
                   : undefined,

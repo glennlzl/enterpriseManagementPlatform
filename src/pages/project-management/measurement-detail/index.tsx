@@ -1,17 +1,24 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ProTable, ProColumns, PageContainer } from '@ant-design/pro-components';
 import {
-  Button,
   Popconfirm,
   Form,
-  Input,
-  Space,
-  Modal,
   Select,
   message,
-  Table,
   Tree,
   Layout,
+  Button,
+  DatePicker,
+  Input,
+  Modal,
+  Space,
+  Badge,
+  Tabs,
+  Typography,
+  Tooltip,
+  Upload,
+  Popover,
+  List, Card, Avatar, Descriptions, Divider, Table, Result, Alert,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useMeasurementDetail } from '@/hooks/project/Hook.useMeasurementDetail';
@@ -68,6 +75,27 @@ const MeasurementDetailTable: React.FC = () => {
     handleExportReport
   } = useMeasurementDetail();
 
+  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+
+  useEffect(() => {
+    if (measurementItemTreeData && measurementItemTreeData.length > 0) {
+      // 递归获取所有节点的 key
+      const getAllKeys = (data: any[]): React.Key[] => {
+        let keys: React.Key[] = [];
+        data.forEach((item) => {
+          keys.push(item.key);
+          if (item.children) {
+            keys = keys.concat(getAllKeys(item.children));
+          }
+        });
+        return keys;
+      };
+
+      const allKeys = getAllKeys(measurementItemTreeData);
+      setExpandedKeys(allKeys);
+    }
+  }, [measurementItemTreeData]);
+
   const onTreeSelect: React.ComponentProps<typeof DirectoryTree>['onSelect'] = (keys, info) => {
     if (info.node.isLeaf) {
       const selectedNode = info.node;
@@ -94,6 +122,13 @@ const MeasurementDetailTable: React.FC = () => {
   // 打开或关闭弹窗
   const handleModalOpen = useCallback(
     (open: boolean, record?: MeasurementDetailVO) => {
+      if (open && !record) {
+        // 如果未选择子项目，提示用户并返回
+        if (!selectedItem || !selectedItem.id) {
+          message.warning('请选择一条清单进行计量');
+          return;
+        }
+      }
       setModalOpen(open);
       if (open) {
         if (record) {
@@ -140,7 +175,7 @@ const MeasurementDetailTable: React.FC = () => {
     measurementComment: { label: '审核意见' },
     measurementBillNumber: { label: '计量单号' },
     measurementType: { label: '计量类型' },
-    extend: { label: '扩展字段' },
+    extend: { label: '备注' },
     contractCostType: { label: '合同费用类型' },
     transactionType: { label: '交易类型' },
     attachmentList: { label: '附件列表' },
@@ -276,186 +311,356 @@ const MeasurementDetailTable: React.FC = () => {
         });
       },
     },
-    {
-      title: '操作',
-      key: 'action',
-      width: 80,
-      render: (_, record) => (
-        <Popconfirm
-          title="确定要删除这条操作日志吗？"
-          onConfirm={() => handleDeleteOperationLog(record)}
-          okText="确定"
-          cancelText="取消"
-        >
-          <a>删除</a>
-        </Popconfirm>
-      ),
-    },
   ];
+
+  const headerTitle = useMemo(() => {
+    let measurementTypeText = '';
+    let measurementItemName = '总览';
+
+    if (selectedItem?.type === 'cost') {
+      measurementTypeText = '费用计量支付管理';
+    } else if (selectedItem?.type === 'material') {
+      measurementTypeText = '工程清单计量支付管理';
+    } else {
+      measurementTypeText = '计量支付管理';
+    }
+
+    if (selectedItem?.id) {
+      // 如果选择了子项，使用其名称
+      measurementItemName = selectedItem.item.itemName || '未知项目';
+    }
+
+    return `${measurementTypeText}（${measurementItemName}）`;
+  }, [selectedItem]);
+
+  // 提取文件名的函数
+  const extractFileName = (fileUrl) => {
+    // 根据您的逻辑提取文件名
+    // 例如：
+    const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
+    let fileName = '未知文件';
+    if (fileUrl && fileUrl.startsWith(prefix)) {
+      const rawFileName = fileUrl.replace(prefix, '');
+      const decodedFileName = decodeURIComponent(rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''));
+      fileName = decodedFileName;
+    }
+    return fileName;
+  };
+
+  const downloadFromOSS = async (fileUrl: string) => {
+    try {
+      // 使用 fetch 获取文件
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const fileName = extractFileName(fileUrl);
+
+      // 创建下载链接
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+
+      // 触发下载
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      message.error('文件下载失败');
+    }
+  };
+
+// 渲染附件列表列的函数
+  const renderApprovalFilesInTable = (_, record) => {
+    if (!record.approvalFileUrl || record.approvalFileUrl.length === 0) {
+      return <Typography.Text>无文件</Typography.Text>;
+    }
+
+    const validFileUrls = record.approvalFileUrl.filter((url) => url);
+
+    if (validFileUrls.length === 0) {
+      return <Typography.Text>无文件</Typography.Text>;
+    }
+
+    // 在表格单元格中显示一个链接，点击后弹出附件列表
+    return (
+      <Popover
+        content={
+          <div style={{ maxWidth: '300px' }}>
+            <List
+              itemLayout="horizontal"
+              dataSource={validFileUrls}
+              renderItem={(fileUrl) => {
+                const fileName = extractFileName(fileUrl);
+                return (
+                  <List.Item
+                    key={fileUrl}
+                    actions={[
+                      <Button
+                        type="link"
+                        onClick={async () => {
+                          await downloadFromOSS(fileUrl);
+                        }}
+                      >
+                        下载
+                      </Button>,
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={<FileOutlined style={{ fontSize: '24px' }} />}
+                      title={fileName}
+                    />
+                  </List.Item>
+                );
+              }}
+            />
+          </div>
+        }
+        title="附件列表"
+        trigger="hover"
+      >
+        <Button type="link">
+          查看附件 ({validFileUrls.length})
+        </Button>
+      </Popover>
+    );
+  };
 
 
   // 表格列定义，包含所有字段
-  const columns: ProColumns<MeasurementDetailVO>[] = [
-    {
-      title: '序号',
-      dataIndex: 'id',
-      valueType: 'text',
-      fixed: 'left',
-      width: 80,
-      sorter: (a, b) => (a.id || 0) - (b.id || 0),
-    },
-    {
-      title: '分项(桩号)',
-      dataIndex: 'subItemNumber',
-      valueType: 'text',
-      fixed: 'left',
-      width: 120,
-      sorter: (a, b) => (a.subItemNumber || '').localeCompare(b.subItemNumber || ''),
-    },
-    {
-      title: '部位',
-      dataIndex: 'position',
-      valueType: 'text',
-      width: 150,
-      sorter: (a, b) => (a.position || '').localeCompare(b.position || ''),
-    },
-    {
-      title: '单价',
-      dataIndex: 'price',
-      valueType: 'money',
-      width: 100,
-      sorter: (a, b) => (a.price || 0) - (b.price || 0),
-    },
-    {
-      title: '单位',
-      dataIndex: 'unit',
-      valueType: 'text',
-      width: 100,
-      sorter: (a, b) => (a.unit || '').localeCompare(b.unit || ''),
-    },
-    {
-      title: '本期计量',
-      dataIndex: 'currentCount',
-      valueType: 'digit',
-      width: 120,
-      sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
-    },
-    {
-      title: '总量',
-      dataIndex: 'totalCount',
-      valueType: 'digit',
-      width: 120,
-      sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
-    },
-    {
-      title: '本期余量',
-      dataIndex: 'remainingCount',
-      valueType: 'digit',
-      width: 120,
-      sorter: (a, b) => (a.remainingCount || 0) - (b.remainingCount || 0),
-    },
-    {
-      title: '金额',
-      dataIndex: 'currentAmount',
-      valueType: 'money',
-      width: 120,
-      sorter: (a, b) => (a.currentAmount || 0) - (b.currentAmount || 0),
-    },
-    {
-      title: '上限量·',
-      dataIndex: 'upperLimitQuantity',
-      valueType: 'digit',
-      width: 120,
-      sorter: (a, b) => (a.upperLimitQuantity || 0) - (b.upperLimitQuantity || 0),
-    },
-    {
-      title: '状态',
-      dataIndex: 'measurementStatus',
-      valueType: 'select',
-      width: 120,
-      valueEnum: {
-        0: { text: '未审核', status: 'Default' },
-        1: { text: '通过', status: 'Success' },
-        2: { text: '驳回', status: 'Error' },
+  const columns = useMemo(() => {
+    const cols: ProColumns<MeasurementDetailVO>[] = [
+      // 基础列，始终显示
+      {
+        title: '序号',
+        dataIndex: 'id',
+        valueType: 'text',
+        fixed: 'left',
+        width: 80,
+        sorter: (a, b) => (a.id || 0) - (b.id || 0),
       },
-      sorter: (a, b) => (a.measurementStatus || 0) - (b.measurementStatus || 0),
-    },
-    {
-      title: '审核意见',
-      dataIndex: 'measurementComment',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '计量单号',
-      dataIndex: 'measurementBillNumber',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '合同费用类型',
-      dataIndex: 'contractCostType',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '交易类型',
-      dataIndex: 'transactionType',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '附件列表',
-      dataIndex: 'attachmentList',
-      valueType: 'text',
-      width: 150,
-      render: (_, record) => {
-        return record.attachmentList ? record.attachmentList.join(', ') : '';
+      // {
+      //   title: '分项(桩号)',
+      //   dataIndex: 'subItemNumber',
+      //   valueType: 'text',
+      //   fixed: 'left',
+      //   width: 120,
+      //   sorter: (a, b) => (a.subItemNumber || '').localeCompare(b.subItemNumber || ''),
+      // },
+      // {
+      //   title: '部位',
+      //   dataIndex: 'position',
+      //   valueType: 'text',
+      //   width: 150,
+      //   sorter: (a, b) => (a.position || '').localeCompare(b.position || ''),
+      // },
+      {
+        title: '单价',
+        dataIndex: 'price',
+        valueType: 'money',
+        width: 100,
+        sorter: (a, b) => (a.price || 0) - (b.price || 0),
       },
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updateTime',
-      valueType: 'dateTime',
-      width: 180,
-      sorter: (a, b) => new Date(a.updateTime || '').getTime() - new Date(b.updateTime || '').getTime(),
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      valueType: 'dateTime',
-      width: 180,
-      sorter: (a, b) => new Date(a.createTime || '').getTime() - new Date(b.createTime || '').getTime(),
-    },
-    {
-      title: '操作',
-      dataIndex: 'option',
-      valueType: 'option',
-      fixed: 'right',
-      width: 250,
-      render: (_, record) => (
-        <Space>
-          <a onClick={() => handleModalOpen(true, record)}>编辑</a>
-          <Popconfirm
-            title="确定要删除这个计量明细吗？"
-            onConfirm={() => handleDeleteMeasurementDetail(record.id!)}
-          >
-            <a>删除</a>
-          </Popconfirm>
-          <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
-          {record.measurementStatus === 0 && (
-            <a onClick={() => handleOpenReviewModal(record)}>审核</a>
-          )}
-        </Space>
-      ),
-    },
-  ];
+      {
+        title: '单位',
+        dataIndex: 'unit',
+        valueType: 'text',
+        width: 100,
+        sorter: (a, b) => (a.unit || '').localeCompare(b.unit || ''),
+      },
+      {
+        title: '本期计量',
+        dataIndex: 'currentCount',
+        valueType: 'digit',
+        width: 120,
+        sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
+      },
+      {
+        title: '总量',
+        dataIndex: 'totalCount',
+        valueType: 'digit',
+        width: 120,
+        sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
+      },
+      // {
+      //   title: '本期余量',
+      //   dataIndex: 'remainingCount',
+      //   valueType: 'digit',
+      //   width: 120,
+      //   sorter: (a, b) => (a.remainingCount || 0) - (b.remainingCount || 0),
+      // },
+      // {
+      //   title: '金额',
+      //   dataIndex: 'currentAmount',
+      //   valueType: 'money',
+      //   width: 120,
+      //   sorter: (a, b) => (a.currentAmount || 0) - (b.currentAmount || 0),
+      // },
+      // {
+      //   title: '上限量',
+      //   dataIndex: 'upperLimitQuantity',
+      //   valueType: 'digit',
+      //   width: 120,
+      //   sorter: (a, b) => (a.upperLimitQuantity || 0) - (b.upperLimitQuantity || 0),
+      // },
+      {
+        title: '状态',
+        dataIndex: 'measurementStatus',
+        valueType: 'select',
+        width: 120,
+        valueEnum: {
+          0: { text: '未审核', status: 'Default' },
+          1: { text: '通过', status: 'Success' },
+          2: { text: '驳回', status: 'Error' },
+        },
+        sorter: (a, b) => (a.measurementStatus || 0) - (b.measurementStatus || 0),
+      },
+      {
+        title: '审核意见',
+        dataIndex: 'measurementComment',
+        valueType: 'text',
+        width: 150,
+      },
+      {
+        title: '计量单号',
+        dataIndex: 'measurementBillNumber',
+        valueType: 'text',
+        width: 150,
+      },
+    ];
 
-  // 使用 useMemo 优化性能
-  const memoizedColumns = useMemo(() => columns, [columns, measurementItemList]);
+    // 根据 selectedItem 的类型，决定是否添加“合同费用类型”和“交易类型”列
+    if (selectedItem?.type !== 'material') {
+      cols.push(
+        {
+          title: '合同费用类型',
+          dataIndex: 'contractCostType',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '交易类型',
+          dataIndex: 'transactionType',
+          valueType: 'text',
+          width: 150,
+        },
+      );
+    }
+
+    // 添加剩余的列
+    cols.push(
+      {
+        title: '附件列表',
+        dataIndex: 'attachmentList',
+        valueType: 'text',
+        width: 150,
+        render: renderApprovalFilesInTable,
+      },
+      {
+        title: '更新时间',
+        dataIndex: 'updateTime',
+        valueType: 'dateTime',
+        width: 180,
+        sorter: (a, b) =>
+          new Date(a.updateTime || '').getTime() - new Date(b.updateTime || '').getTime(),
+      },
+      {
+        title: '创建时间',
+        dataIndex: 'createTime',
+        valueType: 'dateTime',
+        width: 180,
+        sorter: (a, b) =>
+          new Date(a.createTime || '').getTime() - new Date(b.createTime || '').getTime(),
+      },
+      {
+        title: '操作',
+        dataIndex: 'option',
+        valueType: 'option',
+        fixed: 'right',
+        width: 250,
+        render: (_, record) => {
+          if (!selectedItem || !selectedItem.id) {
+            return null;
+          }
+
+          return (
+            <Space>
+              <a onClick={() => handleModalOpen(true, record)}>编辑</a>
+              <Popconfirm
+                title="确定要删除这个计量明细吗？"
+                onConfirm={() => handleDeleteMeasurementDetail(record.id!)}
+              >
+                <a>删除</a>
+              </Popconfirm>
+              <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
+              {record.measurementStatus === 0 && (
+                <a onClick={() => handleOpenReviewModal(record)}>审核</a>
+              )}
+            </Space>
+          );
+        },
+      },
+    );
+
+    return cols;
+  }, [selectedItem]);
+
+  const addButtonDisabled =
+    !selectedProjectId ||
+    !selectedContractId ||
+    !selectedPeriodId ||
+    !selectedItem ||
+    !selectedItem.id;
 
   // 查询表单
   const [searchForm] = Form.useForm();
+
+  const isTreeEmpty = useMemo(() => {
+    if (!measurementItemTreeData || measurementItemTreeData.length === 0) {
+      return true;
+    }
+    return measurementItemTreeData.every(node => !node.children || node.children.length === 0);
+  }, [measurementItemTreeData]);
+
+  const handleExportCSV = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要导出的行');
+      return;
+    }
+
+    const selectedData = measurementDetailList.filter(record => selectedRowKeys.includes(record.id!));
+
+    if (selectedData.length === 0) {
+      message.warning('未找到选中的数据');
+      return;
+    }
+
+    const exportColumns = columns.filter(col => {
+      return col.dataIndex && col.title && col.hideInTable !== true && col.dataIndex !== 'option';
+    });
+
+    const headers = exportColumns.map(col => col.title as string);
+
+    const rows = selectedData.map(record => {
+      return exportColumns.map(col => {
+        const dataIndex = col.dataIndex as string;
+        let value = record[dataIndex as keyof MeasurementDetailVO];
+        if (col.valueType === 'dateTime' && value) {
+          value = moment(value as string).format('YYYY-MM-DD HH:mm:ss');
+        } else if (col.valueType === 'select' && col.valueEnum && value !== undefined) {
+          const enumValue = col.valueEnum[value as React.Key];
+          value = enumValue ? enumValue.text : value;
+        }
+        return value !== undefined && value !== null ? value : '';
+      });
+    });
+
+    const csvContent = [headers, ...rows].map(e => e.join(',')).join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const fileName = `导出数据-${moment().format('YYYYMMDD')}.csv`;
+    saveAs(blob, fileName);
+  };
+
 
   return (
     <PageContainer breadcrumbRender={false}>
@@ -463,12 +668,21 @@ const MeasurementDetailTable: React.FC = () => {
         {/* 左侧的 Sider 组件 */}
         <Sider width={300} style={{ background: '#fff' }}>
           <div style={{ padding: '16px' }}>
-            <DirectoryTree
-              multiple
-              defaultExpandAll
-              onSelect={onTreeSelect}
-              treeData={measurementItemTreeData}
-            />
+            {isTreeEmpty ? (
+              // 当树为空时，显示提示信息
+              <div style={{ textAlign: 'center', color: '#999', paddingTop: '50px' }}>
+                当前没有可用的测量项，请先在合同表格中添加测量项。
+              </div>
+            ) : (
+              // 当树有数据时，显示树形控件
+              <DirectoryTree
+                multiple
+                expandedKeys={expandedKeys}
+                onExpand={(keys) => setExpandedKeys(keys)}
+                onSelect={onTreeSelect}
+                treeData={measurementItemTreeData}
+              />
+            )}
           </div>
         </Sider>
 
@@ -531,14 +745,14 @@ const MeasurementDetailTable: React.FC = () => {
               style={{ marginBottom: 16 }}
             >
               <Form.Item label="查询" name="generalQueryCondition">
-                <Input placeholder="请输入子目号、位置等信息" style={{ width: 500 }} />
+                <Input placeholder="请输入序号、部位等信息" style={{ width: 500 }} />
               </Form.Item>
             </Form>
 
             {/* 计量明细表格 */}
             <ProTable<MeasurementDetailVO>
-              headerTitle="计量支付管理"
-              columns={memoizedColumns}
+              headerTitle={headerTitle}
+              columns={columns}
               rowKey="id"
               search={false}
               loading={loading}
@@ -550,15 +764,33 @@ const MeasurementDetailTable: React.FC = () => {
                 preserveSelectedRowKeys: true,
               }}
               toolBarRender={() => [
+                addButtonDisabled ? (
+                  <Tooltip title={'请选择一条清单进行计量'} key="add-button-tooltip">
+                    <Button
+                      type="primary"
+                      onClick={() => handleModalOpen(true)}
+                      disabled={addButtonDisabled}
+                    >
+                      <PlusOutlined /> 新增计量明细
+                    </Button>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    type="primary"
+                    key="primary"
+                    onClick={() => handleModalOpen(true)}
+                    disabled={addButtonDisabled}
+                  >
+                    <PlusOutlined /> 新增计量明细
+                  </Button>
+                ),
                 <Button
-                  type="primary"
-                  key="primary"
-                  onClick={() => handleModalOpen(true)}
-                  disabled={
-                    !selectedProjectId || !selectedContractId || !selectedPeriodId || !selectedItem
-                  }
+                  type="default"
+                  key="export-csv"
+                  onClick={handleExportCSV}
+                  disabled={selectedRowKeys.length === 0}
                 >
-                  <PlusOutlined /> 新增计量明细
+                  导出当前表格
                 </Button>,
                 <Button
                   type="default"
@@ -566,14 +798,18 @@ const MeasurementDetailTable: React.FC = () => {
                   onClick={handleExportReport}
                   disabled={!selectedContractId || !selectedPeriodId || !selectedItem}
                 >
-                  导出报表
-                </Button>
+                  导出全量报表
+                </Button>,
               ]}
             />
 
             {/* 新增/编辑计量明细的弹窗 */}
             <Modal
-              title={currentMeasurementDetail ? '编辑计量明细' : '新增计量明细'}
+              title={
+                currentMeasurementDetail
+                  ? `编辑${selectedItem?.type === 'cost' ? '费用' : '工程'}计量明细`
+                  : `新增${selectedItem?.type === 'cost' ? '费用' : '工程'}计量明细`
+              }
               visible={modalOpen}
               onCancel={() => handleModalOpen(false)}
               onOk={() => {
@@ -590,7 +826,11 @@ const MeasurementDetailTable: React.FC = () => {
               }}
               width={800}
             >
-              <MeasurementDetailForm form={form} selectedMeasurementItem={selectedItem?.item} />
+              <MeasurementDetailForm
+                form={form}
+                selectedMeasurementItem={selectedItem?.item}
+                measurementType={selectedItem?.type || 'material'}
+              />
             </Modal>
 
             {/* 操作日志的模态框 */}

@@ -10,7 +10,7 @@ import {
   DeleteOutlined,
   CopyOutlined, FileOutlined, UserOutlined, CheckCircleOutlined, CommentOutlined, CloseCircleOutlined,
 } from '@ant-design/icons';
-import type { ProColumns } from '@ant-design/pro-components';
+import type {ActionType, ProColumns} from '@ant-design/pro-components';
 import {
   ModalForm,
   PageContainer,
@@ -18,6 +18,8 @@ import {
   ProFormText,
   ProTable,
 } from '@ant-design/pro-components';
+import { Document, Page, pdfjs } from 'react-pdf';
+import { history } from 'umi';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import {
   Button,
@@ -31,13 +33,18 @@ import {
   Typography,
   Tooltip,
   Upload,
-  List, Card, Avatar, Descriptions, Divider,
+  Popover,
+  List, Card, Avatar, Descriptions, Divider, Table, Result, Alert,
 } from 'antd';
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import _ from 'lodash';
 import { GENERAL_CLIENT_API_BASE_URL } from '@/api/usermanagement';
 import { DateTime } from 'luxon';
 import moment from 'moment';
+import Papa from 'papaparse';
+import mammoth from 'mammoth';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 const { TabPane } = Tabs;
 
@@ -54,8 +61,9 @@ export const approvalTypeConfig = {
 };
 
 const ApprovalSystem: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id?: string }>();
   const { initialState } = useModel('@@initialState');
+  const intl = useIntl();
 
   if (!initialState?.currentUser) {
     return null;
@@ -72,6 +80,12 @@ const ApprovalSystem: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [comment, setComment] = useState('');
   const [approvalModalVisible, setApprovalModalVisible] = useState(false);
+  const actionRef = useRef<ActionType>();
+
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [previewFileType, setPreviewFileType] = useState('');
+  const [previewFileUrl, setPreviewFileUrl] = useState('');
+  const [isReviewModalLoading, setReviewModalLoading] = useState(false);
 
   const {
     state,
@@ -80,13 +94,11 @@ const ApprovalSystem: React.FC = () => {
     handleApprovalChange,
     handleAddApproval,
     downloadFromOSS,
-    actionRef,
     uploadToOSS,
     handleUpdateComment,
     exportToCSV,
     fetchApprovalData,
   } = useApprovalPage(initialState.currentUser?.id || '');
-  const intl = useIntl();
 
   const initiator = _.uniqBy(
     state.initiatorData.map((item) => ({
@@ -159,12 +171,13 @@ const ApprovalSystem: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchApprovalData();
-
+    // 当 id 改变时，重新获取数据或更新组件状态
     if (id) {
       openApprovalModalById(Number(id));
+    } else {
+      // 如果没有 id，可能需要关闭弹窗或显示全部数据
+      setApprovalModalVisible(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleCopy = (record: any) => {
@@ -247,19 +260,26 @@ const ApprovalSystem: React.FC = () => {
                 <Button
                   type="primary"
                   icon={<CheckCircleOutlined />}
-                  onClick={() => handleApprovalChange(currentRecord, 1)}
+                  loading={isReviewModalLoading}
+                  onClick={async () => {
+                    await handleApprovalStatusChange(currentRecord, 1);
+                  }}
                 >
                   批准
                 </Button>
                 <Button
                   danger
                   icon={<CloseCircleOutlined />}
-                  onClick={() => handleApprovalChange(currentRecord, 2)}
+                  loading={isReviewModalLoading}
+                  onClick={async () => {
+                    await handleApprovalStatusChange(currentRecord, 2);
+                  }}
                 >
                   拒绝
                 </Button>
                 <Button
                   icon={<CommentOutlined />}
+                  loading={isReviewModalLoading}
                   onClick={() => showModal(currentRecord)}
                 >
                   添加批示
@@ -270,6 +290,11 @@ const ApprovalSystem: React.FC = () => {
         </Card>
       </Modal>
     );
+  };
+
+  const handleShowAll = () => {
+    setShowAll(true);
+    history.push('/approval'); // 确保这个路径在您的路由配置中存在
   };
 
   const handleDataSource = (dataSource: ApprovalInfoVO[]) => {
@@ -284,9 +309,11 @@ const ApprovalSystem: React.FC = () => {
   };
 
   const showModal = (record) => {
+    setReviewModalLoading(true);
     setCurrentRecord(record);
     setComment(record.comment || '');
     handleModalOpen('commentModalOpen', true);
+    setReviewModalLoading(false);
   };
 
   const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
@@ -303,6 +330,14 @@ const ApprovalSystem: React.FC = () => {
     return fileName;
   };
 
+  const getFileType = (fileName) => {
+    const extension = fileName.split('.').pop().toLowerCase();
+    if (['pdf'].includes(extension)) return 'pdf';
+    if (['doc', 'docx'].includes(extension)) return 'word';
+    if (['csv'].includes(extension)) return 'csv';
+    return 'unknown';
+  };
+
   const renderApprovalFiles = (_, record) => {
     if (!record.approvalFileUrl || record.approvalFileUrl.length === 0) {
       return <Typography.Text>无文件</Typography.Text>;
@@ -311,30 +346,310 @@ const ApprovalSystem: React.FC = () => {
     return (
       <List
         itemLayout="horizontal"
-        dataSource={record.approvalFileUrl}
+        dataSource={record.approvalFileUrl.filter((url) => url)}
         renderItem={(fileUrl) => {
           const fileName = extractFileName(fileUrl);
+          const fileType = getFileType(fileName); // 根据文件名获取文件类型
           return (
-            <List.Item>
+            <List.Item
+              key={fileUrl}
+              actions={[
+                <Button
+                  type="link"
+                  onClick={() => {
+                    setPreviewFileType(fileType);
+                    setPreviewFileUrl(fileUrl);
+                    setPreviewModalVisible(true);
+                  }}
+                >
+                  预览
+                </Button>,
+                <a
+                  key="download"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    await downloadFromOSS(fileUrl);
+                  }}
+                >
+                  下载
+                </a>,
+              ]}
+            >
               <List.Item.Meta
                 avatar={<FileOutlined style={{ fontSize: '24px' }} />}
-                title={
-                  <a
-                    href="#"
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      await downloadFromOSS(fileUrl);
-                    }}
-                  >
-                    {fileName}
-                  </a>
-                }
+                title={fileName}
               />
             </List.Item>
           );
         }}
       />
     );
+  };
+
+  const WordViewer = ({ fileUrl }) => {
+    const [content, setContent] = useState('');
+
+    useEffect(() => {
+      const fetchWordContent = async () => {
+        try {
+          const response = await fetch(fileUrl, { mode: 'cors' });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const arrayBuffer = await response.arrayBuffer();
+          const result = await mammoth.convertToHtml({ arrayBuffer });
+          setContent(result.value);
+        } catch (error) {
+          message.error(`Word 文件加载失败：${error.message}`);
+        }
+      };
+
+      fetchWordContent();
+    }, [fileUrl]);
+
+    return (
+      <div dangerouslySetInnerHTML={{ __html: content }} />
+    );
+  };
+
+  const CSVViewer = ({ fileUrl }) => {
+    const [data, setData] = useState([]);
+
+    useEffect(() => {
+      const fetchCSVContent = async () => {
+        try {
+          const response = await fetch(fileUrl);
+          const csvText = await response.text();
+          const result = Papa.parse(csvText, { header: true });
+          setData(result.data);
+        } catch (error) {
+          message.error(`CSV 文件加载失败：${error.message}`);
+        }
+      };
+
+      fetchCSVContent();
+    }, [fileUrl]);
+
+    return (
+      <Table dataSource={data} columns={generateColumns(data)} pagination={false} />
+    );
+  };
+
+  const generateColumns = (data) => {
+    if (data.length === 0) return [];
+    return Object.keys(data[0]).map((key) => ({
+      title: key,
+      dataIndex: key,
+      key,
+    }));
+  };
+
+  const PDFViewer = ({ fileUrl }) => {
+    return (
+      <div style={{ height: '80vh', overflow: 'auto' }}>
+        <Document
+          file={fileUrl}
+          onLoadError={(error) => message.error(`PDF 加载失败：${error.message}`)}
+        >
+          <Page pageNumber={1} />
+        </Document>
+      </div>
+    );
+  };
+
+  const renderPreviewModal = () => {
+    const handleCancel = () => {
+      setPreviewModalVisible(false);
+      setPreviewFileType('');
+      setPreviewFileUrl('');
+    };
+
+    return (
+      <Modal
+        visible={previewModalVisible}
+        title="文件预览"
+        onCancel={handleCancel}
+        footer={null}
+        width="50%"
+        style={{ top: 20 }}
+      >
+        {previewFileType === 'pdf' && (
+          <PDFViewer fileUrl={previewFileUrl} />
+        )}
+        {previewFileType === 'word' && (
+          <div style={{ height: '80vh', overflow: 'auto' }}>
+            <WordViewer fileUrl={previewFileUrl} />
+          </div>
+        )}
+        {previewFileType === 'csv' && (
+          <div style={{ height: '80vh', overflow: 'auto' }}>
+            <CSVViewer fileUrl={previewFileUrl} />
+          </div>
+        )}
+        {previewFileType === 'unknown' && (
+          <Result
+            status="warning"
+            title="无法预览此文件类型"
+          />
+        )}
+      </Modal>
+    );
+  };
+
+
+
+
+  const renderApprovalFilesInTable = (_, record) => {
+    // 检查是否有文件 URL
+    if (!record.approvalFileUrl || record.approvalFileUrl.length === 0) {
+      return <Typography.Text>无文件</Typography.Text>;
+    }
+
+    // 过滤掉 null 或 undefined 的文件 URL
+    const validFileUrls = record.approvalFileUrl.filter((url) => url);
+
+    // 如果过滤后没有有效的文件 URL
+    if (validFileUrls.length === 0) {
+      return <Typography.Text>无文件</Typography.Text>;
+    }
+
+    return (
+      <Popover
+        content={
+          <div style={{ maxWidth: '400px' }}>
+            <List
+              itemLayout="horizontal"
+              dataSource={validFileUrls}
+              renderItem={(fileUrl) => {
+                const fileName = extractFileName(fileUrl);
+                const fileType = getFileType(fileName); // 获取文件类型
+                return (
+                  <List.Item
+                    key={fileUrl}
+                    actions={[
+                      <Button
+                        type="link"
+                        onClick={() => {
+                          setPreviewFileType(fileType);
+                          setPreviewFileUrl(fileUrl);
+                          setPreviewModalVisible(true);
+                        }}
+                      >
+                        预览
+                      </Button>,
+                      <Button
+                        type="link"
+                        onClick={async () => {
+                          await downloadFromOSS(fileUrl);
+                        }}
+                      >
+                        下载
+                      </Button>,
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={<FileOutlined style={{ fontSize: '24px' }} />}
+                      title={fileName}
+                    />
+                  </List.Item>
+                );
+              }}
+            />
+          </div>
+        }
+        title="文件列表"
+        trigger="hover"
+        overlayStyle={{ width: '400px' }}
+      >
+        <Button type="link">
+          查看文件 ({validFileUrls.length})
+        </Button>
+      </Popover>
+    );
+  };
+
+
+  const handleApprovalStatusChange = async (
+    record: ApprovalInfoVO,
+    status: number,
+  ) => {
+    setReviewModalLoading(true);
+    await handleApprovalChange(record, status);
+
+    // 更新 currentRecord
+    const updatedRecord = {
+      ...record,
+      approvalStatus: status,
+    };
+    setCurrentRecord(updatedRecord);
+
+    // 重新获取数据
+    await fetchApprovalData();
+    actionRef.current?.reload();
+    setReviewModalLoading(false);
+  };
+
+  const handleUpload = async ({ file, onSuccess, onError }) => {
+    try {
+      const actualFile = file.originFileObj || file;
+      const fileUrl = await uploadToOSS(actualFile);
+
+      // 在文件对象中保存文件的 URL
+      file.url = fileUrl;
+
+      onSuccess(null, file);
+    } catch (error) {
+      message.error('文件上传失败');
+      onError(error);
+    }
+  };
+
+
+  const handleFileChange = async ({ fileList: newFileList }) => {
+    setFileList(newFileList);
+
+    // 检查是否所有文件都已上传完成
+    const allUploaded = newFileList.every((file) => file.status === 'done');
+
+    // 如果所有文件都上传完成，更新审批记录的文件列表
+    if (allUploaded) {
+      const allFileUrls = newFileList.map((f) => f.url || f.response);
+
+      // 更新审批记录的文件列表
+      await handleFileUpload({ id: currentRecord.id, fileUrl: allFileUrls });
+
+      // 更新 currentRecord
+      setCurrentRecord((prev) => ({
+        ...prev,
+        approvalFileUrl: allFileUrls,
+      }));
+
+      message.success('所有文件上传成功');
+    }
+
+    // 如果有文件被删除，也需要更新审批记录的文件列表
+    const removedFiles = newFileList.filter((file) => file.status === 'removed');
+    if (removedFiles.length > 0) {
+      const allFileUrls = newFileList
+        .filter((f) => f.status === 'done')
+        .map((f) => f.url || f.response);
+
+      // 更新审批记录的文件列表
+      await handleFileUpload({ id: currentRecord.id, fileUrl: allFileUrls });
+
+      // 更新 currentRecord
+      setCurrentRecord((prev) => ({
+        ...prev,
+        approvalFileUrl: allFileUrls,
+      }));
+
+      message.success('文件删除成功');
+    }
+  };
+
+  const handleFileModalClose = async () => {
+    setFileModalVisible(false);
+    await fetchApprovalData(); // 更新数据
   };
 
   const approvalColumns: ProColumns<ApprovalInfoVO>[] = [
@@ -372,7 +687,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       key: 'approvalFileUrl',
       width: '150px',
-      render: renderApprovalFiles,
+      render: renderApprovalFilesInTable,
     },
     {
       title: <FormattedMessage id="创建时间" />,
@@ -576,7 +891,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       key: 'approvalFileUrl',
       width: '150px',
-      render: renderApprovalFiles, // 使用渲染多个文件的函数
+      render: renderApprovalFilesInTable,
     },
     {
       title: <FormattedMessage id="创建时间" />,
@@ -770,64 +1085,6 @@ const ApprovalSystem: React.FC = () => {
     }
   };
 
-  const handleUpload = async ({ file, onSuccess, onError }) => {
-    setUploading(true);
-    try {
-      const fileUrl = await uploadToOSS(file);
-      const newFileUrls = currentRecord.approvalFileUrl
-        ? [...currentRecord.approvalFileUrl, fileUrl]
-        : [fileUrl];
-
-      await handleFileUpload({ id: currentRecord.id, fileUrl: newFileUrls });
-
-      // 更新当前记录的文件列表
-      setCurrentRecord((prev) => ({
-        ...prev,
-        approvalFileUrl: newFileUrls,
-      }));
-
-      message.success('文件上传成功');
-      fetchApprovalData();
-      onSuccess(null, file);
-    } catch (error) {
-      message.error('文件上传失败');
-      onError(error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // 文件删除处理函数（用于文件管理 Modal）
-  const handleRemove = async (file) => {
-    try {
-      const fileUrl = file.url || file.response;
-      const newFileUrls = currentRecord.approvalFileUrl.filter(
-        (url) => url !== fileUrl,
-      );
-
-      await handleFileUpload({ id: currentRecord.id, fileUrl: newFileUrls });
-
-      // 更新当前记录的文件列表
-      setCurrentRecord((prev) => ({
-        ...prev,
-        approvalFileUrl: newFileUrls,
-      }));
-
-      // 更新文件列表状态
-      setFileList((prevList) =>
-        prevList.filter((item) => item.uid !== file.uid),
-      );
-
-      message.success('文件删除成功');
-      await fetchApprovalData(); // 更新数据
-
-      return true; // 告诉 Upload 组件文件已被删除
-    } catch (error) {
-      message.error('文件删除失败');
-      return false; // 告诉 Upload 组件文件删除失败
-    }
-  };
-
   // 文件上传处理函数（用于新建审批 Modal）
   const handleUploadNewApproval = async ({ file, onSuccess, onError }) => {
     setUploading(true);
@@ -851,11 +1108,9 @@ const ApprovalSystem: React.FC = () => {
     setFileList((prevList) => prevList.filter((item) => item.uid !== file.uid));
   };
 
-  // 当关闭文件管理 Modal 时，刷新文件列表
-  const handleFileModalClose = async () => {
-    setFileModalVisible(false);
-    await fetchApprovalData(); // 更新数据
-  };
+  const isApprovedOrRejected =
+    currentRecord &&
+    (currentRecord.approvalStatus === 1 || currentRecord.approvalStatus === 2);
 
   return (
     <PageContainer>
@@ -886,7 +1141,7 @@ const ApprovalSystem: React.FC = () => {
               </div>
             }
             actionRef={actionRef}
-            rowKey="id"
+            rowKey={(record) => record.id || record.someOtherUniqueField}
             search={false}
             cardBordered
             rowSelection={{
@@ -934,7 +1189,7 @@ const ApprovalSystem: React.FC = () => {
                 {!showAll && (
                   <Button
                     type="primary"
-                    onClick={() => setShowAll(true)}
+                    onClick={handleShowAll}
                     style={{ marginLeft: 16 }}
                   >
                     显示全部
@@ -965,8 +1220,15 @@ const ApprovalSystem: React.FC = () => {
         onCancel={() => handleModalOpen('commentModalOpen', false)}
         onOk={async () => {
           if (currentRecord) {
+            setReviewModalLoading(true);
             await handleUpdateComment(currentRecord, comment);
             handleModalOpen('commentModalOpen', false);
+            // 更新 currentRecord
+            setCurrentRecord((prev) => ({
+              ...prev,
+              comment,
+            }));
+            setReviewModalLoading(false);
           }
         }}
       >
@@ -975,12 +1237,12 @@ const ApprovalSystem: React.FC = () => {
           onChange={(e) => setComment(e.target.value)}
           placeholder="请输入评论"
           rows={4}
+          loading={isReviewModalLoading}
         />
       </Modal>
 
       {/* 审批详情的弹窗 */}
       {renderApprovalModal()}
-
 
       {/* 文件管理的 Modal */}
       <Modal
@@ -990,21 +1252,31 @@ const ApprovalSystem: React.FC = () => {
         footer={null}
         destroyOnClose
       >
+        {isApprovedOrRejected && (
+          <Alert
+            message="当前审批已完成，无法修改文件列表"
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Upload
           customRequest={handleUpload}
-          onRemove={handleRemove}
+          onChange={handleFileChange}
           fileList={fileList}
           multiple
+          disabled={isApprovedOrRejected} // 禁用 Upload 组件
         >
-          <Button icon={<UploadOutlined />} loading={uploading}>
-            选择文件
-          </Button>
+          <Button icon={<UploadOutlined />} disabled={isApprovedOrRejected}>选择文件</Button>
         </Upload>
       </Modal>
 
+
+      {renderPreviewModal()}
+
       {/* 新建审批的 Modal */}
       <ModalForm
-        title="新加入审批"
+        title="新建审批"
         width="400px"
         modalProps={{
           destroyOnClose: true,

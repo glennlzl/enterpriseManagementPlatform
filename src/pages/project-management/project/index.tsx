@@ -486,14 +486,14 @@ const ProjectInfoTable: React.FC = () => {
       filterSearch: true,
     },
     {
-      title: '位置',
+      title: '部位',
       dataIndex: 'location',
       valueType: 'text',
       width: 150,
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <div style={{ padding: 8 }}>
           <Input
-            placeholder="请输入位置"
+            placeholder="请输入部位"
             value={selectedKeys[0]}
             onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
             onPressEnter={() => confirm()}

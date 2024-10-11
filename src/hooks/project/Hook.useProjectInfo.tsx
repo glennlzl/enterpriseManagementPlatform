@@ -107,7 +107,7 @@ export function useProjectInfo() {
     const selectedData = projectList.filter((item) => selectedRowKeys.includes(item.id!));
     if (selectedData.length > 0) {
       const fields = [
-        { label: 'ID', value: 'id' },
+        { label: '序号', value: 'id' },
         { label: '项目名称', value: 'name' },
         { label: '类型', value: 'type' },
         { label: '施工单位', value: 'constructionOrganization' },
@@ -126,7 +126,7 @@ export function useProjectInfo() {
         { label: '项目状态', value: 'projectStatus' },
         { label: '监管级别', value: 'regulatoryLevel' },
         { label: '技术级别', value: 'techLevel' },
-        { label: '位置', value: 'location' },
+        { label: '部位', value: 'location' },
         { label: '更新时间', value: 'updateTime' },
         { label: '创建时间', value: 'createTime' },
       ];

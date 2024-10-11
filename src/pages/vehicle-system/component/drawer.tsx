@@ -1,7 +1,8 @@
 import { fetchOssStsAccessInfo, OssStsAccessInfo } from '@/api/usermanagement';
 import {
   addVehicleUsageInfo,
-  deleteVehicleUsageInfo, getVehicleInfo,
+  deleteVehicleUsageInfo,
+  getVehicleInfo,
   queryVehicleUsageInfoList,
   updateVehicleUsageInfo,
 } from '@/api/vihicle-system';
@@ -25,13 +26,14 @@ import {
   Table,
   Upload,
   Image,
+  InputNumber,
 } from 'antd';
 import moment, { Moment } from 'moment';
 import React, { useEffect, useState } from 'react';
-import {useModel} from "@@/exports";
+import { useModel } from '@@/exports';
 import { DateTime } from 'luxon';
-import {ProFormSelect} from "@ant-design/pro-components";
-import {isNull} from "lodash";
+import { ProFormSelect } from '@ant-design/pro-components';
+import { isNull } from 'lodash';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -44,6 +46,17 @@ interface VehicleDrawerProps {
   vehicleInfo: VehicleInfo | null;
   usageInfoList: VehicleUsageInfo[];
   loading: boolean;
+  isAdding: boolean;
+  setIsAdding: (value: boolean) => void;
+  expandedRowKeys: number[];
+  setExpandedRowKeys: (keys: number[]) => void;
+  editingKey: number | null;
+  setEditingKey: (key: number | null) => void;
+  showMore: boolean;
+  setShowMore: (value: boolean) => void;
+  employeeOptions: { value: number; name: string }[];
+  setVehicleInfo: (info: VehicleInfo) => void;
+  fetchVehicleList: () => void;
 }
 
 const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
@@ -60,47 +73,52 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                                                        setEditingKey,
                                                        showMore,
                                                        setShowMore,
-                                                       form,
                                                        employeeOptions,
                                                        setVehicleInfo,
-                                                       fetchVehicleList}) => {
+                                                       fetchVehicleList,
+                                                     }) => {
   const { initialState } = useModel('@@initialState');
   const [filteredUsageList, setFilteredUsageList] = useState<VehicleUsageInfo[]>(usageInfoList);
-  const [fileList, setFileList] = useState<any[]>([]); // 用于存储文件列表
-  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null); // 保存展开行的
-  const [selectedImages, setSelectedImages] = useState<string[]>([]); // 保存展开行的图片
-  const [editing, setEditing] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]); // 保存图片链接
   const isAdmin = initialState?.currentUser?.role >= 2;
   const [thisLoading, setLoading] = useState(false);
-  const isCreateButtonDisabled = !(_.isEmpty(filteredUsageList) || !_.isNull(filteredUsageList[0].endMileage))
+
+  // 创建单独的Form实例
+  const [addForm] = Form.useForm();
+
+  const isCreateButtonDisabled = filteredUsageList.length > 0 && !filteredUsageList[0].endMileage;
+
+
+  // 在组件内部
+  const sortedUsageList = [...filteredUsageList].sort((a, b) => {
+    const dateA = DateTime.fromFormat(a.recordTime, 'yyyy-MM-dd');
+    const dateB = DateTime.fromFormat(b.recordTime, 'yyyy-MM-dd');
+    return dateB.toMillis() - dateA.toMillis(); // 按日期从新到旧排序
+  });
+
+  // 获取最新的记录（列表的第一项）
+  const latestRecord = sortedUsageList.length > 0 ? sortedUsageList[0] : null;
+  const latestRecordId = latestRecord ? latestRecord.id : null;
+
   // 假设每个员工对象包含 id 和 username 属性
   const employeeOptionsWithUsername = employeeOptions.map((employee) => ({
     value: employee.value,
     label: employee.name, // 使用用户名作为显示标签
   }));
-  const responsibleEmployeeOptions = (!vehicleInfo || !employeeOptionsWithUsername || _.isNull(vehicleInfo?.driverList))
-    ? []
-    : employeeOptionsWithUsername.filter((item) =>
-      item.value === vehicleInfo?.responsiblePersonId ||
-      item.value === vehicleInfo?.registrantId ||
-      _.includes(vehicleInfo.driverList?.map((driver) => driver.id) || [], item.value)
-    );
+  const responsibleEmployeeOptions =
+    !vehicleInfo || !employeeOptionsWithUsername || isNull(vehicleInfo?.driverList)
+      ? []
+      : employeeOptionsWithUsername.filter(
+        (item) =>
+          item.value === vehicleInfo?.responsiblePersonId ||
+          item.value === vehicleInfo?.registrantId ||
+          vehicleInfo.driverList?.some((driver) => driver.id === item.value),
+      );
 
-  console.log( vehicleInfo?.driverList);
-
-
-
-  const compareDateWithToday = (dateStr) => {
-    // 将输入的 YYYY-MM-DD 字符串解析为 Luxon 的 DateTime 对象
+  const compareDateWithToday = (dateStr: string) => {
     const inputDate = DateTime.fromFormat(dateStr, 'yyyy-MM-dd');
-
-    // 获取当前的日期时间
     const today = DateTime.now();
-
-    // 计算两者之间的差异，以天为单位
     const diffInDays = today.diff(inputDate, 'days').days;
-
-    // 判断是否超过一天
     return diffInDays > 1;
   };
 
@@ -117,118 +135,61 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         const updatedUsageList = await queryVehicleUsageInfoList(vehicleInfo.id);
         setFilteredUsageList(updatedUsageList);
       } catch (error) {
-        message.error(error);
+        message.error(error as string);
       }
     }
   };
 
-  const handleExpand = (expanded: boolean, record: any) => {
-    setExpandedRowKeys((prevKeys) => {
-      if (expanded) {
-        return [...prevKeys, record.id];
-      } else {
-        return prevKeys.filter((key) => key !== record.id);
-      }
-    });
-
-    // 仅当展开时更新对应行的信息
-    if (expanded) {
-      form.setFieldsValue({
-        startMileage: record.startMileage,
-        endMileage: record.endMileage,
-        usageStatus: record.usageStatus,
-        vehicleImageUrls: record.vehicleImageUrls,
-        extend: record.extend,
-        recordTime: record.recordTime,
-      });
-
-      setFileList(
-        record.vehicleImageUrls?.map((url, index) => ({
-          uid: index.toString(),
-          name: `Image-${index + 1}`,
-          status: 'done',
-          url: url,
-        })) || [],
+  const handleUpdate = async (id: number, values: any, selectedImages: string[]) => {
+    try {
+      const matchingEmployee = employeeOptions.find(
+        (item) => item.value === values.responsiblePersonId,
       );
-    }
-  };
 
-  const uploadImageToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
-    const client = new OSSClient({
-      region: 'oss-cn-beijing',
-      accessKeyId: ossStsAccessInfo.accessKeyId,
-      accessKeySecret: ossStsAccessInfo.accessKeySecret,
-      stsToken: ossStsAccessInfo.securityToken,
-      bucket: 'rohana-erp',
-    });
+      // 在更新时，使用原始记录的 startMileage
+      const originalRecord = filteredUsageList.find((item) => item.id === id);
+      const startMileage = originalRecord?.startMileage;
 
-    try {
-      const result = await client.put(`photos/${file.name}`, file);
-      return result.url;
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  };
-
-  const handleUpload = async ({ file, onSuccess, onError }: any) => {
-    try {
-      setLoading(true);
-      const ossStsAccessInfo = await fetchOssStsAccessInfo();
-      const imageUrl = await uploadImageToOss(file, ossStsAccessInfo);
-
-      setFileList((prevList) => [...prevList, imageUrl]);
-
-      // 获取当前的 vehicleImageUrls 并确保它是一个数组
-      const currentUrls = form.getFieldValue('vehicleImageUrls');
-      form.setFieldsValue({
-        vehicleImageUrls: _.isUndefined(currentUrls) ? [...currentUrls, imageUrl] : [imageUrl],
-      });
-
-      setSelectedImages((prevImages) => [...prevImages, imageUrl]);
-      setLoading(false);
-
-      onSuccess(imageUrl);
-    } catch (error) {
-      onError(error);
-    }
-  };
-
-  const handleUpdate = async (id: number) => {
-    const values = await form.validateFields();
-    const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
-    try {
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
         userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
         userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
         id: id || 0,
-        startMileage: vehicleInfo?.currentMileage || undefined,
+        startMileage: startMileage, // 使用原始记录的 startMileage
         endMileage: values.endMileage || undefined,
         usageStatus: values.usageStatus || undefined,
         vehicleImageUrls: selectedImages,
         extend: values.extend,
         recordTime: values.recordTime, // 保存使用日期
       };
-      console.log(payload);
       await updateVehicleUsageInfo(payload);
       message.success('车辆使用信息更新成功');
       setEditingKey(null); // 退出编辑模式
-      setEditing(false);
       await refreshUsageInfoList(); // 更新数据
     } catch (error) {
-      message.error(error);
+      message.error('请检查表单字段');
     }
   };
 
+
   const handleAdd = async () => {
-    const values = await form.validateFields();
-    const matchingEmployee = employeeOptions.filter((item) => item.value === values.responsiblePersonId)[0];
     try {
+      const values = await addForm.validateFields();
+      const matchingEmployee = employeeOptions.find(
+        (item) => item.value === values.responsiblePersonId,
+      );
+
+      // 获取上一个记录的结束里程数
+      const lastUsageRecord = filteredUsageList[0]; // 假设列表已按日期降序排序
+      const startMileage = lastUsageRecord
+        ? Number(lastUsageRecord.endMileage)
+        : Number(vehicleInfo?.currentMileage ?? 0);
+
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
         userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
         userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
-        startMileage: vehicleInfo?.currentMileage || undefined,
+        startMileage: startMileage, // 使用上一个记录的结束里程数作为开始里程数
         endMileage: values.endMileage || undefined,
         usageStatus: values.usageStatus || undefined,
         vehicleImageUrls: selectedImages,
@@ -240,19 +201,18 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       setIsAdding(false);
       await refreshUsageInfoList(); // 更新数据
     } catch (error) {
-      message.error(error);
+      message.error('请检查表单字段');
     }
   };
 
   const handleDelete = async (record: any) => {
     try {
       await deleteVehicleUsageInfo(record.id);
-      setEditingKey(record.id); // 只设置当前行为编辑状态
       message.success('车辆使用信息删除成功');
       setFilteredUsageList(filteredUsageList.filter((item) => item.id !== record.id));
       await refreshUsageInfoList(); // 更新数据
     } catch (error) {
-      message.error(error);
+      message.error(error as string);
     }
   };
 
@@ -296,14 +256,17 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
       dataIndex: 'startMileage',
       key: 'startMileage',
       render: (text: string, record: VehicleUsageInfo) =>
-        `${record.startMileage}/${_.isUndefined(record.endMileage) ? ' - ' : record.endMileage}`,
+        `${record.startMileage}/${record.endMileage ?? ' - '}`,
     },
     {
       title: '使用情况',
       dataIndex: 'usageStatus',
       key: 'usageStatus',
       render: (status: number) => (
-        <Badge status={status === 0 || isNull(status) ? 'success' : 'error'} text={status === 0 || isNull(status) ? '正常' : '异常'} />
+        <Badge
+          status={status === 0 || isNull(status) ? 'success' : 'error'}
+          text={status === 0 || isNull(status) ? '正常' : '异常'}
+        />
       ),
     },
   ];
@@ -314,34 +277,64 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         <>
           <Descriptions title="车辆基础信息" bordered size="small" column={2}>
             <Descriptions.Item label="车辆编号">{vehicleInfo.vehicleNumber}</Descriptions.Item>
-            <Descriptions.Item label="工程车编号">{vehicleInfo.engineeingVehicleNumber}</Descriptions.Item>
+            <Descriptions.Item label="工程车编号">
+              {vehicleInfo.engineeingVehicleNumber}
+            </Descriptions.Item>
             <Descriptions.Item label="车牌号码">{vehicleInfo.licenseNumber}</Descriptions.Item>
-            <Descriptions.Item label="管理人姓名">{vehicleInfo.responsiblePersonName}</Descriptions.Item>
+            <Descriptions.Item label="管理人姓名">
+              {vehicleInfo.responsiblePersonName}
+            </Descriptions.Item>
             {showMore && isAdmin && (
               <>
                 <Descriptions.Item label="序号">{vehicleInfo.id}</Descriptions.Item>
                 <Descriptions.Item label="警告等级">{vehicleInfo.warningLevel}</Descriptions.Item>
-                <Descriptions.Item label="发动机号后6位">{vehicleInfo.engineNumber}</Descriptions.Item>
+                <Descriptions.Item label="发动机号后6位">
+                  {vehicleInfo.engineNumber}
+                </Descriptions.Item>
                 <Descriptions.Item label="车辆类型">{vehicleInfo.vehicleType}</Descriptions.Item>
-                <Descriptions.Item label="车辆型号">{vehicleInfo.vehicleSerialNumber}</Descriptions.Item>
+                <Descriptions.Item label="车辆型号">
+                  {vehicleInfo.vehicleSerialNumber}
+                </Descriptions.Item>
                 <Descriptions.Item label="车辆品牌">{vehicleInfo.vehicleBrand}</Descriptions.Item>
-                <Descriptions.Item label="核定载质量">{vehicleInfo.approvedLoadCapacity}</Descriptions.Item>
+                <Descriptions.Item label="核定载质量">
+                  {vehicleInfo.approvedLoadCapacity}
+                </Descriptions.Item>
                 <Descriptions.Item label="登记人">{vehicleInfo.registrant}</Descriptions.Item>
                 <Descriptions.Item label="购车日期">{vehicleInfo.purchaseDate}</Descriptions.Item>
                 <Descriptions.Item label="年检月份">{vehicleInfo.auditMonth}</Descriptions.Item>
-                <Descriptions.Item label="是否年检">{vehicleInfo.isAudited ? '是' : '否'}</Descriptions.Item>
-                <Descriptions.Item label="是否有交强险">{vehicleInfo.trafficInsurance ? '是' : '否'}</Descriptions.Item>
-                <Descriptions.Item label="是否有商业险">{vehicleInfo.commercialInsurance ? '是' : '否'}</Descriptions.Item>
-                <Descriptions.Item label="是否安装GPS">{vehicleInfo.gps ? '是' : '否'}</Descriptions.Item>
+                <Descriptions.Item label="是否年检">
+                  {vehicleInfo.isAudited ? '是' : '否'}
+                </Descriptions.Item>
+                <Descriptions.Item label="是否有交强险">
+                  {vehicleInfo.trafficInsurance ? '是' : '否'}
+                </Descriptions.Item>
+                <Descriptions.Item label="是否有商业险">
+                  {vehicleInfo.commercialInsurance ? '是' : '否'}
+                </Descriptions.Item>
+                <Descriptions.Item label="是否安装GPS">
+                  {vehicleInfo.gps ? '是' : '否'}
+                </Descriptions.Item>
                 <Descriptions.Item label="机械邦">{vehicleInfo.mechanicalBond}</Descriptions.Item>
                 <Descriptions.Item label="使用项目">{vehicleInfo.usageProject}</Descriptions.Item>
-                <Descriptions.Item label="上次保养公里数">{vehicleInfo.lastMaintenanceMileage}</Descriptions.Item>
-                <Descriptions.Item label="当前公里数">{vehicleInfo.currentMileage}</Descriptions.Item>
-                <Descriptions.Item label="下次保养公里数">{vehicleInfo.nextMaintenanceMileage}</Descriptions.Item>
-                <Descriptions.Item label="负责人姓名">{vehicleInfo.responsiblePersonName}</Descriptions.Item>
-                <Descriptions.Item label="负责人联系电话">{vehicleInfo.responsiblePersonMobile}</Descriptions.Item>
+                <Descriptions.Item label="上次保养公里数">
+                  {vehicleInfo.lastMaintenanceMileage}
+                </Descriptions.Item>
+                <Descriptions.Item label="当前公里数">
+                  {vehicleInfo.currentMileage}
+                </Descriptions.Item>
+                <Descriptions.Item label="下次保养公里数">
+                  {vehicleInfo.nextMaintenanceMileage}
+                </Descriptions.Item>
+                <Descriptions.Item label="负责人姓名">
+                  {vehicleInfo.responsiblePersonName}
+                </Descriptions.Item>
+                <Descriptions.Item label="负责人联系电话">
+                  {vehicleInfo.responsiblePersonMobile}
+                </Descriptions.Item>
                 <Descriptions.Item label="其他备注信息">{vehicleInfo.extend}</Descriptions.Item>
-                <Descriptions.Item label="是否废弃">{vehicleInfo.isDeprecated ? '是' : '否'}</Descriptions.Item>
+                <Descriptions.Item label="是否废弃">
+                  {vehicleInfo.isDeprecated ? '是' : '否'}
+                </Descriptions.Item>
               </>
             )}
           </Descriptions>
@@ -361,129 +354,48 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
         title={() => (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '15px', fontWeight: 'bold' }}>使用历史</span>
-              <Form form={form}>
-                <Form.Item name="dateRange">
-                  <RangePicker
-                    style={{ marginBottom: 20 }}
-                    onChange={handleDateFilter}
-                    format="MM-DD"
-                  />
-                </Form.Item>
+            <Form>
+              <Form.Item name="dateRange">
+                <RangePicker
+                  style={{ marginBottom: 20 }}
+                  onChange={handleDateFilter}
+                  format="MM-DD"
+                />
+              </Form.Item>
             </Form>
           </div>
         )}
         expandable={{
           expandedRowRender: (record) => {
+            const isLatestRecord = record.id === latestRecordId;
             return (
-              <div style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-                {(editingKey === record.id && (isAdmin || !compareDateWithToday(record.recordTime))) ? (
-                  <Form layout="vertical" form={form} onFinish={() => handleUpdate(record.id)}>
-                    {
-                      isAdmin && <ProFormSelect
-                        name="responsiblePersonId"
-                        label="使用者"
-                        options={responsibleEmployeeOptions}
-                        width="200px"
-                        initialValue={
-                          {
-                            value: record.userId,
-                            label: record.userName,
-                          }
-                      } // 设置初始选中值
-                      />
-                    }
-                    <Form.Item
-                      label="结束里程数"
-                      name="endMileage"
-                      rules={[
-                        () => ({
-                          validator(_, value) {
-                            const startMileage = Number(record.startMileage ?? 0);
-                            const endMileage = Number(value);
-                            if (!value || startMileage <= endMileage) {
-                              return Promise.resolve();
-                            }
-                            return Promise.reject(new Error('结束里程数必须大于等于开始里程数，当前里程数为 ' + startMileage + ' 公里'));
-                          },
-                        }),
-                      ]}
-                    >
-                      <Input type="number" placeholder="请输入结束里程数" />
-                    </Form.Item>
-                    {isAdmin && (
-                      <Form.Item label="使用情况" name="usageStatus">
-                        <Select placeholder="请选择使用情况">
-                          <Option value={0}>正常</Option>
-                          <Option value={1}>异常</Option>
-                        </Select>
-                      </Form.Item>
-                    )}
-                    <Form.Item label="车辆图片" name="vehicleImageUrls">
-                      <Upload
-                        customRequest={handleUpload}
-                        listType="picture-card"
-                        fileList={fileList}
-                        onChange={({ fileList: newFileList }) => setFileList(newFileList)}
-                        onPreview={(file) => window.open(file.url || file.thumbUrl)}
-                      >
-                        <div>
-                          <PlusOutlined />
-                          <div style={{ marginTop: 8 }}>上传照片</div>
-                        </div>
-                      </Upload>
-                    </Form.Item>
-                    <Form.Item label="备注信息" name="extend">
-                      <Input.TextArea placeholder="请输入备注信息" />
-                    </Form.Item>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                      <Button type="primary" htmlType="submit" loading={thisLoading}>
-                        保存
-                      </Button>
-                      <Button
-                        type="default"
-                        style={{ marginLeft: '8px' }}
-                        onClick={handleCancelEdit}
-                      >
-                        取消
-                      </Button>
-                    </div>
-                  </Form>
-                ) : (
-                  <div>
-                    <p><strong>开始里程数: </strong>{record.startMileage}</p>
-                    <p><strong>结束里程数: </strong>{record.endMileage}</p>
-                    <p><strong>使用情况: </strong>{record.usageStatus === 0 || isNull(record.endMileage) ? '正常' : '异常'}</p>
-                    <div style={{ marginBottom: '16px' }}>
-                      <strong>车辆图片: </strong>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                        <Image.PreviewGroup>
-                          {record.vehicleImageUrls && record.vehicleImageUrls.map((url, index) => (
-                            <Image
-                              key={index}
-                              src={url}
-                              alt={`车辆图片${index + 1}`}
-                              width={100}
-                              height={100}
-                              style={{ objectFit: 'cover', borderRadius: '4px' }}
-                            />
-                          ))}
-                        </Image.PreviewGroup>
-                      </div>
-                    </div>
-                    <p><strong>备注信息: </strong>{record.extend}</p>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                      <Button type="default" onClick={() => handleEdit(record)}>编辑</Button>
-                      <Button type="default" style={{ marginLeft: '8px' }} onClick={() => handleExpand(false, record)}>收起</Button>
-                      {isAdmin || !compareDateWithToday(record.recordTime) ? <Button type="default" style={{ marginLeft: '8px' }} onClick={() => handleDelete(record)}>删除</Button> : null}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <EditableUsageRecord
+                record={record}
+                isLatestRecord={isLatestRecord}
+                isAdmin={isAdmin}
+                editingKey={editingKey}
+                setEditingKey={setEditingKey}
+                handleUpdate={handleUpdate}
+                handleDelete={handleDelete}
+                handleCancelEdit={handleCancelEdit}
+                compareDateWithToday={compareDateWithToday}
+                responsibleEmployeeOptions={responsibleEmployeeOptions}
+                selectedImages={selectedImages}
+                setSelectedImages={setSelectedImages}
+              />
             );
           },
           rowExpandable: () => true,
           expandedRowKeys: expandedRowKeys,
-          onExpand: handleExpand,
+          onExpand: (expanded, record) => {
+            setExpandedRowKeys((prevKeys) => {
+              if (expanded) {
+                return [...prevKeys, record.id];
+              } else {
+                return prevKeys.filter((key) => key !== record.id);
+              }
+            });
+          },
         }}
       />
 
@@ -497,14 +409,14 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
               setIsAdding(true);
               setExpandedRowKeys([]);
               setSelectedImages([]);
-              form.resetFields();
-              setFileList([]); // 重置fileList
+              addForm.resetFields();
             }}
           >
             <PlusOutlined /> 新增使用记录
-           {isCreateButtonDisabled && ( <span style={{ marginLeft: 10, color: 'rgba(0, 0, 0, 0.45)' }}>
-              请先将第一条记录的结束里程数填写完整
-            </span>
+            {isCreateButtonDisabled && (
+              <span style={{ marginLeft: 10, color: 'rgba(0, 0, 0, 0.45)' }}>
+                请先将第一条记录的结束里程数填写完整
+              </span>
             )}
           </Button>
         </div>
@@ -519,28 +431,36 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
             marginTop: 20,
           }}
         >
-          <Form layout="vertical" form={form} onFinish={handleAdd}>
+          <Form layout="vertical" form={addForm} onFinish={handleAdd}>
             <Form.Item
               label="结束里程数"
               name="endMileage"
               rules={[
-                { message: '请输入结束里程数' },
                 () => ({
-                  validator(_, value) {
-                    const startMileage = Number(vehicleInfo?.currentMileage ?? 0);
+                  validator(_: any, value: any) {
+                    const lastUsageRecord = filteredUsageList[filteredUsageList.length - 1];
+                    const startMileage = lastUsageRecord
+                      ? Number(lastUsageRecord.endMileage)
+                      : Number(vehicleInfo?.currentMileage ?? 0);
                     const endMileage = Number(value);
                     if (!value || startMileage <= endMileage) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('结束里程数必须大于等于当前里程数，当前里程数为 ' + startMileage + ' 公里'));
+                    return Promise.reject(
+                      new Error(
+                        '结束里程数必须大于等于开始里程数，当前开始里程数为 ' +
+                        startMileage +
+                        ' 公里',
+                      ),
+                    );
                   },
                 }),
               ]}
             >
-              <Input type="number" placeholder="请输入结束里程数" />
+              <InputNumber placeholder="请输入结束里程数" />
             </Form.Item>
-            {
-              isAdmin && <ProFormSelect
+            {isAdmin && (
+              <ProFormSelect
                 name="responsiblePersonId"
                 label="使用者"
                 options={responsibleEmployeeOptions}
@@ -549,7 +469,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                 }}
                 width="200px"
               />
-            }
+            )}
             {isAdmin && (
               <Form.Item label="使用情况" name="usageStatus">
                 <Select placeholder="请选择使用情况">
@@ -559,34 +479,374 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
               </Form.Item>
             )}
             <Form.Item label="车辆图片" name="vehicleImageUrls">
-              <Upload
-                customRequest={handleUpload}
-                listType="picture-card"
-                fileList={fileList} // 使用状态中的fileList
-                onChange={({ fileList: newFileList }) => setFileList(newFileList)} // 同步更新fileList
-                onPreview={(file) => window.open(file.url || file.thumbUrl)}
-              >
-                <div>
-                  <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>上传照片</div>
-                </div>
-              </Upload>
+              <ImageUploader
+                selectedImages={selectedImages}
+                setSelectedImages={setSelectedImages}
+                setLoading={setLoading}
+              />
             </Form.Item>
             <Form.Item label="备注信息" name="extend">
               <Input.TextArea placeholder="请输入备注信息" />
             </Form.Item>
             <Button type="primary" htmlType="submit">
-              {' '}
-              {/* 这里的htmlType设置为submit */}
               保存
             </Button>
-            <Button type="default" style={{ marginLeft: '8px' }} onClick={() => setIsAdding(false)}>
+            <Button
+              type="default"
+              style={{ marginLeft: '8px' }}
+              onClick={() => setIsAdding(false)}
+            >
               取消
             </Button>
           </Form>
         </div>
       )}
     </Drawer>
+  );
+};
+
+interface EditableUsageRecordProps {
+  record: VehicleUsageInfo;
+  isLatestRecord: boolean;
+  isAdmin: boolean;
+  editingKey: number | null;
+  setEditingKey: (key: number | null) => void;
+  handleUpdate: (id: number, values: any, selectedImages: string[]) => void;
+  handleDelete: (record: any) => void;
+  handleCancelEdit: () => void;
+  compareDateWithToday: (dateStr: string) => boolean;
+  responsibleEmployeeOptions: any[];
+  selectedImages: string[];
+  setSelectedImages: (images: string[]) => void;
+}
+
+const EditableUsageRecord: React.FC<EditableUsageRecordProps> = ({
+                                                                   record,
+                                                                   isLatestRecord,
+                                                                   isAdmin,
+                                                                   editingKey,
+                                                                   setEditingKey,
+                                                                   handleUpdate,
+                                                                   handleDelete,
+                                                                   handleCancelEdit,
+                                                                   compareDateWithToday,
+                                                                   responsibleEmployeeOptions,
+                                                                   selectedImages,
+                                                                   setSelectedImages,
+                                                                 }) => {
+  const [form] = Form.useForm();
+  const [fileList, setFileList] = useState<any[]>(
+    record.vehicleImageUrls?.map((url: string, index: number) => ({
+      uid: index.toString(),
+      name: `Image-${index + 1}`,
+      status: 'done',
+      url: url,
+    })) || [],
+  );
+
+  const [thisLoading, setLoading] = useState(false);
+
+  useEffect(() => {
+    form.setFieldsValue({
+      startMileage: record.startMileage,
+      endMileage: record.endMileage,
+      usageStatus: record.usageStatus,
+      vehicleImageUrls: record.vehicleImageUrls,
+      extend: record.extend,
+      recordTime: record.recordTime,
+      responsiblePersonId: record.userId,
+    });
+    setSelectedImages(record.vehicleImageUrls || []);
+  }, [form, record, setSelectedImages]);
+
+  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+    try {
+      setLoading(true);
+      const ossStsAccessInfo = await fetchOssStsAccessInfo();
+      const imageUrl = await uploadImageToOss(file, ossStsAccessInfo);
+
+      setFileList((prevList) => [
+        ...prevList,
+        {
+          uid: file.uid,
+          name: file.name,
+          status: 'done',
+          url: imageUrl,
+        },
+      ]);
+
+      setSelectedImages((prevImages) => [...prevImages, imageUrl]);
+      setLoading(false);
+
+      onSuccess(imageUrl);
+    } catch (error) {
+      onError(error);
+    }
+  };
+
+  const uploadImageToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+    const client = new OSSClient({
+      region: 'oss-cn-beijing',
+      accessKeyId: ossStsAccessInfo.accessKeyId,
+      accessKeySecret: ossStsAccessInfo.accessKeySecret,
+      stsToken: ossStsAccessInfo.securityToken,
+      bucket: 'rohana-erp',
+    });
+
+    try {
+      const result = await client.put(`photos/${file.name}`, file);
+      return result.url;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        padding: '16px',
+        backgroundColor: '#f5f5f5',
+        borderRadius: '8px',
+      }}
+    >
+      {editingKey === record.id && (isAdmin || !compareDateWithToday(record.recordTime)) ? (
+        <Form
+          layout="vertical"
+          form={form}
+          onFinish={(values) => handleUpdate(record.id, values, selectedImages)}
+        >
+          {isAdmin && (
+            <ProFormSelect
+              name="responsiblePersonId"
+              label="使用者"
+              options={responsibleEmployeeOptions}
+              width="200px"
+              initialValue={{
+                value: record.userId,
+                label: record.userName,
+              }}
+            />
+          )}
+          <Form.Item
+            label="结束里程数"
+            name="endMileage"
+            rules={[
+              () => ({
+                validator(_: any, value: any) {
+                  const startMileage = Number(record.startMileage ?? 0);
+                  const endMileage = Number(value);
+                  if (!value || startMileage <= endMileage) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(
+                    new Error(
+                      '结束里程数必须大于等于开始里程数，当前开始里程数为 ' + startMileage + ' 公里',
+                    ),
+                  );
+                },
+              }),
+            ]}
+          >
+            <InputNumber placeholder="请输入结束里程数" />
+          </Form.Item>
+          {isAdmin && (
+            <Form.Item label="使用情况" name="usageStatus">
+              <Select placeholder="请选择使用情况">
+                <Option value={0}>正常</Option>
+                <Option value={1}>异常</Option>
+              </Select>
+            </Form.Item>
+          )}
+          <Form.Item label="车辆图片" name="vehicleImageUrls">
+            <Upload
+              customRequest={handleUpload}
+              listType="picture-card"
+              fileList={fileList}
+              onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+              onPreview={(file) => window.open(file.url || file.thumbUrl)}
+            >
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>上传照片</div>
+              </div>
+            </Upload>
+          </Form.Item>
+          <Form.Item label="备注信息" name="extend">
+            <Input.TextArea placeholder="请输入备注信息" />
+          </Form.Item>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginTop: '16px',
+            }}
+          >
+            <Button type="primary" htmlType="submit" loading={thisLoading}>
+              保存
+            </Button>
+            <Button type="default" style={{ marginLeft: '8px' }} onClick={handleCancelEdit}>
+              取消
+            </Button>
+          </div>
+        </Form>
+      ) : (
+        <div>
+          <p>
+            <strong>开始里程数: </strong>
+            {record.startMileage}
+          </p>
+          <p>
+            <strong>结束里程数: </strong>
+            {record.endMileage}
+          </p>
+          <p>
+            <strong>使用情况: </strong>
+            {record.usageStatus === 0 || isNull(record.endMileage) ? '正常' : '异常'}
+          </p>
+          <div style={{ marginBottom: '16px' }}>
+            <strong>车辆图片: </strong>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginTop: '8px',
+              }}
+            >
+              <Image.PreviewGroup>
+                {record.vehicleImageUrls &&
+                  record.vehicleImageUrls.map((url: string, index: number) => (
+                    <Image
+                      key={index}
+                      src={url}
+                      alt={`车辆图片${index + 1}`}
+                      width={100}
+                      height={100}
+                      style={{ objectFit: 'cover', borderRadius: '4px' }}
+                    />
+                  ))}
+              </Image.PreviewGroup>
+            </div>
+          </div>
+          <p>
+            <strong>备注信息: </strong>
+            {record.extend}
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginTop: '16px',
+            }}
+          >
+            {isLatestRecord && (
+              <>
+                <Button type="default" onClick={() => setEditingKey(record.id)}>
+                  编辑
+                </Button>
+                <Button
+                  type="default"
+                  style={{ marginLeft: '8px' }}
+                  onClick={() => setEditingKey(null)}
+                >
+                  收起
+                </Button>
+                <Button
+                  type="default"
+                  style={{ marginLeft: '8px' }}
+                  onClick={() => handleDelete(record)}
+                >
+                  删除
+                </Button>
+              </>
+            )}
+            {!isLatestRecord && (
+              <Button type="default" onClick={() => setEditingKey(null)}>
+                收起
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface ImageUploaderProps {
+  selectedImages: string[];
+  setSelectedImages: (images: string[]) => void;
+  setLoading: (loading: boolean) => void;
+}
+
+const ImageUploader: React.FC<ImageUploaderProps> = ({
+                                                       selectedImages,
+                                                       setSelectedImages,
+                                                       setLoading,
+                                                     }) => {
+  const [fileList, setFileList] = useState<any[]>(
+    selectedImages.map((url: string, index: number) => ({
+      uid: index.toString(),
+      name: `Image-${index + 1}`,
+      status: 'done',
+      url: url,
+    })) || [],
+  );
+
+  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+    try {
+      setLoading(true);
+      const ossStsAccessInfo = await fetchOssStsAccessInfo();
+      const imageUrl = await uploadImageToOss(file, ossStsAccessInfo);
+
+      setFileList((prevList) => [
+        ...prevList,
+        {
+          uid: file.uid,
+          name: file.name,
+          status: 'done',
+          url: imageUrl,
+        },
+      ]);
+
+      setSelectedImages((prevImages) => [...prevImages, imageUrl]);
+      setLoading(false);
+
+      onSuccess(imageUrl);
+    } catch (error) {
+      onError(error);
+    }
+  };
+
+  const uploadImageToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+    const client = new OSSClient({
+      region: 'oss-cn-beijing',
+      accessKeyId: ossStsAccessInfo.accessKeyId,
+      accessKeySecret: ossStsAccessInfo.accessKeySecret,
+      stsToken: ossStsAccessInfo.securityToken,
+      bucket: 'rohana-erp',
+    });
+
+    try {
+      const result = await client.put(`photos/${file.name}`, file);
+      return result.url;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  };
+
+  return (
+    <Upload
+      customRequest={handleUpload}
+      listType="picture-card"
+      fileList={fileList}
+      onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+      onPreview={(file) => window.open(file.url || file.thumbUrl)}
+    >
+      <div>
+        <PlusOutlined />
+        <div style={{ marginTop: 8 }}>上传照片</div>
+      </div>
+    </Upload>
   );
 };
 

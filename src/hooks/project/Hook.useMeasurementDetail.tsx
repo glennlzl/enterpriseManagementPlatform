@@ -53,7 +53,8 @@ export function useMeasurementDetail() {
 
 
   const generateExcelReport = async (
-    data: MeasurementDetailVO[],
+    costData: MeasurementDetailVO[],
+    materialData: MeasurementDetailVO[],
     project: ProjectInfoVO | undefined,
     contract: ContractInfoVO | undefined,
     period: PeriodInfoVO | undefined
@@ -135,9 +136,19 @@ export function useMeasurementDetail() {
     // 添加空行
     currentRow++;
 
+    // **添加“合同费用”部分**
+
+    // 添加 '合同费用' 标题
+    worksheet.mergeCells(`A${currentRow}:M${currentRow}`);
+    const costTitleCell = worksheet.getCell(`A${currentRow}`);
+    costTitleCell.value = '合同费用';
+    costTitleCell.font = { size: 14, bold: true };
+    costTitleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+    currentRow++;
+
     // 添加表头
-    const headerRowNumber = currentRow;
-    const headerRow = worksheet.getRow(headerRowNumber);
+    let headerRowNumber = currentRow;
+    let headerRow = worksheet.getRow(headerRowNumber);
     headerRow.values = worksheet.columns.map(col => col.header);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -157,8 +168,9 @@ export function useMeasurementDetail() {
     });
     currentRow++;
 
-    // 添加数据
-    data.forEach((item, index) => {
+    // 添加 '合同费用' 数据
+    const costDataStartRow = currentRow;
+    costData.forEach((item, index) => {
       const measurementItem = measurementItemList.find(mi => mi.id === item.measurementItemId);
       const statusText = item.measurementStatus === 0 ? '未审核' : item.measurementStatus === 1 ? '已审核' : '驳回';
       const rowValues = {
@@ -188,32 +200,132 @@ export function useMeasurementDetail() {
       });
       currentRow++;
     });
+    const costDataEndRow = worksheet.lastRow.number;
 
-    // 添加合计行
-    const lastDataRowNumber = worksheet.lastRow.number;
-    const totalRow = worksheet.addRow({
-      measurementItem: '合计',
-      currentCount: { formula: `SUM(G${headerRowNumber + 1}:G${lastDataRowNumber})` },
-      totalCount: { formula: `SUM(H${headerRowNumber + 1}:H${lastDataRowNumber})` },
-      remainingCount: { formula: `SUM(I${headerRowNumber + 1}:I${lastDataRowNumber})` },
-      currentAmount: { formula: `SUM(J${headerRowNumber + 1}:J${lastDataRowNumber})` },
-      upperLimitQuantity: { formula: `SUM(K${headerRowNumber + 1}:K${lastDataRowNumber})` },
-    });
-    totalRow.font = { bold: true };
-    totalRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    totalRow.eachCell(cell => {
+    // 添加 '合同费用' 合计行
+    if (costData.length > 0) {
+      const totalRow = worksheet.addRow({
+        measurementItem: '合计',
+        currentCount: { formula: `SUM(G${costDataStartRow}:G${costDataEndRow})` },
+        totalCount: { formula: `SUM(H${costDataStartRow}:H${costDataEndRow})` },
+        remainingCount: { formula: `SUM(I${costDataStartRow}:I${costDataEndRow})` },
+        currentAmount: { formula: `SUM(J${costDataStartRow}:J${costDataEndRow})` },
+        upperLimitQuantity: { formula: `SUM(K${costDataStartRow}:K${costDataEndRow})` },
+      });
+      totalRow.font = { bold: true };
+      totalRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      totalRow.eachCell(cell => {
+        cell.border = {
+          top: { style: 'double' },
+          left: { style: 'thin' },
+          bottom: { style: 'double' },
+          right: { style: 'thin' },
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFE699' }, // 黄色背景
+        };
+      });
+      currentRow++;
+    }
+
+    // 添加空行
+    currentRow++;
+
+    // **添加“工程清单”部分**
+
+    // 添加 '工程清单' 标题
+    worksheet.mergeCells(`A${currentRow}:M${currentRow}`);
+    const materialTitleCell = worksheet.getCell(`A${currentRow}`);
+    materialTitleCell.value = '工程清单';
+    materialTitleCell.font = { size: 14, bold: true };
+    materialTitleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+    currentRow++;
+
+    // 添加表头
+    headerRowNumber = currentRow;
+    headerRow = worksheet.getRow(headerRowNumber);
+    headerRow.values = worksheet.columns.map(col => col.header);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 20;
+    headerRow.eachCell(cell => {
       cell.border = {
-        top: { style: 'double' },
+        top: { style: 'thin' },
         left: { style: 'thin' },
-        bottom: { style: 'double' },
+        bottom: { style: 'thin' },
         right: { style: 'thin' },
       };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFFFE699' }, // 黄色背景
+        fgColor: { argb: 'FFD3D3D3' }, // 灰色背景
       };
     });
+    currentRow++;
+
+    // 添加 '工程清单' 数据
+    const materialDataStartRow = currentRow;
+    materialData.forEach((item, index) => {
+      const measurementItem = measurementItemList.find(mi => mi.id === item.measurementItemId);
+      const statusText = item.measurementStatus === 0 ? '未审核' : item.measurementStatus === 1 ? '已审核' : '驳回';
+      const rowValues = {
+        index: index + 1,
+        measurementItem: measurementItem?.itemName || '',
+        subItemNumber: item.subItemNumber || '',
+        position: item.position || '',
+        price: item.price || 0,
+        unit: item.unit || '',
+        currentCount: item.currentCount || 0,
+        totalCount: item.totalCount || 0,
+        remainingCount: item.remainingCount || 0,
+        currentAmount: item.currentAmount || 0,
+        upperLimitQuantity: item.upperLimitQuantity || 0,
+        measurementStatus: statusText,
+        measurementComment: item.measurementComment || '',
+      };
+      const row = worksheet.addRow(rowValues);
+      row.alignment = { vertical: 'middle', horizontal: 'center' };
+      row.eachCell(cell => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+      currentRow++;
+    });
+    const materialDataEndRow = worksheet.lastRow.number;
+
+    // 添加 '工程清单' 合计行
+    if (materialData.length > 0) {
+      const totalRow = worksheet.addRow({
+        measurementItem: '合计',
+        currentCount: { formula: `SUM(G${materialDataStartRow}:G${materialDataEndRow})` },
+        totalCount: { formula: `SUM(H${materialDataStartRow}:H${materialDataEndRow})` },
+        remainingCount: { formula: `SUM(I${materialDataStartRow}:I${materialDataEndRow})` },
+        currentAmount: { formula: `SUM(J${materialDataStartRow}:J${materialDataEndRow})` },
+        upperLimitQuantity: { formula: `SUM(K${materialDataStartRow}:K${materialDataEndRow})` },
+      });
+      totalRow.font = { bold: true };
+      totalRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      totalRow.eachCell(cell => {
+        cell.border = {
+          top: { style: 'double' },
+          left: { style: 'thin' },
+          bottom: { style: 'double' },
+          right: { style: 'thin' },
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFE699' }, // 黄色背景
+        };
+      });
+      currentRow++;
+    }
 
     // 添加页眉和页脚
     worksheet.headerFooter.oddHeader = '&C&16&"微软雅黑,加粗"中间计量统计表';
@@ -223,7 +335,7 @@ export function useMeasurementDetail() {
     worksheet.pageSetup.printArea = `A1:M${worksheet.lastRow.number}`;
 
     // 冻结窗格
-    worksheet.views = [{ state: 'frozen', ySplit: headerRowNumber }];
+    worksheet.views = [{ state: 'frozen', ySplit: 6 }];
 
     // 生成 Excel 文件并触发下载
     const buffer = await workbook.xlsx.writeBuffer();
@@ -240,7 +352,7 @@ export function useMeasurementDetail() {
       setLoading(true);
 
       // 获取所有计量明细数据
-      const cost = await queryMeasurementDetailList(
+      const costData = await queryMeasurementDetailList(
         selectedProjectId!,
         selectedContractId,
         selectedPeriodId,
@@ -248,7 +360,7 @@ export function useMeasurementDetail() {
         'cost',  // 传递 type 为 'cost'
       );
 
-      const material = await queryMeasurementDetailList(
+      const materialData = await queryMeasurementDetailList(
         selectedProjectId!,
         selectedContractId,
         selectedPeriodId,
@@ -256,18 +368,13 @@ export function useMeasurementDetail() {
         'material',  // 传递 type 为 'material'
       );
 
-      // 合并两个数组
-      const data = [...(cost || []), ...(material || [])];
-
       // 获取项目、合同和周期信息
       const project = projectList.find(p => p.id === selectedProjectId);
       const contract = contractList.find(c => c.id === selectedContractId);
       const period = periodList.find(p => p.id === selectedPeriodId);
 
       // 生成报表，传递项目、合同和周期数据
-      await generateExcelReport(data, project, contract, period);
-      // 生成报表
-      await generateExcelReport(data);
+      await generateExcelReport(costData || [], materialData || [], project, contract, period);
     } catch (error) {
       console.error('导出报表失败:', error);
       message.error('导出报表失败');
@@ -275,6 +382,7 @@ export function useMeasurementDetail() {
       setLoading(false);
     }
   };
+
 
   // 获取项目列表
   const fetchProjectList = async () => {
@@ -404,14 +512,30 @@ export function useMeasurementDetail() {
         type,
         generalQueryCondition,
       });
-      const data = await queryMeasurementDetailList(
-        selectedProjectId,
-        selectedContractId,
-        selectedPeriodId,
-        itemId,
-        type,
-        generalQueryCondition,
-      );
+
+      let data;
+      if (itemId !== undefined) {
+        // 如果选中了子项，传递 itemId
+        data = await queryMeasurementDetailList(
+          selectedProjectId,
+          selectedContractId,
+          selectedPeriodId,
+          itemId,
+          type,
+          generalQueryCondition,
+        );
+      } else {
+        // 如果未选中子项（即点击了父级文件夹），不传递 itemId，获取该类型下的所有数据
+        data = await queryMeasurementDetailList(
+          selectedProjectId,
+          selectedContractId,
+          selectedPeriodId,
+          null, // 或者直接不传递 itemId
+          type,
+          generalQueryCondition,
+        );
+      }
+
       console.log('Received measurement detail list:', data);
       setMeasurementDetailList(data || []);
     } catch (error: any) {
@@ -424,6 +548,7 @@ export function useMeasurementDetail() {
       setLoading(false);
     }
   };
+
 
   const handleOpenReviewModal = (record: MeasurementDetailVO) => {
     setCurrentReviewRecord(record);

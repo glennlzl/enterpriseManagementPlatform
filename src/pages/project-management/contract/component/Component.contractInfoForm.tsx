@@ -207,6 +207,21 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
     }
   };
 
+  const contractTypes = [
+    '施工合同',
+    '监理合同',
+    '设计合同',
+    '咨询费',
+    '环评、水保合同',
+    '可研合同',
+    '技术服务合同',
+    '设备采购合同',
+    '征拆合同',
+    '科研项目',
+    '建设单位管理费',
+    '建设期贷款利息',
+  ];
+
   // 编辑计量项
   const handleEditMeasurementItem = (
     record: MeasurementItemVO,
@@ -292,6 +307,23 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
     },
   ];
 
+  const contractTermTypes = [
+    '固定合同',
+    '以完成一定工作为期限的合同',
+  ];
+
+  const contractCostTypes = [
+    '暂定金',
+    '工程款',
+    '保证金',
+    '预付款',
+  ];
+
+  const transactionTypes = [
+    '支付',
+    '扣回',
+  ];
+
   return (
     <Form form={form} layout="vertical">
       {/* 合同基本信息部分 */}
@@ -308,20 +340,33 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
         </Col>
         <Col span={8}>
           <Form.Item
-            label="唯一码"
+            label="合同编号"
             name="contractSerialNumber"
-            rules={[{ required: true, message: '请输入唯一码' }]}
+            rules={[{ required: true, message: '请输入合同编号' }]}
           >
-            <Input placeholder="请输入唯一码" />
+            <Input placeholder="请输入合同编号" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item
             label="合同类型"
             name="type"
-            rules={[{ required: true, message: '请输入合同类型' }]}
+            rules={[{ required: true, message: '请选择合同类型' }]}
           >
-            <Input placeholder="请输入合同类型" />
+            <Select
+              showSearch
+              placeholder="请选择合同类型"
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {contractTypes.map((type) => (
+                <Select.Option key={type} value={type}>
+                  {type}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Col>
       </Row>
@@ -382,8 +427,25 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item label="合同期限类型" name="contractTermType">
-            <Input placeholder="请输入合同期限类型" />
+          <Form.Item
+            label="合同期限类型"
+            name="contractTermType"
+            rules={[{ required: true, message: '请选择合同期限类型' }]}
+          >
+            <Select
+              showSearch
+              placeholder="请选择合同期限类型"
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {contractTermTypes.map((type) => (
+                <Select.Option key={type} value={type}>
+                  {type}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -488,7 +550,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       />
 
       {/* 测量项管理部分 - 项目进度 */}
-      <Divider orientation="left">项目进度</Divider>
+      <Divider orientation="left">工程清单</Divider>
       <Button
         type="dashed"
         onClick={() => {
@@ -537,20 +599,47 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
                   <Form.Item
                     label="计量类目费用类型"
                     name="contractCostType"
-                    rules={[{ required: true, message: '请输入计量类目费用类型' }]}
+                    rules={[{ required: true, message: '请选择计量类目费用类型' }]}
                   >
-                    <Input placeholder="请输入计量类目费用类型" />
+                    <Select
+                      showSearch
+                      placeholder="请选择计量类目费用类型"
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {contractCostTypes.map((type) => (
+                        <Select.Option key={type} value={type}>
+                          {type}
+                        </Select.Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
                 <Col span={12}>
                   <Form.Item
                     label="计量类目交易类型"
                     name="transactionType"
-                    rules={[{ required: true, message: '请输入计量类目交易类型' }]}
+                    rules={[{ required: true, message: '请选择计量类目交易类型' }]}
                   >
-                    <Input placeholder="请输入计量类目交易类型" />
+                    <Select
+                      showSearch
+                      placeholder="请选择计量类目交易类型"
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {transactionTypes.map((type) => (
+                        <Select.Option key={type} value={type}>
+                          {type}
+                        </Select.Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
+
               </Row>
             </>
           )}

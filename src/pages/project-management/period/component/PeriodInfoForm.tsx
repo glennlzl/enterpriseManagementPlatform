@@ -83,6 +83,13 @@ const PeriodInfoForm: React.FC<PeriodInfoFormProps> = ({ form }) => {
     fileList,
   };
 
+  const contractTermTypes = [
+    '普通周期',
+    '结算周期',
+    '返还周期',
+    '预付款周期',
+  ];
+
   return (
     <Form form={form} layout="vertical">
       {/* 周期名称 */}
@@ -98,9 +105,22 @@ const PeriodInfoForm: React.FC<PeriodInfoFormProps> = ({ form }) => {
       <Form.Item
         label="类型"
         name="type"
-        rules={[{ required: true, message: '请输入类型' }]}
+        rules={[{ required: true, message: '请选择类型' }]}
       >
-        <Input placeholder="请输入类型" />
+        <Select
+          showSearch
+          placeholder="请选择类型"
+          optionFilterProp="children"
+          filterOption={(input, option) =>
+            option.children.toLowerCase().includes(input.toLowerCase())
+          }
+        >
+          {contractTermTypes.map((type) => (
+            <Select.Option key={type} value={type}>
+              {type}
+            </Select.Option>
+          ))}
+        </Select>
       </Form.Item>
 
       {/* 流水号 */}
@@ -143,18 +163,6 @@ const PeriodInfoForm: React.FC<PeriodInfoFormProps> = ({ form }) => {
         rules={[{ required: true, message: '请输入计量月份' }]}
       >
         <Input placeholder="请输入计量月份" />
-      </Form.Item>
-
-      {/* 周期状态 */}
-      <Form.Item
-        label="周期状态"
-        name="periodStatus"
-        rules={[{ required: true, message: '请选择周期状态' }]}
-      >
-        <Select placeholder="请选择周期状态">
-          <Option value="进行中">进行中</Option>
-          <Option value="已完成">已完成</Option>
-        </Select>
       </Form.Item>
 
       <Form.Item

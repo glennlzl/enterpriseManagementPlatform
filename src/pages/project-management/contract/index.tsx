@@ -134,7 +134,7 @@ const ContractInfoTable: React.FC = () => {
   const fieldNameMap: { [key: string]: { label: string; isDate?: boolean } } = {
     id: { label: '序号' },
     name: { label: '合同名称' },
-    contractSerialNumber: { label: '唯一码'},
+    contractSerialNumber: { label: '合同编号'},
     type: { label: '合同类型' },
     contractor: { label: '乙方单位' },
     contractAmount: { label: '合同金额' },
@@ -295,20 +295,6 @@ const ContractInfoTable: React.FC = () => {
         });
       },
     },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Popconfirm
-          title="确定要删除这条操作日志吗？"
-          onConfirm={() => handleDeleteOperationLog(record)}
-          okText="确定"
-          cancelText="取消"
-        >
-          <a>删除</a>
-        </Popconfirm>
-      ),
-    },
   ];
 
 // 定义合同成本的列
@@ -392,7 +378,7 @@ const ContractInfoTable: React.FC = () => {
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
     },
     {
-      title: '唯一码',
+      title: '合同编号',
       dataIndex: 'contractSerialNumber',
       valueType: 'text',
       width: 150,
