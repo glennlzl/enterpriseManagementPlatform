@@ -44,6 +44,8 @@ const PeriodInfoTable: React.FC = () => {
     operationLogLoading,
     handleDeleteOperationLog,
     handleOpenOperationLogModal,
+    handleProjectChange,
+    handleContractChange
   } = usePeriodInfo();
 
   // 打开或关闭模态框
@@ -391,8 +393,10 @@ const PeriodInfoTable: React.FC = () => {
         <Form.Item label="选择项目">
           <Select
             value={selectedProjectId}
-            onChange={(value) => setSelectedProjectId(value)}
+            onChange={handleProjectChange}
             style={{ width: 200 }}
+            placeholder="请选择项目"
+            disabled={projectList.length === 0}
           >
             {projectList.map((project) => (
               <Option key={project.id} value={project.id}>
@@ -401,11 +405,13 @@ const PeriodInfoTable: React.FC = () => {
             ))}
           </Select>
         </Form.Item>
+
         <Form.Item label="选择合同">
           <Select
             value={selectedContractId}
-            onChange={(value) => setSelectedContractId(value)}
+            onChange={handleContractChange}
             style={{ width: 200 }}
+            placeholder="请选择合同"
             disabled={!selectedProjectId || contractList.length === 0}
           >
             {contractList.map((contract) => (

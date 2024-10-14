@@ -30,6 +30,32 @@ export function usePeriodInfo() {
   const { initialState } = useModel('@@initialState');
   const userId = initialState?.currentUser?.id;
 
+  // 当用户选择项目时
+  const handleProjectChange = (value) => {
+    setSelectedProjectId(value);
+    localStorage.setItem(`selectedProjectId_${userId}`, value);
+    // 重置合同和周期
+    setSelectedContractId(undefined);
+    setPeriodList([]);
+    localStorage.removeItem(`selectedContractId_${userId}`);
+  };
+
+  // 当用户选择合同时
+  const handleContractChange = (value) => {
+    setSelectedContractId(value);
+    localStorage.setItem(`selectedContractId_${userId}`, value);
+    // 重置周期列表
+    setPeriodList([]);
+  };
+
+  // 初始化时从缓存中读取
+  useEffect(() => {
+    const savedProjectId = localStorage.getItem(`selectedProjectId_${userId}`);
+    if (savedProjectId) {
+      setSelectedProjectId(Number(savedProjectId));
+    }
+  }, [userId]);
+
   // 获取项目列表
   const fetchProjectList = async () => {
     try {
@@ -37,7 +63,14 @@ export function usePeriodInfo() {
       const data = await queryProjectInfoList(userId);
       setProjectList(data || []);
       if (data && data.length > 0) {
-        setSelectedProjectId(data[0].id); // 设置默认项目
+        const savedProjectId = localStorage.getItem(`selectedProjectId_${userId}`);
+        if (savedProjectId && data.some(project => project.id === Number(savedProjectId))) {
+          setSelectedProjectId(Number(savedProjectId));
+        } else {
+          const firstProjectId = data[0].id;
+          setSelectedProjectId(firstProjectId);
+          localStorage.setItem(`selectedProjectId_${userId}`, firstProjectId.toString());
+        }
       } else {
         setSelectedProjectId(undefined);
         setContractList([]);
@@ -60,9 +93,22 @@ export function usePeriodInfo() {
       const data = await queryContractInfoList(projectId, userId);
       setContractList(data || []);
       if (data && data.length > 0) {
-        setSelectedContractId(data[0].id); // 设置默认选中的合同为第一个合同
+        const savedContractId = localStorage.getItem(`selectedContractId_${userId}`);
+        let newContractId = undefined;
+
+        if (savedContractId && data.some(contract => contract.id === Number(savedContractId))) {
+          newContractId = Number(savedContractId);
+        } else {
+          newContractId = data[0].id;
+          localStorage.setItem(`selectedContractId_${userId}`, newContractId.toString());
+        }
+
+        setSelectedContractId(newContractId);
+
+        // 在这里调用 fetchPeriodList，传递最新的 contractId
+        fetchPeriodList(projectId, newContractId);
       } else {
-        setSelectedContractId(undefined); // 如果没有合同，重置选中的合同
+        setSelectedContractId(undefined);
         setPeriodList([]);
       }
     } catch (error) {
@@ -74,16 +120,19 @@ export function usePeriodInfo() {
     }
   };
 
-// 修改 fetchPeriodList 函数
+  // 修改后的 fetchPeriodList 函数
   const fetchPeriodList = async (
-    projectId = selectedProjectId,
-    contractId = selectedContractId,
+    projectId: number | undefined,
+    contractId: number | undefined,
     generalQueryCondition?: string
   ) => {
-    if (!projectId || !contractId) {
+    console.log('Fetching period list with:', projectId, contractId);
+
+    if (projectId === undefined || contractId === undefined) {
       setPeriodList([]);
       return;
     }
+
     setLoading(true);
     try {
       const data = await queryPeriodInfoList(
@@ -100,18 +149,23 @@ export function usePeriodInfo() {
     }
   };
 
-// 修改 handleArchivePeriod 函数
-  const handleArchivePeriod = async (id: number) => {
-    try {
-      await archivePeriodInfo(id);
-      message.success('归档周期信息成功');
-
-      fetchPeriodList(selectedProjectId, selectedContractId);
-    } catch (error) {
-      message.error('归档失败');
+  // 当选择项目时，获取对应的合同列表
+  useEffect(() => {
+    if (selectedProjectId !== undefined) {
+      fetchContractList(selectedProjectId);
+    } else {
+      setContractList([]);
+      setSelectedContractId(undefined);
+      setPeriodList([]);
     }
-  };
+  }, [selectedProjectId]);
 
+  // 当用户手动选择合同时，获取对应的周期列表
+  useEffect(() => {
+    if (selectedProjectId !== undefined && selectedContractId !== undefined) {
+      fetchPeriodList(selectedProjectId, selectedContractId);
+    }
+  }, [selectedContractId]);
 
   // 添加或更新周期信息
   const handleAddOrUpdatePeriod = async (values: AddOrUpdatePeriodInfoRequest) => {
@@ -130,7 +184,7 @@ export function usePeriodInfo() {
         message.success('添加周期信息成功');
       }
       setModalOpen(false);
-      fetchPeriodList();
+      fetchPeriodList(selectedProjectId, selectedContractId);
     } catch (error) {
       message.error('操作失败');
     }
@@ -141,12 +195,29 @@ export function usePeriodInfo() {
     try {
       await deletePeriodInfo(id);
       message.success('删除周期信息成功');
-      fetchPeriodList();
+      fetchPeriodList(selectedProjectId, selectedContractId);
     } catch (error) {
       message.error('删除失败');
     }
   };
 
+  // 处理行选择变化
+  const onSelectChange = (newSelectedRowKeys: number[]) => {
+    setSelectedRowKeys(newSelectedRowKeys);
+  };
+
+
+// 修改 handleArchivePeriod 函数
+  const handleArchivePeriod = async (id: number) => {
+    try {
+      await archivePeriodInfo(id);
+      message.success('归档周期信息成功');
+
+      await fetchPeriodList(selectedProjectId, selectedContractId);
+    } catch (error) {
+      message.error('归档失败');
+    }
+  };
 
   // 初始化加载数据
   useEffect(() => {
@@ -164,15 +235,9 @@ export function usePeriodInfo() {
     }
   }, [selectedProjectId]);
 
-  // 当选择合同时，获取对应的周期列表
   useEffect(() => {
-    fetchPeriodList();
-  }, [selectedContractId]);
-
-  // 处理行选择变化
-  const onSelectChange = (newSelectedRowKeys: number[]) => {
-    setSelectedRowKeys(newSelectedRowKeys);
-  };
+    fetchPeriodList(selectedProjectId, selectedContractId);
+  }, [selectedContractId, selectedProjectId]);
 
 
   const [operationLogModalOpen, setOperationLogModalOpen] = useState<boolean>(false);
@@ -238,5 +303,7 @@ export function usePeriodInfo() {
     operationLogLoading,
     handleDeleteOperationLog,
     handleOpenOperationLogModal,
+    handleContractChange,
+    handleProjectChange
   };
 }

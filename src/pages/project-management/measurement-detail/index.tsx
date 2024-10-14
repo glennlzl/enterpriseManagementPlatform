@@ -72,7 +72,10 @@ const MeasurementDetailTable: React.FC = () => {
     setReviewComment,
     handleOpenReviewModal,
     handleSubmitReview,
-    handleExportReport
+    handleExportReport,
+    handleProjectChange,
+    handleContractChange,
+    handlePeriodChange,
   } = useMeasurementDetail();
 
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
@@ -695,7 +698,7 @@ const MeasurementDetailTable: React.FC = () => {
               <Form.Item label="选择项目">
                 <Select
                   value={selectedProjectId}
-                  onChange={(value) => setSelectedProjectId(value)}
+                  onChange={handleProjectChange}
                   style={{ width: 200 }}
                 >
                   {projectList.map((project) => (
@@ -708,7 +711,7 @@ const MeasurementDetailTable: React.FC = () => {
               <Form.Item label="选择合同">
                 <Select
                   value={selectedContractId}
-                  onChange={(value) => setSelectedContractId(value)}
+                  onChange={handleContractChange}
                   style={{ width: 200 }}
                   disabled={!selectedProjectId || contractList.length === 0}
                 >
@@ -722,7 +725,7 @@ const MeasurementDetailTable: React.FC = () => {
               <Form.Item label="选择周期">
                 <Select
                   value={selectedPeriodId}
-                  onChange={(value) => setSelectedPeriodId(value)}
+                  onChange={handlePeriodChange}
                   style={{ width: 200 }}
                   disabled={!selectedContractId || periodList.length === 0}
                 >
