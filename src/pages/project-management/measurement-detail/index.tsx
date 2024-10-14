@@ -86,10 +86,12 @@ const MeasurementDetailTable: React.FC = () => {
   } = useMeasurementDetail();
 
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+
 
   useEffect(() => {
     if (measurementItemTreeData && measurementItemTreeData.length > 0) {
-      // 递归获取所有节点的 key
+      // 展开所有节点
       const getAllKeys = (data: any[]): React.Key[] => {
         let keys: React.Key[] = [];
         data.forEach((item) => {
@@ -100,9 +102,14 @@ const MeasurementDetailTable: React.FC = () => {
         });
         return keys;
       };
-
       const allKeys = getAllKeys(measurementItemTreeData);
       setExpandedKeys(allKeys);
+
+      // 设置默认选中的节点
+      const materialFolderNode = measurementItemTreeData.find(node => node.key === 'material-folder');
+      if (materialFolderNode) {
+        setSelectedKeys([materialFolderNode.key]);
+      }
     }
   }, [measurementItemTreeData]);
 
@@ -384,15 +391,6 @@ const MeasurementDetailTable: React.FC = () => {
       alignItems: 'center',
     };
 
-    // // 如果没有有效的文件 URL
-    // if (validFileUrls.length === 0) {
-    //   return (
-    //     <div style={containerStyle}>
-    //       <Typography.Text>无文件</Typography.Text>
-    //     </div>
-    //   );
-    // }
-
     // 有文件的情况
     return (
       <div style={containerStyle}>
@@ -502,14 +500,28 @@ const MeasurementDetailTable: React.FC = () => {
     if (selectedItem?.type !== 'cost') {
       cols.push(
         {
-          title: '分项 （桩号）',
-          dataIndex: 'subItemNumber',
+          title: '本期计量',
+          dataIndex: 'currentCount',
+          valueType: 'digit', // 将 'digit' 改为 'money'
+          width: 150,
+          sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
+        },
+        {
+          title: '总价（元）',
+          dataIndex: 'currentAmount',
+          valueType: 'money', // 将 'digit' 改为 'money'
+          width: 150,
+          sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
+        },
+        {
+          title: '本期末累积量',
+          dataIndex: 'remainingCount',
           valueType: 'text',
           width: 150,
         },
         {
-          title: '部位',
-          dataIndex: 'position',
+          title: '设计量',
+          dataIndex: 'upperLimitQuantity',
           valueType: 'text',
           width: 150,
         },
@@ -526,30 +538,16 @@ const MeasurementDetailTable: React.FC = () => {
           width: 150,
         },
         {
-          title: '本期末累积量',
-          dataIndex: 'remainingCount',
+          title: '分项 （桩号）',
+          dataIndex: 'subItemNumber',
           valueType: 'text',
           width: 150,
         },
         {
-          title: '设计量',
-          dataIndex: 'upperLimitQuantity',
+          title: '部位',
+          dataIndex: 'position',
           valueType: 'text',
           width: 150,
-        },
-        {
-          title: '本期计量（元）',
-          dataIndex: 'currentCount',
-          valueType: 'money', // 将 'digit' 改为 'money'
-          width: 150,
-          sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
-        },
-        {
-          title: '总价（元）',
-          dataIndex: 'totalCount',
-          valueType: 'money', // 将 'digit' 改为 'money'
-          width: 150,
-          sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
         },
       );
     }
@@ -714,8 +712,12 @@ const MeasurementDetailTable: React.FC = () => {
               <DirectoryTree
                 multiple
                 expandedKeys={expandedKeys}
+                selectedKeys={selectedKeys}
                 onExpand={(keys) => setExpandedKeys(keys)}
-                onSelect={onTreeSelect}
+                onSelect={(keys, info) => {
+                  setSelectedKeys(keys);
+                  onTreeSelect(keys, info);
+                }}
                 treeData={measurementItemTreeData}
               />
             )}

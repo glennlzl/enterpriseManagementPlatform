@@ -1265,6 +1265,7 @@ const ApprovalSystem: React.FC = () => {
             loading={state.loadingReceiver}
             dataSource={handleDataSource(state.receiverData)}
             columns={approvalColumns}
+            scroll={{ x: 'max-content' }}
           />
         </TabPane>
       </Tabs>

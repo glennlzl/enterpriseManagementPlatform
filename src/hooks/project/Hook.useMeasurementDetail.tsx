@@ -48,6 +48,7 @@ export function useMeasurementDetail() {
   const [currentReviewRecord, setCurrentReviewRecord] = useState<MeasurementDetailVO | null>(null);
   const [reviewComment, setReviewComment] = useState<string>('');
 
+
   const { initialState } = useModel('@@initialState');
   const userId = initialState?.currentUser?.id;
 
@@ -56,6 +57,20 @@ export function useMeasurementDetail() {
     contractId: `measurementDetail_selectedContractId_${userId}`,
     periodId: `measurementDetail_selectedPeriodId_${userId}`,
   };
+
+  useEffect(() => {
+    if (measurementItemTreeData && measurementItemTreeData.length > 0) {
+      // 查找“工程清单”父节点
+      const materialFolderNode = measurementItemTreeData.find(node => node.key === 'material-folder');
+      if (materialFolderNode) {
+        setSelectedItem({
+          id: undefined,
+          type: 'material',
+          item: undefined,
+        });
+      }
+    }
+  }, [measurementItemTreeData]);
 
   // 处理项目选择变化
   const handleProjectChange = (value) => {
