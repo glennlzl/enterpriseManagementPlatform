@@ -697,6 +697,7 @@ const ApprovalSystem: React.FC = () => {
       onFilter: (value, record) => record.approvalInitiatorName === value,
       filterSearch: true,
       filterMode: 'menu',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
       title: <FormattedMessage id="审批接收人" />,
@@ -706,6 +707,7 @@ const ApprovalSystem: React.FC = () => {
       onFilter: (value, record) => record.approvalReceiverName === value,
       filterSearch: true,
       filterMode: 'menu',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
       title: <FormattedMessage id="审批类型" />,
@@ -716,6 +718,7 @@ const ApprovalSystem: React.FC = () => {
       onFilter: (value, record) => record.approvalType === value,
       filterSearch: true,
       filterMode: 'menu',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
       title: <FormattedMessage id="文件链接" />,
@@ -725,6 +728,7 @@ const ApprovalSystem: React.FC = () => {
       width: '150px',
       align: 'left', // 确保列的对齐方式一致
       render: renderApprovalFilesInTable,
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
       title: <FormattedMessage id="创建时间" />,
@@ -782,11 +786,13 @@ const ApprovalSystem: React.FC = () => {
 
         return recordDate >= startDate && recordDate <= endDate;
       },
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
       title: <FormattedMessage id="更新时间" />,
       dataIndex: 'updateTime',
       valueType: 'dateTime',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
         const [startDate, endDate] = selectedKeys[0] || [];
         return (
@@ -842,6 +848,7 @@ const ApprovalSystem: React.FC = () => {
     },
     {
       title: '审批状态',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       dataIndex: 'approvalStatus',
       valueType: 'select',
       valueEnum: approvalStatusConfig,
@@ -856,10 +863,12 @@ const ApprovalSystem: React.FC = () => {
       title: '批示',
       dataIndex: 'comment',
       valueType: 'text',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
       title: '操作',
       dataIndex: 'approvalStatus',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       render: (_, record) => {
         const isApproved = record?.approvalStatus === 1;
         const isRejected = record?.approvalStatus === 2;
@@ -899,6 +908,7 @@ const ApprovalSystem: React.FC = () => {
       dataIndex: 'approvalInitiatorName',
       valueType: 'text',
       filters: initiator,
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       onFilter: (value, record) => record.approvalInitiatorName === value,
       filterSearch: true,
       filterMode: 'menu',
@@ -908,6 +918,7 @@ const ApprovalSystem: React.FC = () => {
       dataIndex: 'approvalReceiverName',
       valueType: 'text',
       filters: receiver,
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       onFilter: (value, record) => record.approvalReceiverName === value,
       filterSearch: true,
       filterMode: 'menu',
@@ -918,6 +929,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'select',
       valueEnum: approvalTypeConfig,
       filters: fileType,
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       onFilter: (value, record) => record.approvalType === value,
       filterSearch: true,
       filterMode: 'menu',
@@ -928,12 +940,14 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       key: 'approvalFileUrl',
       width: '150px',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       align: 'left', // 确保列的对齐方式一致
       render: renderApprovalFilesInTable,
     },
     {
       title: <FormattedMessage id="创建时间" />,
       dataIndex: 'createTime',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       valueType: 'dateTime',
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
         const [startDate, endDate] = selectedKeys[0] || [];
@@ -991,6 +1005,7 @@ const ApprovalSystem: React.FC = () => {
     {
       title: <FormattedMessage id="更新时间" />,
       dataIndex: 'updateTime',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       valueType: 'dateTime',
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
         const [startDate, endDate] = selectedKeys[0] || [];
@@ -1049,6 +1064,7 @@ const ApprovalSystem: React.FC = () => {
       title: '审批状态',
       dataIndex: 'approvalStatus',
       valueType: 'select',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       valueEnum: approvalStatusConfig,
       filters: Object.keys(approvalStatusConfig).map((key) => ({
         text: approvalStatusConfig[key].text,
@@ -1061,10 +1077,12 @@ const ApprovalSystem: React.FC = () => {
       title: '批示',
       dataIndex: 'comment',
       valueType: 'text',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
     },
     {
       title: <FormattedMessage id="操作" />,
       dataIndex: 'operation',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
       valueType: 'option',
       render: (_, record) => (
         <Space>
