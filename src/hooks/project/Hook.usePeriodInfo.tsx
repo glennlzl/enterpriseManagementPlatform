@@ -74,17 +74,21 @@ export function usePeriodInfo() {
     }
   };
 
-  // 获取周期信息列表
-  const fetchPeriodList = async (generalQueryCondition?: string) => {
-    // if (!selectedProjectId || !selectedContractId) {
-    //   setPeriodList([]);
-    //   return;
-    // }
+// 修改 fetchPeriodList 函数
+  const fetchPeriodList = async (
+    projectId = selectedProjectId,
+    contractId = selectedContractId,
+    generalQueryCondition?: string
+  ) => {
+    if (!projectId || !contractId) {
+      setPeriodList([]);
+      return;
+    }
     setLoading(true);
     try {
       const data = await queryPeriodInfoList(
-        selectedProjectId,
-        selectedContractId,
+        projectId,
+        contractId,
         generalQueryCondition,
       );
       setPeriodList(data || []);
@@ -95,6 +99,19 @@ export function usePeriodInfo() {
       setLoading(false);
     }
   };
+
+// 修改 handleArchivePeriod 函数
+  const handleArchivePeriod = async (id: number) => {
+    try {
+      await archivePeriodInfo(id);
+      message.success('归档周期信息成功');
+
+      fetchPeriodList(selectedProjectId, selectedContractId);
+    } catch (error) {
+      message.error('归档失败');
+    }
+  };
+
 
   // 添加或更新周期信息
   const handleAddOrUpdatePeriod = async (values: AddOrUpdatePeriodInfoRequest) => {
@@ -130,16 +147,6 @@ export function usePeriodInfo() {
     }
   };
 
-  // 归档周期信息
-  const handleArchivePeriod = async (id: number) => {
-    try {
-      await archivePeriodInfo(id);
-      message.success('归档周期信息成功');
-      fetchPeriodList();
-    } catch (error) {
-      message.error('归档失败');
-    }
-  };
 
   // 初始化加载数据
   useEffect(() => {

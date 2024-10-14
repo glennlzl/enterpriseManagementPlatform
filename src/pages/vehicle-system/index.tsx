@@ -198,28 +198,129 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'engineeingVehicleNumber',
       valueType: 'text',
       fixed: 'left',
-      width: '120px',
+      width: '150px',
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         a.engineeingVehicleNumber.localeCompare(b.engineeingVehicleNumber),
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入工程车编号"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.engineeingVehicleNumber
+          ? record.engineeingVehicleNumber.includes(value)
+          : false,
     },
     {
       title: <FormattedMessage id="车辆编号" />,
       dataIndex: 'vehicleNumber',
       valueType: 'text',
       fixed: 'left',
-      width: '120px',
+      width: '150px',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.vehicleNumber.localeCompare(b.vehicleNumber),
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入车辆编号"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.vehicleNumber ? record.vehicleNumber.includes(value) : false,
     },
     {
       title: <FormattedMessage id="车牌号码" />,
       dataIndex: 'licenseNumber',
       valueType: 'text',
-      width: '120px',
+      width: '150px',
       fixed: 'left',
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         _.isUndefined(a.licenseNumber) || _.isUndefined(b.licenseNumber)
           ? {}
           : a.licenseNumber.localeCompare(b.licenseNumber),
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入车牌号码"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.licenseNumber ? record.licenseNumber.includes(value) : false,
     },
     {
       title: <FormattedMessage id="发动机号后6位" />,
@@ -227,6 +328,39 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.engineNumber.localeCompare(b.engineNumber),
       width: '150px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入发动机号后6位"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.engineNumber ? record.engineNumber.includes(value) : false,
     },
     {
       title: <FormattedMessage id="车辆类型" />,
@@ -245,12 +379,78 @@ const VehicleManagement: React.FC = () => {
       sorter: (a: VehicleInfo, b: VehicleInfo) =>
         a.vehicleSerialNumber.localeCompare(b.vehicleSerialNumber),
       width: '120px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入车辆型号"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.vehicleSerialNumber ? record.vehicleSerialNumber.includes(value) : false,
     },
     {
       title: <FormattedMessage id="车辆品牌" />,
       dataIndex: 'vehicleBrand',
       valueType: 'text',
       width: '120px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入车辆品牌"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.vehicleBrand ? record.vehicleBrand.includes(value) : false,
     },
     {
       title: <FormattedMessage id="核定载质量(吨)" />,
@@ -261,6 +461,40 @@ const VehicleManagement: React.FC = () => {
           ? {}
           : a.approvedLoadCapacity.localeCompare(b.approvedLoadCapacity),
       width: '150px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <InputNumber
+            placeholder="请输入载质量"
+            value={selectedKeys[0]}
+            onChange={(value) => setSelectedKeys(value ? [value] : [])}
+            style={{ marginBottom: 8, display: 'block', width: '100%' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.approvedLoadCapacity
+          ? record.approvedLoadCapacity.includes(value)
+          : false,
     },
     {
       title: <FormattedMessage id="登记人" />,
@@ -355,7 +589,6 @@ const VehicleManagement: React.FC = () => {
       filters: filters.isAuditedFilters,
       onFilter: (value, record) => record.isAudited === value,
       width: '120px',
-      filterSearch: true,
     },
     {
       title: <FormattedMessage id="是否有交强险" />,
@@ -363,7 +596,9 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       render: (value: number) => (value === 1 ? '是' : '否'),
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.trafficInsurance - b.trafficInsurance,
-      width: '120px',
+      filters: filters.merchantInsturance,
+      onFilter: (value, record) => record.trafficInsurance === value,
+      width: '150px',
     },
     {
       title: <FormattedMessage id="交强险日期" />,
@@ -439,7 +674,9 @@ const VehicleManagement: React.FC = () => {
       valueType: 'text',
       render: (value: number) => (value === 1 ? '是' : '否'),
       sorter: (a: VehicleInfo, b: VehicleInfo) => a.commercialInsurance - b.commercialInsurance,
-      width: '120px',
+      filters: filters.gpsFilters,
+      onFilter: (value, record) => record.commercialInsurance === value,
+      width: '150px',
     },
     {
       title: <FormattedMessage id="商业险日期" />,
@@ -530,6 +767,39 @@ const VehicleManagement: React.FC = () => {
       dataIndex: 'usageProject',
       valueType: 'text',
       width: '120px',
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入使用项目"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) =>
+        record.usageProject ? record.usageProject.includes(value) : false,
     },
     {
       title: <FormattedMessage id="上次保养公里数" />,
@@ -762,6 +1032,41 @@ const VehicleManagement: React.FC = () => {
         }
         return value.map(driver => driver.name).join(', ') || '-';
       },
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入司机姓名"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+              style={{ width: 90 }}
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) => {
+        const driverNames = record.driverList?.map(driver => driver.name).join(', ') || '';
+        return driverNames.includes(value);
+      },
     },
     {
       title: <FormattedMessage id="其他备注信息" />,
@@ -875,7 +1180,7 @@ const VehicleManagement: React.FC = () => {
         headerTitle={
           <div>
             {intl.formatMessage({ id: '车辆管理', defaultMessage: '车辆管理' })}
-            <Tooltip title={intl.formatMessage({ id: '点击打开预警', defaultMessage: '点击显示里程保养预警' })}>
+            <Tooltip title={intl.formatMessage({ id: '点击打开预警', defaultMessage: '点击显示里程保养预警，红色表示车辆存在里程保养风险' })}>
               <Switch
                 style={{ marginLeft: 16 }}
                 checkedChildren="预警开"

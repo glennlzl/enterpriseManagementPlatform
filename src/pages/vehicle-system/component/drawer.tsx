@@ -187,8 +187,8 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
 
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
-        userId: matchingEmployee?.value || vehicleInfo?.registrantId || 0,
-        userName: matchingEmployee?.name || vehicleInfo?.registrant || '',
+        userId: matchingEmployee?.value || initialState?.currentUser.userId || 0,
+        userName: matchingEmployee?.name ||initialState?.currentUser.userName || '',
         startMileage: startMileage, // 使用上一个记录的结束里程数作为开始里程数
         endMileage: values.endMileage || undefined,
         usageStatus: values.usageStatus || undefined,
@@ -449,7 +449,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                     return Promise.reject(
                       new Error(
                         '结束里程数必须大于等于开始里程数，当前开始里程数为 ' +
-                        startMileage +
+                        Number(vehicleInfo?.currentMileage ?? 0) +
                         ' 公里',
                       ),
                     );
@@ -741,9 +741,6 @@ const EditableUsageRecord: React.FC<EditableUsageRecordProps> = ({
           >
             {isLatestRecord && (
               <>
-                <Button type="default" onClick={() => setEditingKey(record.id)}>
-                  编辑
-                </Button>
                 <Button
                   type="default"
                   style={{ marginLeft: '8px' }}
@@ -760,6 +757,9 @@ const EditableUsageRecord: React.FC<EditableUsageRecordProps> = ({
                 </Button>
               </>
             )}
+            <Button type="default" onClick={() => setEditingKey(record.id)}>
+              编辑
+            </Button>
             {!isLatestRecord && (
               <Button type="default" onClick={() => setEditingKey(null)}>
                 收起

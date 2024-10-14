@@ -561,7 +561,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
         }}
         style={{ width: '100%', marginBottom: 16 }}
       >
-        添加项目进度项
+        添加工程清单项
       </Button>
       <Table
         dataSource={projectScheduleItems}

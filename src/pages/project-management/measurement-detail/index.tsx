@@ -195,7 +195,7 @@ const MeasurementDetailTable: React.FC = () => {
     } else if (Array.isArray(value)) {
       return value
         .map((item) => {
-          if (typeof item === 'object') {
+          if (item !== null && typeof item === 'object') {
             // 提取对象中的关键字段
             const itemDetails = Object.keys(item)
               .map((key) => {
@@ -211,7 +211,7 @@ const MeasurementDetailTable: React.FC = () => {
           }
         })
         .join('; ');
-    } else if (typeof value === 'object') {
+    } else if (value !== null && typeof value === 'object') {
       // 对象，提取关键字段
       const objectDetails = Object.keys(value)
         .map((key) => {
@@ -234,6 +234,7 @@ const MeasurementDetailTable: React.FC = () => {
       return String(value);
     }
   };
+
 
   // 解析操作日志记录的函数
   const parseOperationRecord = (record: OperationLogVO) => {
@@ -268,43 +269,36 @@ const MeasurementDetailTable: React.FC = () => {
       title: '操作人',
       dataIndex: 'operator',
       key: 'operator',
-      width: 100,
     },
     {
       title: '操作类型',
       dataIndex: 'operationType',
       key: 'operationType',
-      width: 100,
     },
     {
       title: '操作时间',
       dataIndex: 'createTime',
       key: 'createTime',
       render: (text) => moment(text).format('YYYY-MM-DD HH:mm:ss'),
-      width: 160,
     },
     {
       title: '修改详情',
       key: 'operationDetail',
-      width: 400,
+      width: 600,
       render: (_, record) => {
         const changes = parseOperationRecord(record);
         return changes.map((change, index) => {
-          // 使用字段名映射获取中文列名
           const fieldInfo = fieldNameMap[change.field] || { label: change.field };
           const fieldName = fieldInfo.label;
-
-          // 将 originalValue 和 newValue 转换为易读的字符串
           const originalValueText = formatValue(change.originalValue, change.field);
           const newValueText = formatValue(change.newValue, change.field);
+
           return (
             <div key={index} style={{ marginBottom: '8px' }}>
-              <strong>{fieldName}:</strong>
+              <strong>{fieldName}：</strong>
               <div>
-                <span style={{ color: 'red' }}>原始值:</span> {originalValueText}
-              </div>
-              <div>
-                <span style={{ color: 'green' }}>新值:</span> {newValueText}
+                <span style={{ color: 'red' }}>原始值：{originalValueText}</span> →
+                <span style={{ color: 'green' }}> 新值：{newValueText}</span>
               </div>
             </div>
           );
@@ -371,17 +365,23 @@ const MeasurementDetailTable: React.FC = () => {
 
 // 渲染附件列表列的函数
   const renderApprovalFilesInTable = (_, record) => {
-    if (!record.approvalFileUrl || record.approvalFileUrl.length === 0) {
-      return <Typography.Text>无文件</Typography.Text>;
+    const approvalFileUrl = record.approvalFileUrl;
+
+    // 如果 approvalFileUrl 不存在或为空，返回 null 或一个占位符
+    if (!approvalFileUrl) {
+      return null; // 或者返回一个占位符，例如 <Typography.Text>无附件</Typography.Text>
     }
 
-    const validFileUrls = record.approvalFileUrl.filter((url) => url);
+    // 确保 validFileUrls 是一个数组
+    const validFileUrls = (Array.isArray(approvalFileUrl) ? approvalFileUrl : [approvalFileUrl])
+      .filter((url) => url);
 
+    // 如果过滤后没有有效的文件 URL，返回 null 或占位符
     if (validFileUrls.length === 0) {
-      return <Typography.Text>无文件</Typography.Text>;
+      return null; // 或者返回一个占位符，例如 <Typography.Text>无附件</Typography.Text>
     }
 
-    // 在表格单元格中显示一个链接，点击后弹出附件列表
+    // 继续渲染附件列表
     return (
       <Popover
         content={
@@ -426,6 +426,7 @@ const MeasurementDetailTable: React.FC = () => {
   };
 
 
+
   // 表格列定义，包含所有字段
   const columns = useMemo(() => {
     const cols: ProColumns<MeasurementDetailVO>[] = [
@@ -453,20 +454,20 @@ const MeasurementDetailTable: React.FC = () => {
       //   width: 150,
       //   sorter: (a, b) => (a.position || '').localeCompare(b.position || ''),
       // },
-      {
-        title: '单价',
-        dataIndex: 'price',
-        valueType: 'money',
-        width: 100,
-        sorter: (a, b) => (a.price || 0) - (b.price || 0),
-      },
-      {
-        title: '单位',
-        dataIndex: 'unit',
-        valueType: 'text',
-        width: 100,
-        sorter: (a, b) => (a.unit || '').localeCompare(b.unit || ''),
-      },
+      // {
+      //   title: '单价',
+      //   dataIndex: 'price',
+      //   valueType: 'money',
+      //   width: 100,
+      //   sorter: (a, b) => (a.price || 0) - (b.price || 0),
+      // },
+      // {
+      //   title: '单位',
+      //   dataIndex: 'unit',
+      //   valueType: 'text',
+      //   width: 100,
+      //   sorter: (a, b) => (a.unit || '').localeCompare(b.unit || ''),
+      // },
       {
         title: '本期计量',
         dataIndex: 'currentCount',
@@ -475,7 +476,7 @@ const MeasurementDetailTable: React.FC = () => {
         sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
       },
       {
-        title: '总量',
+        title: '总价',
         dataIndex: 'totalCount',
         valueType: 'digit',
         width: 120,
@@ -671,7 +672,7 @@ const MeasurementDetailTable: React.FC = () => {
             {isTreeEmpty ? (
               // 当树为空时，显示提示信息
               <div style={{ textAlign: 'center', color: '#999', paddingTop: '50px' }}>
-                当前没有可用的测量项，请先在合同表格中添加测量项。
+                当前没有可用的计量项，请先在合同表格中添加测量项。然后在右侧选择项目，合同和周期。
               </div>
             ) : (
               // 当树有数据时，显示树形控件

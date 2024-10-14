@@ -187,46 +187,6 @@ const ProjectInfoTable: React.FC = () => {
       sorter: (a, b) => (a.id || 0) - (b.id || 0),
     },
     {
-      title: '项目名称',
-      dataIndex: 'name',
-      valueType: 'text',
-      fixed: 'left',
-      width: 150,
-      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
-      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-        <div style={{ padding: 8 }}>
-          <Input
-            placeholder="请输入项目名称"
-            value={selectedKeys[0]}
-            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-            onPressEnter={() => confirm()}
-            style={{ marginBottom: 8, display: 'block' }}
-          />
-          <Space>
-            <Button
-              type="primary"
-              onClick={() => confirm()}
-              size="small"
-            >
-              筛选
-            </Button>
-            <Button
-              onClick={() => {
-                if (clearFilters) {
-                  clearFilters();
-                }
-                confirm();
-              }}
-              size="small"
-            >
-              重置
-            </Button>
-          </Space>
-        </div>
-      ),
-      onFilter: (value, record) => record.name?.includes(value),
-    },
-    {
       title: '类型',
       dataIndex: 'type',
       valueType: 'text',
@@ -272,6 +232,79 @@ const ProjectInfoTable: React.FC = () => {
         </div>
       ),
       onFilter: (value, record) => record.constructionOrganization?.includes(value),
+    },
+    {
+      title: '开工日期',
+      dataIndex: 'startDate',
+      valueType: 'date',
+      width: 120,
+      filterDropdown: dateFilterDropdown('startDate'),
+      onFilter: dateOnFilter('startDate'),
+    },
+    {
+      title: '完工日期',
+      dataIndex: 'endDate',
+      valueType: 'date',
+      width: 120,
+      filterDropdown: dateFilterDropdown('endDate'),
+      onFilter: dateOnFilter('endDate'),
+    },
+    {
+      title: '项目状态',
+      dataIndex: 'projectStatus',
+      valueType: 'text',
+      width: 100,
+      filters: projectStatusFilters,
+      onFilter: (value, record) => record.projectStatus === value,
+      filterSearch: true,
+    },
+    {
+      title: '合同日期',
+      dataIndex: 'contractDate',
+      valueType: 'date',
+      width: 120,
+      filterDropdown: dateFilterDropdown('contractDate'),
+      onFilter: dateOnFilter('contractDate'),
+    },
+    {
+      title: '项目名称',
+      dataIndex: 'name',
+      valueType: 'text',
+      fixed: 'left',
+      width: 150,
+      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入项目名称"
+            value={selectedKeys[0]}
+            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                if (clearFilters) {
+                  clearFilters();
+                }
+                confirm();
+              }}
+              size="small"
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) => record.name?.includes(value),
     },
     {
       title: '流水号',
@@ -358,22 +391,6 @@ const ProjectInfoTable: React.FC = () => {
       filterSearch: true,
     },
     {
-      title: '开始日期',
-      dataIndex: 'startDate',
-      valueType: 'date',
-      width: 120,
-      filterDropdown: dateFilterDropdown('startDate'),
-      onFilter: dateOnFilter('startDate'),
-    },
-    {
-      title: '结束日期',
-      dataIndex: 'endDate',
-      valueType: 'date',
-      width: 120,
-      filterDropdown: dateFilterDropdown('endDate'),
-      onFilter: dateOnFilter('endDate'),
-    },
-    {
       title: '项目描述',
       dataIndex: 'projectDescription',
       valueType: 'text',
@@ -413,14 +430,6 @@ const ProjectInfoTable: React.FC = () => {
       onFilter: (value, record) => record.projectDescription?.includes(value),
     },
     {
-      title: '合同日期',
-      dataIndex: 'contractDate',
-      valueType: 'date',
-      width: 120,
-      filterDropdown: dateFilterDropdown('contractDate'),
-      onFilter: dateOnFilter('contractDate'),
-    },
-    {
       title: '工商注册地址',
       dataIndex: 'businessRegistrationAddress',
       valueType: 'text',
@@ -457,15 +466,6 @@ const ProjectInfoTable: React.FC = () => {
         </div>
       ),
       onFilter: (value, record) => record.businessRegistrationAddress?.includes(value),
-    },
-    {
-      title: '项目状态',
-      dataIndex: 'projectStatus',
-      valueType: 'text',
-      width: 100,
-      filters: projectStatusFilters,
-      onFilter: (value, record) => record.projectStatus === value,
-      filterSearch: true,
     },
     {
       title: '监管级别',

@@ -32,7 +32,8 @@ export const useVehicleSystem = (userId: number) => {
     registrantFilters: [],
     isAuditedFilters: [],
     gpsFilters: [],
-    mechanicalBondFilters: []
+    mechanicalBondFilters: [],
+    merchantInsturance: []
   });
 
 
@@ -91,13 +92,18 @@ export const useVehicleSystem = (userId: number) => {
       { text: '是', value: 1 },
       { text: '否', value: 0 }
     ];
+    const merchantInsturance = [
+      { text: '是', value: 1 },
+      { text: '否', value: 0 }
+    ];
     const mechanicalBondFilters = _.uniqBy(vehicleList.map(item => ({ text: item.mechanicalBond, value: item.mechanicalBond })), 'value');
     setFilters({
       vehicleTypeFilters,
       registrantFilters,
       isAuditedFilters,
       gpsFilters,
-      mechanicalBondFilters
+      mechanicalBondFilters,
+      merchantInsturance
     });
   }, [userId, isWarning]);
 

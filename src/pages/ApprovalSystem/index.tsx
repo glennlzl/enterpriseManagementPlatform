@@ -24,6 +24,7 @@ import { FormattedMessage, useIntl } from '@umijs/max';
 import {
   Button,
   DatePicker,
+  Image,
   Input,
   message,
   Modal,
@@ -335,14 +336,11 @@ const ApprovalSystem: React.FC = () => {
     if (['pdf'].includes(extension)) return 'pdf';
     if (['doc', 'docx'].includes(extension)) return 'word';
     if (['csv'].includes(extension)) return 'csv';
+    if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) return 'image';
     return 'unknown';
   };
 
   const renderApprovalFiles = (_, record) => {
-    if (!record.approvalFileUrl || record.approvalFileUrl.length === 0) {
-      return <Typography.Text>无文件</Typography.Text>;
-    }
-
     return (
       <List
         itemLayout="horizontal"
@@ -351,40 +349,38 @@ const ApprovalSystem: React.FC = () => {
           const fileName = extractFileName(fileUrl);
           const fileType = getFileType(fileName); // 根据文件名获取文件类型
           return (
-            <List.Item
-              key={fileUrl}
-              actions={[
-                <Button
-                  type="link"
-                  onClick={() => {
-                    setPreviewFileType(fileType);
-                    setPreviewFileUrl(fileUrl);
-                    setPreviewModalVisible(true);
-                  }}
-                >
-                  预览
-                </Button>,
-                <a
-                  key="download"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    await downloadFromOSS(fileUrl);
-                  }}
-                >
-                  下载
-                </a>,
-              ]}
-            >
-              <List.Item.Meta
-                avatar={<FileOutlined style={{ fontSize: '24px' }} />}
-                title={fileName}
-              />
+            <List.Item key={fileUrl}>
+              <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                <FileOutlined style={{ fontSize: '24px', marginRight: '8px' }} />
+                <Typography.Text style={{ flex: 1 }}>{fileName}</Typography.Text>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <Button
+                    type="link"
+                    onClick={() => {
+                      setPreviewFileType(fileType);
+                      setPreviewFileUrl(fileUrl);
+                      setPreviewModalVisible(true);
+                    }}
+                  >
+                    预览
+                  </Button>
+                  <Button
+                    type="link"
+                    onClick={async () => {
+                      await downloadFromOSS(fileUrl);
+                    }}
+                  >
+                    下载
+                  </Button>
+                </div>
+              </div>
             </List.Item>
           );
         }}
       />
     );
   };
+
 
   const WordViewer = ({ fileUrl }) => {
     const [content, setContent] = useState('');
@@ -457,6 +453,21 @@ const ApprovalSystem: React.FC = () => {
     );
   };
 
+  const ImageViewer = ({ fileUrl }) => {
+    return (
+      <div style={{ textAlign: 'center' }}>
+        <Image
+          src={fileUrl}
+          alt="Image Preview"
+          style={{ maxWidth: '100%', maxHeight: '80vh' }}
+          onError={() => {
+            message.error('图片加载失败');
+          }}
+        />
+      </div>
+    );
+  };
+
   const renderPreviewModal = () => {
     const handleCancel = () => {
       setPreviewModalVisible(false);
@@ -486,6 +497,11 @@ const ApprovalSystem: React.FC = () => {
             <CSVViewer fileUrl={previewFileUrl} />
           </div>
         )}
+        {previewFileType === 'image' && (
+          <div style={{ height: '80vh', overflow: 'auto' }}>
+            <ImageViewer fileUrl={previewFileUrl} />
+          </div>
+        )}
         {previewFileType === 'unknown' && (
           <Result
             status="warning"
@@ -497,76 +513,96 @@ const ApprovalSystem: React.FC = () => {
   };
 
 
-
-
   const renderApprovalFilesInTable = (_, record) => {
-    // 检查是否有文件 URL
-    if (!record.approvalFileUrl || record.approvalFileUrl.length === 0) {
-      return <Typography.Text>无文件</Typography.Text>;
-    }
-
     // 过滤掉 null 或 undefined 的文件 URL
-    const validFileUrls = record.approvalFileUrl.filter((url) => url);
+    const validFileUrls = (record.approvalFileUrl || []).filter((url) => url);
 
-    // 如果过滤后没有有效的文件 URL
-    if (validFileUrls.length === 0) {
-      return <Typography.Text>无文件</Typography.Text>;
-    }
+    // 统一的容器样式
+    const containerStyle = {
+      display: 'flex',
+      alignItems: 'center',
+    };
 
+    // // 如果没有有效的文件 URL
+    // if (validFileUrls.length === 0) {
+    //   return (
+    //     <div style={containerStyle}>
+    //       <Typography.Text>无文件</Typography.Text>
+    //     </div>
+    //   );
+    // }
+
+    // 有文件的情况
     return (
-      <Popover
-        content={
-          <div style={{ maxWidth: '400px' }}>
-            <List
-              itemLayout="horizontal"
-              dataSource={validFileUrls}
-              renderItem={(fileUrl) => {
-                const fileName = extractFileName(fileUrl);
-                const fileType = getFileType(fileName); // 获取文件类型
-                return (
-                  <List.Item
-                    key={fileUrl}
-                    actions={[
-                      <Button
-                        type="link"
-                        onClick={() => {
-                          setPreviewFileType(fileType);
-                          setPreviewFileUrl(fileUrl);
-                          setPreviewModalVisible(true);
-                        }}
-                      >
-                        预览
-                      </Button>,
-                      <Button
-                        type="link"
-                        onClick={async () => {
-                          await downloadFromOSS(fileUrl);
-                        }}
-                      >
-                        下载
-                      </Button>,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      avatar={<FileOutlined style={{ fontSize: '24px' }} />}
-                      title={fileName}
-                    />
-                  </List.Item>
-                );
-              }}
-            />
-          </div>
-        }
-        title="文件列表"
-        trigger="hover"
-        overlayStyle={{ width: '400px' }}
-      >
-        <Button type="link">
-          查看文件 ({validFileUrls.length})
-        </Button>
-      </Popover>
+      <div style={containerStyle}>
+        <Popover
+          content={
+            <div style={{ maxWidth: '400px' }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={validFileUrls}
+                renderItem={(fileUrl) => {
+                  const fileName = extractFileName(fileUrl);
+                  const fileType = getFileType(fileName); // 获取文件类型
+                  return (
+                    <List.Item
+                      key={fileUrl}
+                      actions={[
+                        <Button
+                          type="link"
+                          onClick={() => {
+                            setPreviewFileType(fileType);
+                            setPreviewFileUrl(fileUrl);
+                            setPreviewModalVisible(true);
+                          }}
+                        >
+                          预览
+                        </Button>,
+                        <Button
+                          type="link"
+                          onClick={async () => {
+                            await downloadFromOSS(fileUrl);
+                          }}
+                        >
+                          下载
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={<FileOutlined style={{ fontSize: '24px' }} />}
+                        title={
+                          <Typography.Text
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80%',
+                              display: 'block',
+                            }}
+                            title={fileName}
+                          >
+                            {fileName}
+                          </Typography.Text>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </div>
+          }
+          title="文件列表"
+          trigger="hover"
+          overlayStyle={{ width: '400px' }}
+        >
+          <Button type="link">
+            查看文件 ({validFileUrls.length})
+          </Button>
+        </Popover>
+      </div>
     );
   };
+
 
 
   const handleApprovalStatusChange = async (
@@ -687,6 +723,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       key: 'approvalFileUrl',
       width: '150px',
+      align: 'left', // 确保列的对齐方式一致
       render: renderApprovalFilesInTable,
     },
     {
@@ -891,6 +928,7 @@ const ApprovalSystem: React.FC = () => {
       valueType: 'text',
       key: 'approvalFileUrl',
       width: '150px',
+      align: 'left', // 确保列的对齐方式一致
       render: renderApprovalFilesInTable,
     },
     {

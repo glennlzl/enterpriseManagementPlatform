@@ -114,7 +114,7 @@ const PeriodInfoTable: React.FC = () => {
     } else if (Array.isArray(value)) {
       return value
         .map((item) => {
-          if (typeof item === 'object') {
+          if (item !== null && typeof item === 'object') {
             // 提取对象中的关键字段
             const itemDetails = Object.keys(item)
               .map((key) => {
@@ -130,7 +130,7 @@ const PeriodInfoTable: React.FC = () => {
           }
         })
         .join('; ');
-    } else if (typeof value === 'object') {
+    } else if (value !== null && typeof value === 'object') {
       // 对象，提取关键字段
       const objectDetails = Object.keys(value)
         .map((key) => {
@@ -181,55 +181,47 @@ const PeriodInfoTable: React.FC = () => {
     }
   };
 
-// 定义操作日志的列
   const operationLogColumns: ProColumns<OperationLogVO>[] = [
     {
       title: '操作人',
       dataIndex: 'operator',
       key: 'operator',
-      width: 100,
     },
     {
       title: '操作类型',
       dataIndex: 'operationType',
       key: 'operationType',
-      width: 100,
     },
     {
       title: '操作时间',
       dataIndex: 'createTime',
       key: 'createTime',
       render: (text) => moment(text).format('YYYY-MM-DD HH:mm:ss'),
-      width: 160,
     },
     {
       title: '修改详情',
       key: 'operationDetail',
-      width: 400,
+      width: 600,
       render: (_, record) => {
         const changes = parseOperationRecord(record);
         return changes.map((change, index) => {
-          // 使用字段名映射获取中文列名
           const fieldInfo = fieldNameMap[change.field] || { label: change.field };
           const fieldName = fieldInfo.label;
-
-          // 将 originalValue 和 newValue 转换为易读的字符串
           const originalValueText = formatValue(change.originalValue, change.field);
           const newValueText = formatValue(change.newValue, change.field);
+
           return (
             <div key={index} style={{ marginBottom: '8px' }}>
-              <strong>{fieldName}:</strong>
+              <strong>{fieldName}：</strong>
               <div>
-                <span style={{ color: 'red' }}>原始值:</span> {originalValueText}
-              </div>
-              <div>
-                <span style={{ color: 'green' }}>新值:</span> {newValueText}
+                <span style={{ color: 'red' }}>原始值：{originalValueText}</span> →
+                <span style={{ color: 'green' }}> 新值：{newValueText}</span>
               </div>
             </div>
           );
         });
       },
-    }
+    },
   ];
 
   // 定义表格的列

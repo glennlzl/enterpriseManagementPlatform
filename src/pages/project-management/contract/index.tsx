@@ -274,21 +274,17 @@ const ContractInfoTable: React.FC = () => {
       render: (_, record) => {
         const changes = parseOperationRecord(record);
         return changes.map((change, index) => {
-          // 使用字段名映射获取中文列名
           const fieldInfo = fieldNameMap[change.field] || { label: change.field };
           const fieldName = fieldInfo.label;
-
-          // 将 originalValue 和 newValue 转换为易读的字符串
           const originalValueText = formatValue(change.originalValue, change.field);
           const newValueText = formatValue(change.newValue, change.field);
+
           return (
             <div key={index} style={{ marginBottom: '8px' }}>
-              <strong>{fieldName}:</strong>
+              <strong>{fieldName}：</strong>
               <div>
-                <span style={{ color: 'red' }}>原始值:</span> {originalValueText}
-              </div>
-              <div>
-                <span style={{ color: 'green' }}>新值:</span> {newValueText}
+                <span style={{ color: 'red' }}>原始值：{originalValueText}</span> →
+                <span style={{ color: 'green' }}> 新值：{newValueText}</span>
               </div>
             </div>
           );
