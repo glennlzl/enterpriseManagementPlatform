@@ -1,8 +1,12 @@
-import React from 'react';
-import { Form, Input, Upload, Button, InputNumber, Row, Col, Divider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, Upload, Button, InputNumber, Divider, message } from 'antd';
 import type { FormInstance } from 'antd/lib/form';
 import { UploadOutlined } from '@ant-design/icons';
-import {MeasurementItemVO} from "@/model/project/Model.measurement-item";
+import { MeasurementItemVO } from "@/model/project/Model.measurement-item";
+import { fetchOssStsAccessInfo, OssStsAccessInfo } from '@/api/usermanagement';
+import OSS from 'ali-oss';
+
+const OSSClient = OSS.default || OSS;
 
 interface MeasurementDetailFormProps {
   form: FormInstance;
@@ -16,8 +20,83 @@ const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({
                                                                        measurementType,
                                                                      }) => {
   // 附件上传处理
-  const normFile = (e: any) => {
-    return Array.isArray(e) ? e : e && e.fileList;
+  const [fileList, setFileList] = useState<any[]>([]);
+
+  const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
+
+  const extractFileName = (fileUrl) => {
+    let fileName = '未知文件';
+    if (fileUrl && fileUrl.startsWith(prefix)) {
+      const rawFileName = fileUrl.replace(prefix, '');
+      const decodedFileName = decodeURIComponent(
+        rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''),
+      );
+      fileName = decodedFileName;
+    }
+    return fileName;
+  };
+
+  // 初始化时，如果有附件列表，设置到 fileList 中
+  useEffect(() => {
+    const initialFileList = form.getFieldValue('attachmentList') || [];
+    setFileList(
+      initialFileList.map((url) => ({
+        uid: url,
+        name: extractFileName(url),
+        status: 'done',
+        url,
+      })) || [],
+    );
+  }, []);
+
+  console.log(fileList);
+
+  // 上传到OSS的函数
+  const uploadFileToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+    const client = new OSSClient({
+      region: 'oss-cn-beijing',
+      accessKeyId: ossStsAccessInfo.accessKeyId,
+      accessKeySecret: ossStsAccessInfo.accessKeySecret,
+      stsToken: ossStsAccessInfo.securityToken,
+      bucket: 'rohana-erp',
+    });
+
+    try {
+      const result = await client.put(`files/${file.name}`, file);
+      return result.url;
+    } catch (err) {
+      return Promise.reject(err);
+    }
+  };
+
+  // 自定义上传处理
+  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+    try {
+      const ossStsAccessInfo = await fetchOssStsAccessInfo();
+      const fileUrl = await uploadFileToOss(file, ossStsAccessInfo);
+
+      setFileList((prevList) => [...prevList, { uid: file.uid, name: file.name, url: fileUrl, status: 'done' }]);
+      // 更新表单中的 attachmentList
+      const currentUrls = form.getFieldValue('attachmentList') || [];
+      form.setFieldsValue({
+        attachmentList: [...currentUrls, fileUrl],
+      });
+
+      onSuccess(fileUrl);
+    } catch (error) {
+      onError(error);
+    }
+  };
+
+  const handleRemove = (file: any) => {
+    setFileList((prevList) => prevList.filter((item) => item.uid !== file.uid));
+
+    // 更新表单中的 attachmentList
+    const currentUrls = form.getFieldValue('attachmentList') || [];
+    const updatedUrls = currentUrls.filter((url: string) => url !== file.url);
+    form.setFieldsValue({
+      attachmentList: updatedUrls,
+    });
   };
 
   return (
@@ -29,18 +108,6 @@ const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({
       <Form.Item label="测量项名称">
         <Input value={selectedMeasurementItem?.itemName} readOnly disabled />
       </Form.Item>
-
-      {/* 计量单号 */}
-      {/* 如果需要显示计量单号，取消以下注释 */}
-      {/*
-    <Form.Item
-      label="计量单号"
-      name="measurementBillNumber"
-      rules={[{ required: true, message: '请输入计量单号' }]}
-    >
-      <Input placeholder="请输入计量单号" />
-    </Form.Item>
-    */}
 
       {/* 仅在 measurementType !== 'cost' 时显示 */}
       {measurementType !== 'cost' && (
@@ -100,15 +167,14 @@ const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({
         label="附件列表"
         name="attachmentList"
         valuePropName="fileList"
-        getValueFromEvent={normFile}
+        getValueFromEvent={(e) => e && e.fileList}
       >
         <Upload
-          name="files"
-          action="/api/upload" // 根据实际情况修改上传地址
-          listType="picture"
+          customRequest={handleUpload}
           multiple
+          onRemove={handleRemove}
         >
-          <Button icon={<UploadOutlined />}>上传附件</Button>
+          <Button icon={<UploadOutlined />}>点击上传文件</Button>
         </Upload>
       </Form.Item>
 

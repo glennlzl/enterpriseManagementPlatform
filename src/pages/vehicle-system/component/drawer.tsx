@@ -187,8 +187,8 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
 
       const payload: AddOrUpdateVehicleUsageInfoRequest = {
         vehicleId: vehicleInfo?.id || 0,
-        userId: matchingEmployee?.value || initialState?.currentUser.userId || 0,
-        userName: matchingEmployee?.name ||initialState?.currentUser.userName || '',
+        userId: matchingEmployee?.value || initialState?.currentUser.id || 0,
+        userName: matchingEmployee?.name ||initialState?.currentUser.name || '',
         startMileage: startMileage, // 使用上一个记录的结束里程数作为开始里程数
         endMileage: values.endMileage || undefined,
         usageStatus: values.usageStatus || undefined,

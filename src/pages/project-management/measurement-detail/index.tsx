@@ -18,9 +18,16 @@ import {
   Tooltip,
   Upload,
   Popover,
-  List, Card, Avatar, Descriptions, Divider, Table, Result, Alert,
+  List,
+  Card,
+  Avatar,
+  Descriptions,
+  Divider,
+  Table,
+  Result,
+  Alert,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, FileOutlined } from '@ant-design/icons';
 import { useMeasurementDetail } from '@/hooks/project/Hook.useMeasurementDetail';
 import { MeasurementDetailVO } from '@/model/project/Model.measurement-detail';
 import MeasurementDetailForm from '@/pages/project-management/measurement-detail/component/Component.measurementDetailForm';
@@ -368,67 +375,83 @@ const MeasurementDetailTable: React.FC = () => {
 
 // 渲染附件列表列的函数
   const renderApprovalFilesInTable = (_, record) => {
-    const approvalFileUrl = record.approvalFileUrl;
+    // 过滤掉 null 或 undefined 的文件 URL
+    const validFileUrls = (record.attachmentList || []).filter((url) => url);
 
-    // 如果 approvalFileUrl 不存在或为空，返回 null 或一个占位符
-    if (!approvalFileUrl) {
-      return null; // 或者返回一个占位符，例如 <Typography.Text>无附件</Typography.Text>
-    }
+    // 统一的容器样式
+    const containerStyle = {
+      display: 'flex',
+      alignItems: 'center',
+    };
 
-    // 确保 validFileUrls 是一个数组
-    const validFileUrls = (Array.isArray(approvalFileUrl) ? approvalFileUrl : [approvalFileUrl])
-      .filter((url) => url);
+    // // 如果没有有效的文件 URL
+    // if (validFileUrls.length === 0) {
+    //   return (
+    //     <div style={containerStyle}>
+    //       <Typography.Text>无文件</Typography.Text>
+    //     </div>
+    //   );
+    // }
 
-    // 如果过滤后没有有效的文件 URL，返回 null 或占位符
-    if (validFileUrls.length === 0) {
-      return null; // 或者返回一个占位符，例如 <Typography.Text>无附件</Typography.Text>
-    }
-
-    // 继续渲染附件列表
+    // 有文件的情况
     return (
-      <Popover
-        content={
-          <div style={{ maxWidth: '300px' }}>
-            <List
-              itemLayout="horizontal"
-              dataSource={validFileUrls}
-              renderItem={(fileUrl) => {
-                const fileName = extractFileName(fileUrl);
-                return (
-                  <List.Item
-                    key={fileUrl}
-                    actions={[
-                      <Button
-                        type="link"
-                        onClick={async () => {
-                          await downloadFromOSS(fileUrl);
-                        }}
-                      >
-                        下载
-                      </Button>,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      avatar={<FileOutlined style={{ fontSize: '24px' }} />}
-                      title={fileName}
-                    />
-                  </List.Item>
-                );
-              }}
-            />
-          </div>
-        }
-        title="附件列表"
-        trigger="hover"
-      >
-        <Button type="link">
-          查看附件 ({validFileUrls.length})
-        </Button>
-      </Popover>
+      <div style={containerStyle}>
+        <Popover
+          content={
+            <div style={{ maxWidth: '400px' }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={validFileUrls}
+                renderItem={(fileUrl) => {
+                  const fileName = extractFileName(fileUrl);
+                  return (
+                    <List.Item
+                      key={fileUrl}
+                      actions={[
+                        <Button
+                          type="link"
+                          onClick={async () => {
+                            await downloadFromOSS(fileUrl);
+                          }}
+                        >
+                          下载
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={<FileOutlined style={{ fontSize: '24px' }} />}
+                        title={
+                          <Typography.Text
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80%',
+                              display: 'block',
+                            }}
+                            title={fileName}
+                          >
+                            {fileName}
+                          </Typography.Text>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </div>
+          }
+          title="文件列表"
+          trigger="hover"
+          overlayStyle={{ width: '400px' }}
+        >
+          <Button type="link">
+            查看文件 ({validFileUrls.length})
+          </Button>
+        </Popover>
+      </div>
     );
   };
-
-
 
   // 表格列定义，包含所有字段
   const columns = useMemo(() => {
@@ -442,92 +465,11 @@ const MeasurementDetailTable: React.FC = () => {
         width: 80,
         sorter: (a, b) => (a.id || 0) - (b.id || 0),
       },
-      // {
-      //   title: '分项(桩号)',
-      //   dataIndex: 'subItemNumber',
-      //   valueType: 'text',
-      //   fixed: 'left',
-      //   width: 120,
-      //   sorter: (a, b) => (a.subItemNumber || '').localeCompare(b.subItemNumber || ''),
-      // },
-      // {
-      //   title: '部位',
-      //   dataIndex: 'position',
-      //   valueType: 'text',
-      //   width: 150,
-      //   sorter: (a, b) => (a.position || '').localeCompare(b.position || ''),
-      // },
-      // {
-      //   title: '单价',
-      //   dataIndex: 'price',
-      //   valueType: 'money',
-      //   width: 100,
-      //   sorter: (a, b) => (a.price || 0) - (b.price || 0),
-      // },
-      // {
-      //   title: '单位',
-      //   dataIndex: 'unit',
-      //   valueType: 'text',
-      //   width: 100,
-      //   sorter: (a, b) => (a.unit || '').localeCompare(b.unit || ''),
-      // },
       {
-        title: '本期计量',
-        dataIndex: 'currentCount',
-        valueType: 'digit',
-        width: 120,
-        sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
-      },
-      {
-        title: '总价',
-        dataIndex: 'totalCount',
-        valueType: 'digit',
-        width: 120,
-        sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
-      },
-      // {
-      //   title: '本期余量',
-      //   dataIndex: 'remainingCount',
-      //   valueType: 'digit',
-      //   width: 120,
-      //   sorter: (a, b) => (a.remainingCount || 0) - (b.remainingCount || 0),
-      // },
-      // {
-      //   title: '金额',
-      //   dataIndex: 'currentAmount',
-      //   valueType: 'money',
-      //   width: 120,
-      //   sorter: (a, b) => (a.currentAmount || 0) - (b.currentAmount || 0),
-      // },
-      // {
-      //   title: '上限量',
-      //   dataIndex: 'upperLimitQuantity',
-      //   valueType: 'digit',
-      //   width: 120,
-      //   sorter: (a, b) => (a.upperLimitQuantity || 0) - (b.upperLimitQuantity || 0),
-      // },
-      {
-        title: '状态',
-        dataIndex: 'measurementStatus',
-        valueType: 'select',
-        width: 120,
-        valueEnum: {
-          0: { text: '未审核', status: 'Default' },
-          1: { text: '通过', status: 'Success' },
-          2: { text: '驳回', status: 'Error' },
-        },
-        sorter: (a, b) => (a.measurementStatus || 0) - (b.measurementStatus || 0),
-      },
-      {
-        title: '审核意见',
-        dataIndex: 'measurementComment',
+        title: '清单名称',
+        dataIndex: 'name',
         valueType: 'text',
-        width: 150,
-      },
-      {
-        title: '计量单号',
-        dataIndex: 'measurementBillNumber',
-        valueType: 'text',
+        fixed: 'left',
         width: 150,
       },
     ];
@@ -547,17 +489,101 @@ const MeasurementDetailTable: React.FC = () => {
           valueType: 'text',
           width: 150,
         },
+        {
+          title: '金额（元）',
+          dataIndex: 'currentCount',
+          valueType: 'money', // 将 'digit' 改为 'money'
+          width: 150,
+          sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
+        },
       );
+    }
+
+    if (selectedItem?.type !== 'cost') {
+      cols.push(
+        {
+          title: '分项 （桩号）',
+          dataIndex: 'subItemNumber',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '部位',
+          dataIndex: 'position',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '单位',
+          dataIndex: 'unit',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '单价',
+          dataIndex: 'price',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '本期末累积量',
+          dataIndex: 'remainingCount',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '设计量',
+          dataIndex: 'upperLimitQuantity',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '本期计量（元）',
+          dataIndex: 'currentCount',
+          valueType: 'money', // 将 'digit' 改为 'money'
+          width: 150,
+          sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
+        },
+        {
+          title: '总价（元）',
+          dataIndex: 'totalCount',
+          valueType: 'money', // 将 'digit' 改为 'money'
+          width: 150,
+          sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
+        },
+      );
+    }
+
+    if (selectedItem?.id) {
+      cols.push({
+        title: '附件列表',
+        dataIndex: 'attachmentList',
+        valueType: 'text',
+        render: renderApprovalFilesInTable,
+        width: 200,
+        ellipsis: true,
+      });
     }
 
     // 添加剩余的列
     cols.push(
       {
-        title: '附件列表',
-        dataIndex: 'attachmentList',
+        title: '状态',
+        dataIndex: 'measurementStatus',
+        valueType: 'select',
+        width: 120,
+        valueEnum: {
+          0: { text: '未审核', status: 'Default' },
+          1: { text: '通过', status: 'Success' },
+          2: { text: '驳回', status: 'Error' },
+        },
+        sorter: (a, b) => (a.measurementStatus || 0) - (b.measurementStatus || 0),
+      },
+      {
+        title: '计量单号',
+        dataIndex: 'measurementBillNumber',
         valueType: 'text',
         width: 150,
-        render: renderApprovalFilesInTable,
       },
       {
         title: '更新时间',
@@ -574,6 +600,12 @@ const MeasurementDetailTable: React.FC = () => {
         width: 180,
         sorter: (a, b) =>
           new Date(a.createTime || '').getTime() - new Date(b.createTime || '').getTime(),
+      },
+      {
+        title: '审核意见',
+        dataIndex: 'measurementComment',
+        valueType: 'text',
+        width: 150,
       },
       {
         title: '操作',

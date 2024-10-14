@@ -1,5 +1,6 @@
 export interface MeasurementDetailVO {
   id?: number;
+  name?: string;
   measurementItemId?: number;
   subItemNumber?: string;
   position?: string;

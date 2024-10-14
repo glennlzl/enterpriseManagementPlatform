@@ -330,18 +330,6 @@ export function useMeasurementDetail() {
   const generateTreeData = (costItems: MeasurementItemVO[], materialItems: MeasurementItemVO[]): any[] => {
     return [
       {
-        title: '合同费用',
-        key: 'cost-folder',
-        children: costItems.map((item) => ({
-          title: item.itemName || '',
-          key: `cost-${item.id}`,
-          itemId: item.id,
-          type: 'cost',
-          item,
-          isLeaf: true,
-        })),
-      },
-      {
         title: '工程清单',
         key: 'material-folder',
         children: materialItems.map((item) => ({
@@ -349,6 +337,18 @@ export function useMeasurementDetail() {
           key: `material-${item.id}`,
           itemId: item.id,
           type: 'material',
+          item,
+          isLeaf: true,
+        })),
+      },
+      {
+        title: '合同费用',
+        key: 'cost-folder',
+        children: costItems.map((item) => ({
+          title: item.itemName || '',
+          key: `cost-${item.id}`,
+          itemId: item.id,
+          type: 'cost',
           item,
           isLeaf: true,
         })),
@@ -394,9 +394,9 @@ export function useMeasurementDetail() {
       { header: '单位', key: 'unit', width: 10 },
       { header: '本期计量', key: 'currentCount', width: 12 },
       { header: '总量', key: 'totalCount', width: 12 },
-      { header: '本期余量', key: 'remainingCount', width: 12 },
+      { header: '本期末累积量', key: 'remainingCount', width: 12 },
       { header: '金额', key: 'currentAmount', width: 12 },
-      { header: '上限量', key: 'upperLimitQuantity', width: 12 },
+      { header: '设计量', key: 'upperLimitQuantity', width: 12 },
       { header: '状态', key: 'measurementStatus', width: 10 },
       { header: '审核意见', key: 'measurementComment', width: 20 },
     ];
@@ -762,6 +762,7 @@ export function useMeasurementDetail() {
       message.error('请选择一个测量项');
       return;
     }
+
     try {
       setLoading(true);
       const measurementData = {
@@ -772,6 +773,7 @@ export function useMeasurementDetail() {
         relatedProjectId: selectedProjectId!,
         relatedContractId: selectedContractId!,
         relatedPeriodId: selectedPeriodId!,
+        attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => typeof attachment === 'string' ? attachment : attachment.response) : [],
       };
       if (currentMeasurementDetail?.id) {
         await updateMeasurementDetail(measurementData);
