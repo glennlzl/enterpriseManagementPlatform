@@ -794,6 +794,7 @@ const MeasurementDetailTable: React.FC = () => {
                   onTreeSelect(keys, info);
                 }}
                 treeData={measurementItemTreeData}
+                expandAction={'doubleClick'}
               />
             )}
           </div>
