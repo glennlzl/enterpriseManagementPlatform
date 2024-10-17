@@ -52,7 +52,27 @@ export async function fetchReceiverData(userId: string) {
     if (response.isSuccess) {
       return response.data; // 访问返回的 `data` 字段
     } else {
-      console.log(response.msg);
+      return Promise.reject(response.msg);
+    }
+  });
+}
+
+/** 删除审批信息 */
+export async function deleteApprovalInfo(id: number) {
+  const url = new URL(`${API_BASE_URL}/deleteApprovalInfo`);
+  return request<ApiResponse<boolean>>(url.toString(), {
+    method: 'POST',
+    data: id, // 将 id 放在请求体中
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    withCredentials: true, // 确保携带 Cookies
+  }).then((response) => {
+    if (response.isSuccess) {
+      return response.data; // 返回后端的 `data` 字段
+    } else {
+      console.error(response.msg);
       return Promise.reject(response.msg);
     }
   });

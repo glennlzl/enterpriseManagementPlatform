@@ -87,6 +87,7 @@ const VehicleManagement: React.FC = () => {
 
   const [queryParams, setQueryParams] = useState({});
 
+
   const [employeeOptions, setEmployeeOptions] = useState<
     { label: string; value: number; name: string, mobile: string }[]
   >([]);
@@ -1160,7 +1161,7 @@ const VehicleManagement: React.FC = () => {
       >
         <Row gutter={16}>
           <Col span={8}>
-            <Form.Item label="查询" name="generalQueryCondition">
+            <Form.Item label="模糊查询" name="generalQueryCondition">
               <Input placeholder="这里可以输入序号、工程车编号、车牌号码等内容" />
             </Form.Item>
           </Col>
@@ -1255,6 +1256,7 @@ const VehicleManagement: React.FC = () => {
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
         onOk={() => createForm.submit()}
+        maskClosable={false}
         title={intl.formatMessage({
           id: '新增车辆信息',
         })}
@@ -1495,6 +1497,7 @@ const VehicleManagement: React.FC = () => {
         open={editModalOpen}
         onCancel={() => setEditModalOpen(false)}
         onOk={() => editForm.submit()}
+        maskClosable={false}
         title={intl.formatMessage({
           id: '编辑车辆信息',
         })}

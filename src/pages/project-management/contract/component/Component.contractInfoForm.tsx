@@ -93,10 +93,9 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
   }, [contractCostItems, projectScheduleItems]);
 
   // 附件上传相关状态
-  const [fileList, setFileList] = useState<any[]>([]);
+  const [fileList, setFileList] = useState([]);
 
-  // 上传到OSS
-  const uploadFileToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+  const uploadImageToOss = async (file, ossStsAccessInfo) => {
     const client = new OSSClient({
       region: 'oss-cn-beijing',
       accessKeyId: ossStsAccessInfo.accessKeyId,
@@ -113,30 +112,36 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
     }
   };
 
-  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+  const handleUpload = async ({ file, onSuccess, onError }) => {
     try {
       const ossStsAccessInfo = await fetchOssStsAccessInfo();
-      const fileUrl = await uploadFileToOss(file, ossStsAccessInfo);
+      const fileUrl = await uploadImageToOss(file, ossStsAccessInfo);
 
-      setFileList((prevList) => [...prevList, { uid: file.uid, name: file.name, url: fileUrl }]);
-      // 更新表单中的 attachmentList
+      const newFile = {
+        uid: file.uid,
+        name: file.name,
+        status: 'done',
+        url: fileUrl,
+      };
+
+      setFileList((prevList) => [...prevList, newFile]);
+
       const currentUrls = form.getFieldValue('attachmentList') || [];
       form.setFieldsValue({
         attachmentList: [...currentUrls, fileUrl],
       });
 
-      onSuccess(fileUrl);
+      onSuccess(newFile);
     } catch (error) {
       onError(error);
     }
   };
 
-  const handleRemove = (file: any) => {
+  const handleRemove = (file) => {
     setFileList((prevList) => prevList.filter((item) => item.uid !== file.uid));
 
-    // 更新表单中的 attachmentList
     const currentUrls = form.getFieldValue('attachmentList') || [];
-    const updatedUrls = currentUrls.filter((url: string) => url !== file.url);
+    const updatedUrls = currentUrls.filter((url) => url !== file.url);
     form.setFieldsValue({
       attachmentList: updatedUrls,
     });
@@ -148,6 +153,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
     multiple: true,
     fileList,
   };
+
 
   // 添加或编辑计量项
   const handleMeasurementOk = async () => {
@@ -187,7 +193,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
       setCurrentMeasurementItem(null);
       measurementForm.resetFields();
     } catch (error) {
-      message.error('操作失败，请重试');
+      message.error(error);
     }
   };
 

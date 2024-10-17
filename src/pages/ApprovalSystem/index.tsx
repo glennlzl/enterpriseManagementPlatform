@@ -35,7 +35,7 @@ import {
   Tooltip,
   Upload,
   Popover,
-  List, Card, Avatar, Descriptions, Divider, Table, Result, Alert,
+  List, Card, Avatar, Descriptions, Divider, Table, Result, Alert, Popconfirm,
 } from 'antd';
 import React, {useEffect, useRef, useState} from 'react';
 import _ from 'lodash';
@@ -99,6 +99,7 @@ const ApprovalSystem: React.FC = () => {
     handleUpdateComment,
     exportToCSV,
     fetchApprovalData,
+    handleDelete
   } = useApprovalPage(initialState.currentUser?.id || '');
 
   const initiator = _.uniqBy(
@@ -208,6 +209,7 @@ const ApprovalSystem: React.FC = () => {
   const renderApprovalModal = () => {
     if (!currentRecord) return null;
 
+    const isApprover = currentRecord.approvalReceiverId === initialState.currentUser.id;
     const isApproved = currentRecord.approvalStatus === 1;
     const isRejected = currentRecord.approvalStatus === 2;
     const statusText = approvalStatusConfig[currentRecord.approvalStatus]?.text;
@@ -224,6 +226,7 @@ const ApprovalSystem: React.FC = () => {
         onCancel={() => setApprovalModalVisible(false)}
         footer={null}
         destroyOnClose
+        maskClosable={false}
         width={600}
       >
         <Card bordered={false}>
@@ -265,6 +268,7 @@ const ApprovalSystem: React.FC = () => {
                   onClick={async () => {
                     await handleApprovalStatusChange(currentRecord, 1);
                   }}
+                  disabled={!isApprover} // 非审批人禁用按钮
                 >
                   批准
                 </Button>
@@ -275,6 +279,7 @@ const ApprovalSystem: React.FC = () => {
                   onClick={async () => {
                     await handleApprovalStatusChange(currentRecord, 2);
                   }}
+                  disabled={!isApprover} // 非审批人禁用按钮
                 >
                   拒绝
                 </Button>
@@ -282,11 +287,21 @@ const ApprovalSystem: React.FC = () => {
                   icon={<CommentOutlined />}
                   loading={isReviewModalLoading}
                   onClick={() => showModal(currentRecord)}
+                  disabled={!isApprover} // 非审批人禁用按钮
                 >
                   添加批示
                 </Button>
               </Space>
             </div>
+          )}
+          {/* 非审批人时显示解释 */}
+          {!isApprover && !isApproved && !isRejected && (
+            <Alert
+              message="您不是此审批的审批人，无法进行审批操作。"
+              type="info"
+              showIcon
+              style={{ marginTop: 16 }}
+            />
           )}
         </Card>
       </Modal>
@@ -874,30 +889,38 @@ const ApprovalSystem: React.FC = () => {
         const isRejected = record?.approvalStatus === 2;
         return !isApproved && !isRejected ? (
           <div>
-            <Button
-              type="primary"
-              disabled={isApproved || isRejected}
-              onClick={() => handleApprovalChange(record, 1)}
-            >
-              批准
-            </Button>
-            <Button
-              type="default"
-              disabled={isApproved || isRejected}
-              onClick={() => handleApprovalChange(record, 2)}
-              style={{ marginLeft: 8 }}
-            >
-              拒绝
-            </Button>
-            <Button
-              type="default"
-              onClick={() => showModal(record)}
-              style={{ marginLeft: 8 }}
-            >
-              添加批示
-            </Button>
+            <Space>
+              <Button
+                type="default"
+                onClick={() => showModal(record)}
+                style={{ marginLeft: 8 }}
+              >
+                添加批示
+              </Button>
+              <Button
+                type="primary"
+                disabled={isApproved || isRejected}
+                onClick={() => handleApprovalChange(record, 1)}
+              >
+                批准
+              </Button>
+              <Button
+                type="default"
+                disabled={isApproved || isRejected}
+                onClick={() => handleApprovalChange(record, 2)}
+                style={{ marginLeft: 8 }}
+              >
+                拒绝
+              </Button>
+            </Space>
           </div>
-        ) : null;
+        ) : <Button
+          type="default"
+          onClick={() => showModal(record)}
+          style={{ marginLeft: 8 }}
+        >
+          添加批示
+        </Button>;
       },
     },
   ];
@@ -1122,6 +1145,18 @@ const ApprovalSystem: React.FC = () => {
           >
             一键复制链接
           </Button>
+          {record.approvalStatus === 3 && (
+            <Popconfirm
+              title="确定要删除这条审批信息吗？"
+              onConfirm={() => handleDelete(record.id)}
+              okText="是"
+              cancelText="否"
+            >
+              <Button danger style={{ marginLeft: 8 }}>
+                删除
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -1337,6 +1372,7 @@ const ApprovalSystem: React.FC = () => {
         width="400px"
         modalProps={{
           destroyOnClose: true,
+          maskClosable: false
         }}
         open={state.createModalOpen}
         onOpenChange={(isOpen) => {

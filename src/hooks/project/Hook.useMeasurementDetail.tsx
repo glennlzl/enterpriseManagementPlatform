@@ -171,9 +171,7 @@ export function useMeasurementDetail() {
         localStorage.removeItem(storageKeys.contractId);
       }
     } catch (error: any) {
-      console.error('Error fetching contract list:', error);
       setContractList([]);
-      message.error('获取合同列表失败');
     } finally {
       setLoading(false);
     }
@@ -739,7 +737,7 @@ export function useMeasurementDetail() {
       // 审核完成后不需要再次调用 fetchMeasurementDetailList，因为在 handleSubmitReview 中已经调用
     } catch (error: any) {
       console.error('Error reviewing measurement detail:', error);
-      message.error('操作失败');
+      message.error(error);
     } finally {
       setLoading(false);
     }
@@ -757,7 +755,7 @@ export function useMeasurementDetail() {
       await fetchMeasurementDetailList();
       message.success(status === 1 ? '审核成功' : '驳回成功');
     } catch (error) {
-      message.error('操作失败');
+      message.error(error);
     }
   };
 
@@ -788,7 +786,6 @@ export function useMeasurementDetail() {
         relatedProjectId: selectedProjectId!,
         relatedContractId: selectedContractId!,
         relatedPeriodId: selectedPeriodId!,
-        attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => typeof attachment === 'string' ? attachment : attachment.response) : [],
       };
       if (currentMeasurementDetail?.id) {
         await updateMeasurementDetail(measurementData);
@@ -801,7 +798,6 @@ export function useMeasurementDetail() {
       fetchMeasurementDetailList();
     } catch (error: any) {
       console.error('Error adding/updating measurement detail:', error);
-      message.error('操作失败');
     } finally {
       setLoading(false);
     }
@@ -864,6 +860,48 @@ export function useMeasurementDetail() {
     fetchOperationLogs(measurementDetail);
   };
 
+  const handleRemoveAttachment = async (fileUrl: string, measurementDetailId: number) => {
+    try {
+      // 查找对应的计量明细
+      const measurementDetail = measurementDetailList.find(detail => detail.id === measurementDetailId);
+      if (!measurementDetail) {
+        message.error('未找到对应的计量明细');
+        return;
+      }
+
+      // 更新 attachmentList
+      const updatedAttachmentList = (measurementDetail.attachmentList || []).filter(url => url !== fileUrl);
+
+      // 调用后端 API 更新数据
+      await updateMeasurementDetail({
+        ...currentMeasurementDetail,
+        attachmentList: updatedAttachmentList,
+      });
+
+      // 更新本地状态
+      const updatedMeasurementDetailList = measurementDetailList.map(detail => {
+        if (detail.id === measurementDetailId) {
+          return { ...detail, attachmentList: updatedAttachmentList };
+        }
+        return detail;
+      });
+      setMeasurementDetailList(updatedMeasurementDetailList);
+
+      // 如果当前编辑的计量明细是被更新的那个，也需要更新它的 attachmentList
+      if (currentMeasurementDetail && currentMeasurementDetail.id === measurementDetailId) {
+        setCurrentMeasurementDetail({
+          ...currentMeasurementDetail,
+          attachmentList: updatedAttachmentList,
+        });
+      }
+
+      message.success('附件删除成功');
+    } catch (error) {
+      console.error('删除附件失败:', error);
+      message.error('附件删除失败');
+    }
+  };
+
   return {
     measurementDetailList,
     loading,
@@ -899,6 +937,7 @@ export function useMeasurementDetail() {
     reviewModalVisible,
     setReviewModalVisible,
     currentReviewRecord,
+    setCurrentReviewRecord,
     reviewComment,
     setReviewComment,
     handleOpenReviewModal,
@@ -907,6 +946,7 @@ export function useMeasurementDetail() {
     handleProjectChange,
     handleContractChange,
     handlePeriodChange,
-    fetchContractList
+    fetchContractList,
+    handleRemoveAttachment
   };
 }

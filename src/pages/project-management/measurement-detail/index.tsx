@@ -27,7 +27,7 @@ import {
   Result,
   Alert,
 } from 'antd';
-import { PlusOutlined, FileOutlined } from '@ant-design/icons';
+import { PlusOutlined, FileOutlined, SearchOutlined } from '@ant-design/icons';
 import { useMeasurementDetail } from '@/hooks/project/Hook.useMeasurementDetail';
 import { MeasurementDetailVO } from '@/model/project/Model.measurement-detail';
 import MeasurementDetailForm from '@/pages/project-management/measurement-detail/component/Component.measurementDetailForm';
@@ -83,6 +83,8 @@ const MeasurementDetailTable: React.FC = () => {
     handleProjectChange,
     handleContractChange,
     handlePeriodChange,
+    handleRemoveAttachment,
+    setCurrentReviewRecord
   } = useMeasurementDetail();
 
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
@@ -152,6 +154,16 @@ const MeasurementDetailTable: React.FC = () => {
           setCurrentMeasurementDetail(record);
           form.setFieldsValue({
             ...record,
+            attachmentList: record.attachmentList
+              ? record.attachmentList
+                .filter((url) => url)
+                .map((url, index) => ({
+                  uid: `-${index}`,
+                  name: extractFileName(url),
+                  status: 'done',
+                  url: url,
+                }))
+              : [],
           });
         } else {
           setCurrentMeasurementDetail(null);
@@ -451,18 +463,9 @@ const MeasurementDetailTable: React.FC = () => {
     );
   };
 
-  // 表格列定义，包含所有字段
   const columns = useMemo(() => {
     const cols: ProColumns<MeasurementDetailVO>[] = [
-      // 基础列，始终显示
-      {
-        title: '序号',
-        dataIndex: 'id',
-        valueType: 'text',
-        fixed: 'left',
-        width: 80,
-        sorter: (a, b) => (a.id || 0) - (b.id || 0),
-      },
+      // 清单名称列，始终显示
       {
         title: '清单名称',
         dataIndex: 'name',
@@ -472,7 +475,52 @@ const MeasurementDetailTable: React.FC = () => {
       },
     ];
 
-    // 根据 selectedItem 的类型，决定是否添加“合同费用类型”和“交易类型”列
+    // 只有在选中子节点（selectedItem.id 存在）时，才添加「序号」列
+    if (selectedItem?.id) {
+      cols.unshift({
+        title: '序号',
+        dataIndex: 'id',
+        valueType: 'text',
+        fixed: 'left',
+        width: 80,
+        sorter: (a, b) => (a.id || 0) - (b.id || 0),
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入序号"
+              value={selectedKeys[0]}
+              onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => confirm()}
+                size="small"
+                style={{ width: 90 }}
+              >
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) =>
+          record.id ? record.id.toString().includes(value) : false,
+      });
+    }
+
+    // 根据 selectedItem 的类型，决定是否添加「合同费用类型」和「交易类型」列
     if (selectedItem?.type !== 'material') {
       cols.push(
         {
@@ -490,7 +538,7 @@ const MeasurementDetailTable: React.FC = () => {
         {
           title: '金额（元）',
           dataIndex: 'currentCount',
-          valueType: 'money', // 将 'digit' 改为 'money'
+          valueType: 'money',
           width: 150,
           sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
         },
@@ -502,19 +550,25 @@ const MeasurementDetailTable: React.FC = () => {
         {
           title: '本期计量',
           dataIndex: 'currentCount',
-          valueType: 'digit', // 将 'digit' 改为 'money'
+          valueType: 'digit',
           width: 150,
           sorter: (a, b) => (a.currentCount || 0) - (b.currentCount || 0),
         },
         {
           title: '总价（元）',
           dataIndex: 'currentAmount',
-          valueType: 'money', // 将 'digit' 改为 'money'
+          valueType: 'money',
           width: 150,
           sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
         },
         {
           title: '本期末累积量',
+          dataIndex: 'totalCount',
+          valueType: 'text',
+          width: 150,
+        },
+        {
+          title: '剩余量',
           dataIndex: 'remainingCount',
           valueType: 'text',
           width: 150,
@@ -552,6 +606,7 @@ const MeasurementDetailTable: React.FC = () => {
       );
     }
 
+    // 「附件列表」列，只有在选中子节点时才添加
     if (selectedItem?.id) {
       cols.push({
         title: '附件列表',
@@ -563,7 +618,17 @@ const MeasurementDetailTable: React.FC = () => {
       });
     }
 
-    // 添加剩余的列
+    // 「计量单号」列，只有在选中子节点时才添加
+    if (selectedItem?.id) {
+      cols.push({
+        title: '计量单号',
+        dataIndex: 'measurementBillNumber',
+        valueType: 'text',
+        width: 150,
+      });
+    }
+
+    // 添加其他列
     cols.push(
       {
         title: '状态',
@@ -576,12 +641,6 @@ const MeasurementDetailTable: React.FC = () => {
           2: { text: '驳回', status: 'Error' },
         },
         sorter: (a, b) => (a.measurementStatus || 0) - (b.measurementStatus || 0),
-      },
-      {
-        title: '计量单号',
-        dataIndex: 'measurementBillNumber',
-        valueType: 'text',
-        width: 150,
       },
       {
         title: '更新时间',
@@ -599,44 +658,60 @@ const MeasurementDetailTable: React.FC = () => {
         sorter: (a, b) =>
           new Date(a.createTime || '').getTime() - new Date(b.createTime || '').getTime(),
       },
-      {
+    );
+
+    // 「审核意见」列，只有在选中子节点时才添加
+    if (selectedItem?.id) {
+      cols.push({
         title: '审核意见',
         dataIndex: 'measurementComment',
         valueType: 'text',
         width: 150,
-      },
-      {
+      });
+    }
+
+    // 「操作」列，只有在选中子节点时才添加
+    if (selectedItem?.id) {
+      cols.push({
         title: '操作',
         dataIndex: 'option',
         valueType: 'option',
         fixed: 'right',
         width: 250,
-        render: (_, record) => {
-          if (!selectedItem || !selectedItem.id) {
-            return null;
-          }
-
-          return (
-            <Space>
-              <a onClick={() => handleModalOpen(true, record)}>编辑</a>
-              <Popconfirm
-                title="确定要删除这个计量明细吗？"
-                onConfirm={() => handleDeleteMeasurementDetail(record.id!)}
-              >
-                <a>删除</a>
-              </Popconfirm>
-              <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
-              {record.measurementStatus === 0 && (
+        render: (_, record) => (
+          <Space>
+            {record.measurementStatus !== 1 ? (
+              <>
+                <a onClick={() => handleModalOpen(true, record)}>编辑</a>
+                <Popconfirm
+                  title="确定要删除这个计量明细吗？"
+                  onConfirm={() => handleDeleteMeasurementDetail(record.id!)}
+                >
+                  <a>删除</a>
+                </Popconfirm>
+                <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
                 <a onClick={() => handleOpenReviewModal(record)}>审核</a>
-              )}
-            </Space>
-          );
-        },
-      },
-    );
+              </>
+            ) : (
+              <>
+                <Tooltip title="审核通过的计量明细无法编辑">
+                  <a style={{ color: '#ccc', cursor: 'not-allowed' }}>编辑</a>
+                </Tooltip>
+                <Tooltip title="审核通过的计量明细无法删除">
+                  <a style={{ color: '#ccc', cursor: 'not-allowed' }}>删除</a>
+                </Tooltip>
+                <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
+              </>
+            )}
+          </Space>
+        ),
+      });
+    }
+
 
     return cols;
   }, [selectedItem]);
+
 
   const addButtonDisabled =
     !selectedProjectId ||
@@ -782,8 +857,8 @@ const MeasurementDetailTable: React.FC = () => {
               }}
               style={{ marginBottom: 16 }}
             >
-              <Form.Item label="查询" name="generalQueryCondition">
-                <Input placeholder="请输入序号、部位等信息" style={{ width: 500 }} />
+              <Form.Item label="模糊查询" name="generalQueryCondition">
+                <Input placeholder="请输入名称、部位等信息" style={{ width: 500 }} />
               </Form.Item>
             </Form>
 
@@ -822,14 +897,19 @@ const MeasurementDetailTable: React.FC = () => {
                     <PlusOutlined /> 新增计量明细
                   </Button>
                 ),
-                <Button
-                  type="default"
-                  key="export-csv"
-                  onClick={handleExportCSV}
-                  disabled={selectedRowKeys.length === 0}
+                <Tooltip
+                  title={selectedRowKeys.length === 0 ? '请先在左侧选择行，才能导出' : ''}
+                  key="export-csv-tooltip"
                 >
-                  导出当前表格
-                </Button>,
+                  <Button
+                    type="default"
+                    key="export-csv"
+                    onClick={handleExportCSV}
+                    disabled={selectedRowKeys.length === 0}
+                  >
+                    导出当前表格
+                  </Button>
+                </Tooltip>,
                 <Button
                   type="default"
                   key="export"
@@ -854,7 +934,14 @@ const MeasurementDetailTable: React.FC = () => {
                 form
                   .validateFields()
                   .then((values) => {
-                    handleAddOrUpdateMeasurementDetail(values);
+                    const formattedValues = {
+                      ...values,
+                      ...currentMeasurementDetail,
+                      attachmentList: values.attachmentList
+                        ? values.attachmentList.map((file) => file.url || file.response.url)
+                        : [],
+                    };
+                    handleAddOrUpdateMeasurementDetail(formattedValues);
                     form.resetFields();
                     setModalOpen(false);
                   })
@@ -868,6 +955,8 @@ const MeasurementDetailTable: React.FC = () => {
                 form={form}
                 selectedMeasurementItem={selectedItem?.item}
                 measurementType={selectedItem?.type || 'material'}
+                currentMeasurementDetail={currentMeasurementDetail}      // 传递 currentMeasurementDetail
+                handleRemoveAttachment={handleRemoveAttachment}          // 传递 handleRemoveAttachment
               />
             </Modal>
 

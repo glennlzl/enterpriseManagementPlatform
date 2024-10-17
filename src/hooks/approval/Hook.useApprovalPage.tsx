@@ -1,5 +1,5 @@
 import {
-  addApproval,
+  addApproval, deleteApprovalInfo,
   fetchInitiatorData,
   fetchReceiverData,
   updateApprovalDecision,
@@ -55,18 +55,35 @@ export const useApprovalPage = (userId: string) => {
         fetchReceiverData(userId),
       ]);
 
+      // 定义审批状态的排序顺序
+      const statusOrder = {
+        3: 1, // 待审批
+        1: 2, // 已批准
+        2: 3, // 已拒绝
+      };
+
+      // 对发起的数据进行排序
+      const sortedInitiatorData = initiatorResponse.sort((a, b) => {
+        return statusOrder[a.approvalStatus] - statusOrder[b.approvalStatus];
+      });
+
+      // 对接收的数据进行排序
+      const sortedReceiverData = receiverResponse.sort((a, b) => {
+        return statusOrder[a.approvalStatus] - statusOrder[b.approvalStatus];
+      });
+
       setState((prevState) => ({
         ...prevState,
-        initiatorData: initiatorResponse,
-        receiverData: receiverResponse,
+        initiatorData: sortedInitiatorData,
+        receiverData: sortedReceiverData,
         loadingInitiator: false,
         loadingReceiver: false,
       }));
 
       // 返回获取到的数据
       return {
-        initiatorData: initiatorResponse,
-        receiverData: receiverResponse,
+        initiatorData: sortedInitiatorData,
+        receiverData: sortedReceiverData,
       };
     } catch (error) {
       setState((prevState) => ({
@@ -330,6 +347,27 @@ export const useApprovalPage = (userId: string) => {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    const loginCheck = await isLogin();
+    if (!loginCheck) {
+      message.error('请重新登录');
+      history.push('/user/login');
+      return;
+    }
+    try {
+      const success = await deleteApprovalInfo(id);
+      if (success) {
+        message.success('删除成功');
+        await fetchApprovalData(); // 重新获取审批数据
+        actionRef.current?.reload(); // 刷新表格
+      } else {
+        message.error('删除失败，请重试');
+      }
+    } catch (error) {
+      message.error(`删除失败: ${error}`);
+    }
+  };
+
   return {
     state,
     setState,
@@ -343,5 +381,6 @@ export const useApprovalPage = (userId: string) => {
     handleUpdateComment,
     exportToCSV,
     fetchApprovalData, // 将 fetchApprovalData 暴露出去，供组件调用
+    handleDelete
   };
 };

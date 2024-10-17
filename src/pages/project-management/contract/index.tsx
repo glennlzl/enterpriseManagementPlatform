@@ -4,8 +4,8 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import {Button, Popconfirm, Form, Input, Space, Modal, Select, Table, message} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, Table, message, Popover, List, Typography} from 'antd';
+import {FileOutlined, PlusOutlined} from '@ant-design/icons';
 import moment from 'moment';
 import { useContractInfo } from '@/hooks/project/Hook.useContractInfo';
 import { AddOrUpdateContractInfoRequest, ContractInfoVO, MeasurementItemVO } from '@/model/project/Model.contract';
@@ -93,6 +93,16 @@ const ContractInfoTable: React.FC = () => {
           startDate: record.startDate ? moment(record.startDate) : undefined,
           endDate: record.endDate ? moment(record.endDate) : undefined,
           financialResponsiblePersonId: record.financialResponsiblePersonId,
+          attachmentList: record.attachmentList
+            ? record.attachmentList
+              .filter((url) => url)
+              .map((url, index) => ({
+                uid: `-${index}`,
+                name: extractFileName(url),
+                status: 'done',
+                url: url,
+              }))
+            : [],
         });
       }
     } else if (modalType === 'authorizeModalOpen') {
@@ -108,28 +118,6 @@ const ContractInfoTable: React.FC = () => {
   };
 
 
-  const downloadFromOSS = async (fileUrl: string) => {
-    const loginCheck = await isLogin();
-    if (!loginCheck) {
-      message.error('请重新登录');
-      history.push('/user/login');
-    }
-    try {
-      // 通过文件URL直接下载
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      const fileName = fileUrl.split('/').pop();
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = fileName || 'downloaded_file';
-      link.click();
-    } catch (err) {
-      console.error('文件下载失败:', err);
-      throw err;
-    }
-  };
-
-
 // 字段名到中文列名的映射
   const fieldNameMap: { [key: string]: { label: string; isDate?: boolean } } = {
     id: { label: '序号' },
@@ -140,6 +128,7 @@ const ContractInfoTable: React.FC = () => {
     contractAmount: { label: '合同金额' },
     startDate: { label: '开始日期', isDate: true },
     endDate: { label: '完工日期', isDate: true },
+    adminList: { label: '负责人列表' },
     contractOrder: { label: '合同排序' },
     contractProvisionalPrice: { label: '暂估价' },
     contractTermType: { label: '合同期限类型' },
@@ -150,9 +139,8 @@ const ContractInfoTable: React.FC = () => {
     accountBank: { label: '开户行' },
     accountNumber: { label: '账号' },
     financialResponsiblePerson: { label: '财务负责人' },
-    projectSchedule: { label: '项目进度' },
+    projectSchedule: { label: '工程清单' },
     contractCost: { label: '合同成本' },
-    adminList: { label: '负责人列表' },
     attachmentList: { label: '附件列表' },
     updateTime: { label: '更新时间', isDate: true },
     createTime: { label: '创建时间', isDate: true },
@@ -177,44 +165,59 @@ const ContractInfoTable: React.FC = () => {
     ) {
       return '-';
     } else if (Array.isArray(value)) {
-      return value
-        .map((item) => {
-          if (typeof item === 'object') {
-            // 提取对象中的关键字段，排除不需要显示的字段
-            const itemDetails = Object.keys(item)
-              .filter((key) => key !== 'itemType' && key !== 'contractCostType') // 排除字段
-              .map((key) => {
-                const fieldInfo = fieldNameMap[key] || { label: key };
-                const fieldLabel = fieldInfo.label;
-                const fieldValue = formatValue(item[key], key);
-                return `${fieldLabel}: ${fieldValue}`;
-              })
-              .join(', ');
-            return `{ ${itemDetails} }`;
-          } else {
-            return String(item);
-          }
-        })
-        .join('; ');
+      if (fieldKey === 'adminList') {
+        // 针对 adminList，提取姓名，逗号分隔
+        return value.map((item) => item.name).join(', ');
+      } else {
+        return value
+          .map((item) => {
+            if (typeof item === 'object') {
+              const itemDetails = Object.keys(item)
+                .filter(
+                  (key) =>
+                    key !== 'itemType' &&
+                    key !== 'contractCostType' &&
+                    key !== 'id'
+                )
+                .map((key) => {
+                  const fieldLabel = fieldNameMap[key]?.label || key;
+                  const fieldValue = formatValue(item[key], key);
+                  return `${fieldLabel}: ${fieldValue}`;
+                })
+                .join(', ');
+              return `{ ${itemDetails} }`;
+            } else {
+              return String(item);
+            }
+          })
+          .join('; ');
+      }
     } else if (typeof value === 'object') {
-      // 对象，提取关键字段
-      const objectDetails = Object.keys(value)
-        .filter((key) => key !== 'itemType' && key !== 'contractCostType') // 排除字段
-        .map((key) => {
-          const fieldInfo = fieldNameMap[key] || { label: key };
-          const fieldLabel = fieldInfo.label;
-          const fieldValue = formatValue(value[key], key);
-          return `${fieldLabel}: ${fieldValue}`;
-        })
-        .join(', ');
-      return `{ ${objectDetails} }`;
+      if (fieldKey === 'adminList') {
+        // 单个对象，提取姓名
+        return value.name;
+      } else {
+        const objectDetails = Object.keys(value)
+          .filter(
+            (key) =>
+              key !== 'itemType' &&
+              key !== 'contractCostType' &&
+              key !== 'id'
+          )
+          .map((key) => {
+            const fieldLabel = fieldNameMap[key]?.label || key;
+            const fieldValue = formatValue(value[key], key);
+            return `${fieldLabel}: ${fieldValue}`;
+          })
+          .join(', ');
+        return `{ ${objectDetails} }`;
+      }
     } else if (
       fieldKey &&
       fieldNameMap[fieldKey] &&
       fieldNameMap[fieldKey].isDate &&
       typeof value === 'number'
     ) {
-      // 如果是时间字段，且值是数字，则格式化为日期
       return moment(value).format('YYYY-MM-DD HH:mm:ss');
     } else {
       return String(value);
@@ -222,25 +225,35 @@ const ContractInfoTable: React.FC = () => {
   };
 
 
+
 // 解析操作日志记录的函数
-  const parseOperationRecord = (record: OperationLogVO) => {
+  const safeJSONParse = (value) => {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return value;
+    }
+  };
+
+  const parseOperationRecord = (record) => {
     try {
       const operationFieldArray = JSON.parse(record.operationField);
       const operationFieldOriginalValueArray = JSON.parse(record.operationFieldOriginalValue);
       const operationFieldNewValueArray = JSON.parse(record.operationFieldNewValue);
 
-      const parsedOriginalValues = operationFieldOriginalValueArray.map((value) =>
-        JSON.parse(value)
-      );
-      const parsedNewValues = operationFieldNewValueArray.map((value) =>
-        JSON.parse(value)
-      );
+      const changes = operationFieldArray.map((field, index) => {
+        let originalValue = operationFieldOriginalValueArray[index];
+        let newValue = operationFieldNewValueArray[index];
 
-      const changes = operationFieldArray.map((field: string, index: number) => ({
-        field,
-        originalValue: parsedOriginalValues[index],
-        newValue: parsedNewValues[index],
-      }));
+        originalValue = safeJSONParse(originalValue);
+        newValue = safeJSONParse(newValue);
+
+        return {
+          field,
+          originalValue,
+          newValue,
+        };
+      });
 
       return changes;
     } catch (error) {
@@ -248,7 +261,6 @@ const ContractInfoTable: React.FC = () => {
       return [];
     }
   };
-
 // 定义操作日志的列
   const operationLogColumns: ProColumns<OperationLogVO>[] = [
     {
@@ -270,7 +282,6 @@ const ContractInfoTable: React.FC = () => {
     {
       title: '修改详情',
       key: 'operationDetail',
-      width: 600,
       render: (_, record) => {
         const changes = parseOperationRecord(record);
         return changes.map((change, index) => {
@@ -292,7 +303,6 @@ const ContractInfoTable: React.FC = () => {
       },
     },
   ];
-
 // 定义合同成本的列
   const contractCostColumns: ProColumns<MeasurementItemVO>[] = [
     {
@@ -355,6 +365,112 @@ const ContractInfoTable: React.FC = () => {
     setDetailModalOpen(true);
   };
 
+  const extractFileName = (fileUrl) => {
+    // 根据您的逻辑提取文件名
+    // 例如：
+    const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
+    let fileName = '未知文件';
+    if (fileUrl && fileUrl.startsWith(prefix)) {
+      const rawFileName = fileUrl.replace(prefix, '');
+      const decodedFileName = decodeURIComponent(rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''));
+      fileName = decodedFileName;
+    }
+    return fileName;
+  };
+
+  const downloadFromOSS = async (fileUrl: string) => {
+    try {
+      // 使用 fetch 获取文件
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const fileName = extractFileName(fileUrl);
+
+      // 创建下载链接
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+
+      // 触发下载
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      message.error('文件下载失败');
+    }
+  };
+
+// 渲染附件列表列的函数
+  const renderApprovalFilesInTable = (_, record) => {
+    // 过滤掉 null 或 undefined 的文件 URL
+    const validFileUrls = (record.attachmentList || []).filter((url) => url);
+
+    // 统一的容器样式
+    const containerStyle = {
+      display: 'flex',
+      alignItems: 'center',
+    };
+
+    // 有文件的情况
+    return (
+      <div style={containerStyle}>
+        <Popover
+          content={
+            <div style={{ maxWidth: '400px' }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={validFileUrls}
+                renderItem={(fileUrl) => {
+                  const fileName = extractFileName(fileUrl);
+                  return (
+                    <List.Item
+                      key={fileUrl}
+                      actions={[
+                        <Button
+                          type="link"
+                          onClick={async () => {
+                            await downloadFromOSS(fileUrl);
+                          }}
+                        >
+                          下载
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={<FileOutlined style={{ fontSize: '24px' }} />}
+                        title={
+                          <Typography.Text
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80%',
+                              display: 'block',
+                            }}
+                            title={fileName}
+                          >
+                            {fileName}
+                          </Typography.Text>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </div>
+          }
+          title="文件列表"
+          trigger="hover"
+          overlayStyle={{ width: '400px' }}
+        >
+          <Button type="link">
+            查看文件 ({validFileUrls.length})
+          </Button>
+        </Popover>
+      </div>
+    );
+  };
+
 
   const columns: ProColumns<ContractInfoVO>[] = [
     {
@@ -372,6 +488,36 @@ const ContractInfoTable: React.FC = () => {
       fixed: 'left',
       width: 150,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+    },
+    {
+      title: '合同成本',
+      dataIndex: 'contractCost',
+      valueType: 'text',
+      width: 150,
+      render: (_, record) => (
+        <a
+          onClick={() =>
+            showDetailModal('合同成本详情', record.contractCost || [], 'contractCost')
+          }
+        >
+          查看详情
+        </a>
+      ),
+    },
+    {
+      title: '工程清单',
+      dataIndex: 'projectSchedule',
+      valueType: 'text',
+      width: 150,
+      render: (_, record) => (
+        <a
+          onClick={() =>
+            showDetailModal('工程清单详情', record.projectSchedule || [], 'projectSchedule')
+          }
+        >
+          查看详情
+        </a>
+      ),
     },
     {
       title: '合同编号',
@@ -470,36 +616,6 @@ const ContractInfoTable: React.FC = () => {
       width: 150,
     },
     {
-      title: '合同成本',
-      dataIndex: 'contractCost',
-      valueType: 'text',
-      width: 150,
-      render: (_, record) => (
-        <a
-          onClick={() =>
-            showDetailModal('合同成本详情', record.contractCost || [], 'contractCost')
-          }
-        >
-          查看详情
-        </a>
-      ),
-    },
-    {
-      title: '项目进度',
-      dataIndex: 'projectSchedule',
-      valueType: 'text',
-      width: 150,
-      render: (_, record) => (
-        <a
-          onClick={() =>
-            showDetailModal('项目进度详情', record.projectSchedule || [], 'projectSchedule')
-          }
-        >
-          查看详情
-        </a>
-      ),
-    },
-    {
       title: '负责人列表',
       dataIndex: 'adminList',
       valueType: 'text',
@@ -510,40 +626,7 @@ const ContractInfoTable: React.FC = () => {
       title: '附件列表',
       dataIndex: 'attachmentList',
       valueType: 'text',
-      render: (_, record) =>
-        record.attachmentList && record.attachmentList.length > 0 ? (
-          record.attachmentList.map((url: string, index: number) => {
-            if (!url) {
-              return null; // 或者返回一个占位符
-            }
-
-            // 提取并解码文件名
-            const decodedFileName = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
-
-            return (
-              <div key={index}>
-                <a
-                  href="#"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    await downloadFromOSS(url); // 调用下载函数
-                  }}
-                  style={{
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: 'inline-block',
-                    maxWidth: '100%',
-                  }}
-                >
-                  {decodedFileName}
-                </a>
-              </div>
-            );
-          })
-        ) : (
-          '-'
-        ),
+      render: renderApprovalFilesInTable,
       width: 200,
       ellipsis: true,
     },
@@ -629,7 +712,7 @@ const ContractInfoTable: React.FC = () => {
         }}
         style={{ marginBottom: 16 }}
       >
-        <Form.Item label="查询" name="generalQueryCondition" style={{ width: 500 }}>
+        <Form.Item label="模糊查询" name="generalQueryCondition" style={{ width: 500 }}>
           <Input placeholder="请输入合同名称、编号等信息" />
         </Form.Item>
       </Form>
@@ -678,6 +761,7 @@ const ContractInfoTable: React.FC = () => {
       {/* 新增合同的弹窗 */}
       <Modal
         title="新增合同"
+        maskClosable={false}
         visible={createModalOpen}
         onCancel={() => handleModalOpen('createModalOpen', false)}
         width={1500}
@@ -689,8 +773,9 @@ const ContractInfoTable: React.FC = () => {
               const formattedValues: AddOrUpdateContractInfoRequest = {
                 ...values,
                 projectSchedule: values.projectSchedule,
-                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => attachment.response) : [],
-                startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
+                attachmentList: values.attachmentList
+                  ? values.attachmentList.map((file) => file.url || file.response.url)
+                  : [],                startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
                 endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : undefined,
                 relatedProjectId: selectedProjectId,
                 financialResponsiblePerson: values.financialResponsiblePerson
@@ -721,6 +806,7 @@ const ContractInfoTable: React.FC = () => {
       {/* 编辑合同的弹窗 */}
       <Modal
         title="编辑合同"
+        maskClosable={false}
         width={1500}
         destroyOnClose
         visible={editModalOpen}
@@ -733,8 +819,9 @@ const ContractInfoTable: React.FC = () => {
                 ...currentContract,
                 ...values,
                 projectSchedule: values.projectSchedule,
-                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => attachment.response) : [],
-                startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
+                attachmentList: values.attachmentList
+                  ? values.attachmentList.map((file) => file.url || file.response.url)
+                  : [],                startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
                 endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : undefined,
                 relatedProjectId: selectedProjectId,
                 financialResponsiblePerson: values.financialResponsiblePerson
@@ -770,6 +857,7 @@ const ContractInfoTable: React.FC = () => {
       {/* 授权合同的弹窗 */}
       <Modal
         title="授权合同"
+        maskClosable={false}
         visible={authorizeModalOpen}
         onCancel={() => handleModalOpen('authorizeModalOpen', false)}
         onOk={() => {
@@ -837,7 +925,7 @@ const ContractInfoTable: React.FC = () => {
         visible={operationLogModalOpen}
         onCancel={() => setOperationLogModalOpen(false)}
         footer={null}
-        width={800}
+        width={1000} // 根据需要调整模态框的宽度
       >
         <Table
           dataSource={operationLogs}
@@ -845,6 +933,7 @@ const ContractInfoTable: React.FC = () => {
           rowKey="id"
           loading={operationLogLoading}
           pagination={false}
+          scroll={{ x: 'max-content' }} // 启用横向滚动
         />
       </Modal>
     </PageContainer>

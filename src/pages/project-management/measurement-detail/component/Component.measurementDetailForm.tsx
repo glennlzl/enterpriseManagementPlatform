@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useEffect, useState} from 'react';
 import { Form, Input, Upload, Button, InputNumber, Divider, message } from 'antd';
 import type { FormInstance } from 'antd/lib/form';
 import { UploadOutlined } from '@ant-design/icons';
@@ -19,40 +19,9 @@ const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({
                                                                        selectedMeasurementItem,
                                                                        measurementType,
                                                                      }) => {
-  // 附件上传处理
-  const [fileList, setFileList] = useState<any[]>([]);
+  const [fileList, setFileList] = useState([]);
 
-  const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
-
-  const extractFileName = (fileUrl) => {
-    let fileName = '未知文件';
-    if (fileUrl && fileUrl.startsWith(prefix)) {
-      const rawFileName = fileUrl.replace(prefix, '');
-      const decodedFileName = decodeURIComponent(
-        rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''),
-      );
-      fileName = decodedFileName;
-    }
-    return fileName;
-  };
-
-  // 初始化时，如果有附件列表，设置到 fileList 中
-  useEffect(() => {
-    const initialFileList = form.getFieldValue('attachmentList') || [];
-    setFileList(
-      initialFileList.map((url) => ({
-        uid: url,
-        name: extractFileName(url),
-        status: 'done',
-        url,
-      })) || [],
-    );
-  }, []);
-
-  console.log(fileList);
-
-  // 上传到OSS的函数
-  const uploadFileToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+  const uploadImageToOss = async (file, ossStsAccessInfo) => {
     const client = new OSSClient({
       region: 'oss-cn-beijing',
       accessKeyId: ossStsAccessInfo.accessKeyId,
@@ -69,35 +38,48 @@ const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({
     }
   };
 
-  // 自定义上传处理
-  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+  const handleUpload = async ({ file, onSuccess, onError }) => {
     try {
       const ossStsAccessInfo = await fetchOssStsAccessInfo();
-      const fileUrl = await uploadFileToOss(file, ossStsAccessInfo);
+      const fileUrl = await uploadImageToOss(file, ossStsAccessInfo);
 
-      setFileList((prevList) => [...prevList, { uid: file.uid, name: file.name, url: fileUrl, status: 'done' }]);
-      // 更新表单中的 attachmentList
+      const newFile = {
+        uid: file.uid,
+        name: file.name,
+        status: 'done',
+        url: fileUrl,
+      };
+
+      setFileList((prevList) => [...prevList, newFile]);
+
       const currentUrls = form.getFieldValue('attachmentList') || [];
       form.setFieldsValue({
         attachmentList: [...currentUrls, fileUrl],
       });
 
-      onSuccess(fileUrl);
+      onSuccess(newFile);
     } catch (error) {
       onError(error);
     }
   };
 
-  const handleRemove = (file: any) => {
+  const handleRemove = (file) => {
     setFileList((prevList) => prevList.filter((item) => item.uid !== file.uid));
 
-    // 更新表单中的 attachmentList
     const currentUrls = form.getFieldValue('attachmentList') || [];
-    const updatedUrls = currentUrls.filter((url: string) => url !== file.url);
+    const updatedUrls = currentUrls.filter((url) => url !== file.url);
     form.setFieldsValue({
       attachmentList: updatedUrls,
     });
   };
+
+  const uploadProps = {
+    customRequest: handleUpload,
+    onRemove: handleRemove,
+    multiple: true,
+    fileList,
+  };
+
 
   return (
     <Form form={form} layout="vertical">
@@ -169,11 +151,7 @@ const MeasurementDetailForm: React.FC<MeasurementDetailFormProps> = ({
         valuePropName="fileList"
         getValueFromEvent={(e) => e && e.fileList}
       >
-        <Upload
-          customRequest={handleUpload}
-          multiple
-          onRemove={handleRemove}
-        >
+        <Upload {...uploadProps}>
           <Button icon={<UploadOutlined />}>点击上传文件</Button>
         </Upload>
       </Form.Item>

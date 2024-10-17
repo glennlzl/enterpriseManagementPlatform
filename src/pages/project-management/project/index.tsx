@@ -4,8 +4,8 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import {Button, Popconfirm, Form, Input, Space, Modal, Select, DatePicker, message} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, DatePicker, message, Popover, List, Typography} from 'antd';
+import {FileOutlined, PlusOutlined} from '@ant-design/icons';
 import { ProjectInfoVO } from "@/model/project/Modal.project";
 import { useProjectInfo } from "@/hooks/project/Hook.useProjectInfo";
 import ProjectInfoForm from "@/pages/project-management/project/component/Component.projectInfoForm";
@@ -65,6 +65,16 @@ const ProjectInfoTable: React.FC = () => {
           startDate: record.startDate ? moment(record.startDate) : undefined,
           endDate: record.endDate ? moment(record.endDate) : undefined,
           contractDate: record.contractDate ? moment(record.contractDate) : undefined,
+          attachmentList: record.attachmentList
+            ? record.attachmentList
+              .filter((url) => url)
+              .map((url, index) => ({
+                uid: `-${index}`,
+                name: extractFileName(url),
+                status: 'done',
+                url: url,
+              }))
+            : [],
           // 如果需要处理其他字段
         });
       }
@@ -77,27 +87,6 @@ const ProjectInfoTable: React.FC = () => {
           adminList: record.adminList ? record.adminList.map((admin) => admin.id) : [],
         });
       }
-    }
-  };
-
-  const downloadFromOSS = async (fileUrl: string) => {
-    const loginCheck = await isLogin();
-    if (!loginCheck) {
-      message.error('请重新登录');
-      history.push('/user/login');
-    }
-    try {
-      // 通过文件URL直接下载
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      const fileName = fileUrl.split('/').pop();
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = fileName || 'downloaded_file';
-      link.click();
-    } catch (err) {
-      console.error('文件下载失败:', err);
-      throw err;
     }
   };
 
@@ -114,6 +103,114 @@ const ProjectInfoTable: React.FC = () => {
   const projectStatusFilters = generateFilters(projectList, 'projectStatus');
   const regulatoryLevelFilters = generateFilters(projectList, 'regulatoryLevel');
   const techLevelFilters = generateFilters(projectList, 'techLevel');
+
+
+  // 提取文件名的函数
+  const extractFileName = (fileUrl) => {
+    // 根据您的逻辑提取文件名
+    // 例如：
+    const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
+    let fileName = '未知文件';
+    if (fileUrl && fileUrl.startsWith(prefix)) {
+      const rawFileName = fileUrl.replace(prefix, '');
+      const decodedFileName = decodeURIComponent(rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''));
+      fileName = decodedFileName;
+    }
+    return fileName;
+  };
+
+  const downloadFromOSS = async (fileUrl: string) => {
+    try {
+      // 使用 fetch 获取文件
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const fileName = extractFileName(fileUrl);
+
+      // 创建下载链接
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+
+      // 触发下载
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      message.error('文件下载失败');
+    }
+  };
+
+// 渲染附件列表列的函数
+  const renderApprovalFilesInTable = (_, record) => {
+    // 过滤掉 null 或 undefined 的文件 URL
+    const validFileUrls = (record.attachmentList || []).filter((url) => url);
+
+    // 统一的容器样式
+    const containerStyle = {
+      display: 'flex',
+      alignItems: 'center',
+    };
+
+    // 有文件的情况
+    return (
+      <div style={containerStyle}>
+        <Popover
+          content={
+            <div style={{ maxWidth: '400px' }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={validFileUrls}
+                renderItem={(fileUrl) => {
+                  const fileName = extractFileName(fileUrl);
+                  return (
+                    <List.Item
+                      key={fileUrl}
+                      actions={[
+                        <Button
+                          type="link"
+                          onClick={async () => {
+                            await downloadFromOSS(fileUrl);
+                          }}
+                        >
+                          下载
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={<FileOutlined style={{ fontSize: '24px' }} />}
+                        title={
+                          <Typography.Text
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80%',
+                              display: 'block',
+                            }}
+                            title={fileName}
+                          >
+                            {fileName}
+                          </Typography.Text>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </div>
+          }
+          title="文件列表"
+          trigger="hover"
+          overlayStyle={{ width: '400px' }}
+        >
+          <Button type="link">
+            查看文件 ({validFileUrls.length})
+          </Button>
+        </Popover>
+      </div>
+    );
+  };
 
   // 处理日期过滤器
   const dateFilterDropdown = (dataIndex) => ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
@@ -541,40 +638,7 @@ const ProjectInfoTable: React.FC = () => {
       title: '附件列表',
       dataIndex: 'attachmentList',
       valueType: 'text',
-      render: (_, record) =>
-        record.attachmentList && record.attachmentList.length > 0 ? (
-          record.attachmentList.map((url: string, index: number) => {
-            if (!url) {
-              return null; // 或者返回一个占位符
-            }
-
-            // 提取并解码文件名
-            const decodedFileName = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
-
-            return (
-              <div key={index}>
-                <a
-                  href="#"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    await downloadFromOSS(url); // 调用下载函数
-                  }}
-                  style={{
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: 'inline-block',
-                    maxWidth: '100%',
-                  }}
-                >
-                  {decodedFileName}
-                </a>
-              </div>
-            );
-          })
-        ) : (
-          '-'
-        ),
+      render: renderApprovalFilesInTable,
       width: 200,
       ellipsis: true,
     },
@@ -625,7 +689,7 @@ const ProjectInfoTable: React.FC = () => {
         }}
         style={{ marginBottom: 16 }}
       >
-        <Form.Item label="查询" name="generalQueryCondition" style={{ width: 500 }}>
+        <Form.Item label="模糊查询" name="generalQueryCondition" style={{ width: 500 }}>
           <Input placeholder="请输入项目名称、地区等信息" />
         </Form.Item>
       </Form>
@@ -668,6 +732,7 @@ const ProjectInfoTable: React.FC = () => {
       <Modal
         title="新增项目"
         visible={createModalOpen}
+        maskClosable={false}
         onCancel={() => handleModalOpen('createModalOpen', false)}
         onOk={() => {
           form
@@ -676,7 +741,9 @@ const ProjectInfoTable: React.FC = () => {
               // 处理日期字段，转换为字符串格式
               const formattedValues = {
                 ...values,
-                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => attachment.response) : [],
+                attachmentList: values.attachmentList
+                  ? values.attachmentList.map((file) => file.url || file.response.url)
+                  : [],
                 startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
                 endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : undefined,
                 contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DD') : undefined,
@@ -696,6 +763,7 @@ const ProjectInfoTable: React.FC = () => {
       {/* 授权项目的弹窗 */}
       <Modal
         title="授权项目"
+        maskClosable={false}
         visible={authorizeModalOpen}
         onCancel={() => handleModalOpen('authorizeModalOpen', false)}
         onOk={() => {
@@ -743,6 +811,7 @@ const ProjectInfoTable: React.FC = () => {
 
       <Modal
         title="编辑项目"
+        maskClosable={false}
         visible={editModalOpen}
         onCancel={() => handleModalOpen('editModalOpen', false)}
         onOk={() => {
@@ -753,8 +822,9 @@ const ProjectInfoTable: React.FC = () => {
               const formattedValues = {
                 ...currentProject,
                 ...values,
-                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => typeof attachment === 'string' ? attachment : attachment.response) : [],
-                startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
+                attachmentList: values.attachmentList
+                  ? values.attachmentList.map((file) => file.url || file.response.url)
+                  : [],                startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : undefined,
                 endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : undefined,
                 contractDate: values.contractDate ? values.contractDate.format('YYYY-MM-DD') : undefined,
                 adminList: values.adminList ? employeeList.filter((emp) => _.includes(values.adminList.map((person) => person.value), emp.id)) : undefined

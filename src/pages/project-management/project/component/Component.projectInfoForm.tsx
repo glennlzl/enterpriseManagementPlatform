@@ -29,9 +29,9 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
     return Promise.resolve();
   };
 
-  const [fileList, setFileList] = useState<any[]>([]);
+  const [fileList, setFileList] = useState([]);
 
-  const uploadImageToOss = async (file: File, ossStsAccessInfo: OssStsAccessInfo) => {
+  const uploadImageToOss = async (file, ossStsAccessInfo) => {
     const client = new OSSClient({
       region: 'oss-cn-beijing',
       accessKeyId: ossStsAccessInfo.accessKeyId,
@@ -48,37 +48,42 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
     }
   };
 
-  const handleUpload = async ({ file, onSuccess, onError }: any) => {
+  const handleUpload = async ({ file, onSuccess, onError }) => {
     try {
       const ossStsAccessInfo = await fetchOssStsAccessInfo();
       const fileUrl = await uploadImageToOss(file, ossStsAccessInfo);
 
-      setFileList((prevList) => [...prevList, fileUrl]);
-      // 更新表单中的 attachmentList
+      const newFile = {
+        uid: file.uid,
+        name: file.name,
+        status: 'done',
+        url: fileUrl,
+      };
+
+      setFileList((prevList) => [...prevList, newFile]);
+
       const currentUrls = form.getFieldValue('attachmentList') || [];
-      console.log(currentUrls);
       form.setFieldsValue({
-        attachmentList: _.isUndefined(currentUrls) ? [...currentUrls, fileUrl] : [fileUrl],
+        attachmentList: [...currentUrls, fileUrl],
       });
 
-      onSuccess(fileUrl);
+      onSuccess(newFile);
     } catch (error) {
       onError(error);
     }
   };
 
-  const handleRemove = (file: any) => {
+  const handleRemove = (file) => {
     setFileList((prevList) => prevList.filter((item) => item.uid !== file.uid));
 
-    // 更新表单中的 attachmentList
     const currentUrls = form.getFieldValue('attachmentList') || [];
-    const updatedUrls = currentUrls.filter((url: string) => url !== file.url);
+    const updatedUrls = currentUrls.filter((url) => url !== file.url);
     form.setFieldsValue({
       attachmentList: updatedUrls,
     });
   };
 
-  const uploadProps: UploadProps = {
+  const uploadProps = {
     customRequest: handleUpload,
     onRemove: handleRemove,
     multiple: true,
@@ -195,7 +200,6 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
           <Form.Item
             label="投资类型"
             name="investmentType"
-            rules={[{ required: true, message: '请选择投资类型' }]}
           >
             <Select placeholder="请选择投资类型">
               {investmentTypes.map((type) => (
@@ -263,7 +267,6 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
           <Form.Item
             label="监管层级"
             name="regulatoryLevel"
-            rules={[{ required: true, message: '请选择监管层级' }]}
           >
             <Select placeholder="请选择监管层级">
               {regulatoryLevels.map((level) => (
@@ -298,3 +301,4 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
 };
 
 export default ProjectInfoForm;
+

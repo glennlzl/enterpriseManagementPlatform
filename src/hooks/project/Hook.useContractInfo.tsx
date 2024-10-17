@@ -116,7 +116,7 @@ export function useContractInfo() {
         { label: '财务负责人ID', value: 'financialResponsiblePersonId' },
         { label: '财务负责人电话', value: 'financialResponsiblePersonMobile' },
         { label: '关联项目ID', value: 'relatedProjectId' },
-        { label: '项目进度', value: 'projectSchedule' },
+        { label: '工程清单', value: 'projectSchedule' },
         { label: '合同成本', value: 'contractCost' },
         { label: '管理员列表', value: 'adminList' },
         { label: '附件列表', value: 'attachmentList' },

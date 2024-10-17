@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import {
@@ -23,62 +23,101 @@ const TableList: React.FC = () => {
   );
 
   const intl = useIntl();
-  const nameFilters = _.uniqBy(state.employeeList.map(item => ({ text: item.name, value: item.name })), 'value');
-  const phoneFilters = _.uniqBy(state.employeeList.map(item => ({ text: item.mobile, value: item.mobile })), 'value');
 
-  const columns = [
-    {
-      title: <FormattedMessage id="姓名" />,
-      dataIndex: 'name',
-      valueType: 'textarea',
-      filters: nameFilters,
-      onFilter: (value, record) => record.name === value,
-      filterSearch: true,
-    },
-    {
-      title: <FormattedMessage id="上级" />,
-      dataIndex: 'managerName',
-      valueType: 'textarea',
-    },
-    {
-      title: <FormattedMessage id="手机" />,
-      dataIndex: 'mobile',
-      valueType: 'textarea',
-      filters: phoneFilters,
-      onFilter: (value, record) => record.mobile === value,
-      search: true,
-      filterSearch: true,
-    },
-    {
-      title: <FormattedMessage id="工号" />,
-      dataIndex: 'jobNumber',
-      valueType: 'textarea',
-    },
-    {
-      title: <FormattedMessage id="职位" />,
-      dataIndex: 'title',
-      valueType: 'textarea',
-    },
-    {
-      title: <FormattedMessage id="邮箱" />,
-      dataIndex: 'email',
-      valueType: 'textarea',
-    },
-    {
-      title: <FormattedMessage id="状态" />,
-      dataIndex: 'isIncumbent',
-      hideInForm: true,
-      valueEnum: {
-        0: {
-          text: <FormattedMessage id="已离职" />,
-          status: 'Default',
-        },
-        1: {
-          text: <FormattedMessage id="在职" />,
-          status: 'Success',
+  const [dataSource, setDataSource] = useState([]);
+
+  const getColumns = (dataSource) => {
+    const nameFilters = _.uniqBy(dataSource.map(item => ({ text: item.name, value: item.name })), 'value');
+    const phoneFilters = _.uniqBy(dataSource.map(item => ({ text: item.mobile, value: item.mobile })), 'value');
+    const managerNameFilters = _.uniqBy(dataSource.map(item => ({ text: item.managerName, value: item.managerName })), 'value');
+    const jobNumberFilters = _.uniqBy(dataSource.map(item => ({ text: item.jobNumber, value: item.jobNumber })), 'value');
+    const titleFilters = _.uniqBy(dataSource.map(item => ({ text: item.title, value: item.title })), 'value');
+    const emailFilters = _.uniqBy(dataSource.map(item => ({ text: item.email, value: item.email })), 'value');
+    const isIncumbentFilters = [
+      { text: '在职', value: 1 },
+      { text: '已离职', value: 0 },
+    ];
+
+    return [
+      {
+        title: <FormattedMessage id="姓名" />,
+        dataIndex: 'name',
+        valueType: 'textarea',
+        filters: nameFilters,
+        filterMultiple: true,
+        filterSearch: true,
+        onFilter: (value, record) => record.name === value,
+        search: true,
+      },
+      {
+        title: <FormattedMessage id="上级" />,
+        dataIndex: 'managerName',
+        valueType: 'textarea',
+        filters: managerNameFilters,
+        filterMultiple: true,
+        filterSearch: true,
+        onFilter: (value, record) => record.managerName === value,
+        search: true,
+      },
+      {
+        title: <FormattedMessage id="手机" />,
+        dataIndex: 'mobile',
+        valueType: 'textarea',
+        filters: phoneFilters,
+        filterMultiple: true,
+        filterSearch: true,
+        onFilter: (value, record) => record.mobile === value,
+        search: true,
+      },
+      {
+        title: <FormattedMessage id="工号" />,
+        dataIndex: 'jobNumber',
+        valueType: 'textarea',
+        filters: jobNumberFilters,
+        filterMultiple: true,
+        filterSearch: true,
+        onFilter: (value, record) => record.jobNumber === value,
+        search: true,
+      },
+      {
+        title: <FormattedMessage id="职位" />,
+        dataIndex: 'title',
+        valueType: 'textarea',
+        filters: titleFilters,
+        filterMultiple: true,
+        filterSearch: true,
+        onFilter: (value, record) => record.title === value,
+        search: true,
+      },
+      {
+        title: <FormattedMessage id="邮箱" />,
+        dataIndex: 'email',
+        valueType: 'textarea',
+        filters: emailFilters,
+        filterMultiple: true,
+        filterSearch: true,
+        onFilter: (value, record) => record.email === value,
+        search: true,
+      },
+      {
+        title: <FormattedMessage id="状态" />,
+        dataIndex: 'isIncumbent',
+        hideInForm: true,
+        filters: isIncumbentFilters,
+        filterMultiple: true,
+        onFilter: (value, record) => record.isIncumbent == value,
+        search: true,
+        valueEnum: {
+          0: {
+            text: <FormattedMessage id="已离职" />,
+            status: 'Default',
+          },
+          1: {
+            text: <FormattedMessage id="在职" />,
+            status: 'Success',
+          },
         },
       },
-    },
     {
       title: <FormattedMessage id="操作" />,
       dataIndex: 'option',
@@ -119,7 +158,7 @@ const TableList: React.FC = () => {
         ) : null,
       ],
     }
-  ];
+  ];};
 
   return (
     <PageContainer>
@@ -156,12 +195,13 @@ const TableList: React.FC = () => {
         ]}
         request={async () => {
           const data = await fetchUsers();
+          setDataSource(data); // Store the fetched data in state
           return {
             data,
             success: true,
           };
         }}
-        columns={columns}
+        columns={getColumns(dataSource)}
       />
       {state.selectedRowsState?.length > 0 && (
         <FooterToolbar

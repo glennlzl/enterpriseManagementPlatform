@@ -55,7 +55,7 @@ const VehicleTypeManagement: React.FC = () => {
       message.success('删除成功');
       reloadTableData(); // 删除后重新加载数据
     } catch (error) {
-      message.error('删除失败，请重试');
+      message.error(error);
     }
   };
 
@@ -68,7 +68,7 @@ const VehicleTypeManagement: React.FC = () => {
       form.resetFields();
       reloadTableData(); // 添加后重新加载数据
     } catch (error) {
-      message.error('新增失败，请重试');
+      message.error(error);
     }
   };
 
@@ -146,6 +146,7 @@ const VehicleTypeManagement: React.FC = () => {
         visible={modalVisible}
         onCancel={() => setModalVisible(false)}
         onOk={handleAdd}
+        maskClosable={false}
       >
         <Form form={form} layout="vertical">
           <Form.Item

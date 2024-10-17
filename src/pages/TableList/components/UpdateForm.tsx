@@ -54,6 +54,7 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             })}
             open={props.updateModalOpen}
             footer={submitter}
+            maskClosable={false}
             onCancel={() => {
               props.onCancel();
             }}
@@ -118,6 +119,12 @@ const UpdateForm: React.FC<UpdateFormProps> = (props) => {
             defaultMessage: '手机',
           })}
           required={true}
+          rules={[
+            {
+              required: true,
+              message: '请输入手机号！',
+            },
+          ]}
         />
         <ProFormText
           name="jobNumber"

@@ -175,6 +175,7 @@ export function usePeriodInfo() {
         ...values,
         relatedProjectId: selectedProjectId!,
         relatedContractId: selectedContractId!,
+        attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => typeof attachment === 'string' ? attachment : attachment.response) : [],
       };
       if (currentPeriod?.id) {
         await updatePeriodInfo(periodData);
@@ -186,7 +187,7 @@ export function usePeriodInfo() {
       setModalOpen(false);
       fetchPeriodList(selectedProjectId, selectedContractId);
     } catch (error) {
-      message.error('操作失败');
+      message.error(error);
     }
   };
 
@@ -197,7 +198,7 @@ export function usePeriodInfo() {
       message.success('删除周期信息成功');
       fetchPeriodList(selectedProjectId, selectedContractId);
     } catch (error) {
-      message.error('删除失败');
+      message.error(error);
     }
   };
 
@@ -215,7 +216,7 @@ export function usePeriodInfo() {
 
       await fetchPeriodList(selectedProjectId, selectedContractId);
     } catch (error) {
-      message.error('归档失败');
+      message.error(error);
     }
   };
 

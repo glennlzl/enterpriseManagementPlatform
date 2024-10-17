@@ -106,7 +106,12 @@ export const useEmployeeManagement = (currentUserId: string) => {
       history.push('/user/login');
     }
     try {
-      return await getUsers(currentUserId);
+      const data = await getUsers(currentUserId);
+      setState((prevState) => ({
+        ...prevState,
+        employeeList: data,
+      }));
+      return data;
     } catch (error) {
       message.error('获取用户信息失败');
       return [];

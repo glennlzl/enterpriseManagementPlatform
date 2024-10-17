@@ -4,8 +4,8 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import {Button, Popconfirm, Form, Input, Space, Modal, Select, message, Table, List, Popover} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, message, Table, List, Popover, Typography} from 'antd';
+import {FileOutlined, PlusOutlined} from '@ant-design/icons';
 import moment from 'moment';
 import { PeriodInfoVO } from '@/model/project/Model.period';
 import { usePeriodInfo } from '@/hooks/project/Hook.usePeriodInfo';
@@ -58,32 +58,21 @@ const PeriodInfoTable: React.FC = () => {
         ...record,
         startDate: record.startDate ? moment(record.startDate) : undefined,
         endDate: record.endDate ? moment(record.endDate) : undefined,
+        attachmentList: record.attachmentList
+          ? record.attachmentList
+            .filter((url) => url)
+            .map((url, index) => ({
+              uid: `-${index}`,
+              name: extractFileName(url),
+              status: 'done',
+              url: url,
+            }))
+          : [],
       });
     } else {
       // 新增周期信息
       setCurrentPeriod(null);
       form.resetFields();
-    }
-  };
-
-  const downloadFromOSS = async (fileUrl: string) => {
-    const loginCheck = await isLogin();
-    if (!loginCheck) {
-      message.error('请重新登录');
-      history.push('/user/login');
-    }
-    try {
-      // 通过文件URL直接下载
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      const fileName = fileUrl.split('/').pop();
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = fileName || 'downloaded_file';
-      link.click();
-    } catch (err) {
-      console.error('文件下载失败:', err);
-      throw err;
     }
   };
 
@@ -104,7 +93,6 @@ const PeriodInfoTable: React.FC = () => {
     // 根据需要添加更多字段
   };
 
-// 格式化值的函数
   const formatValue = (value: any, fieldKey?: string): string => {
     if (
       value === null ||
@@ -114,73 +102,208 @@ const PeriodInfoTable: React.FC = () => {
     ) {
       return '-';
     } else if (Array.isArray(value)) {
-      return value
-        .map((item) => {
-          if (item !== null && typeof item === 'object') {
-            // 提取对象中的关键字段
-            const itemDetails = Object.keys(item)
-              .map((key) => {
-                const fieldInfo = fieldNameMap[key] || { label: key };
-                const fieldLabel = fieldInfo.label;
-                const fieldValue = formatValue(item[key], key);
-                return `${fieldLabel}: ${fieldValue}`;
-              })
-              .join(', ');
-            return `{ ${itemDetails} }`;
-          } else {
-            return String(item);
-          }
-        })
-        .join('; ');
-    } else if (value !== null && typeof value === 'object') {
-      // 对象，提取关键字段
-      const objectDetails = Object.keys(value)
-        .map((key) => {
-          const fieldInfo = fieldNameMap[key] || { label: key };
-          const fieldLabel = fieldInfo.label;
-          const fieldValue = formatValue(value[key], key);
-          return `${fieldLabel}: ${fieldValue}`;
-        })
-        .join(', ');
-      return `{ ${objectDetails} }`;
+      if (fieldKey === 'adminList') {
+        // 针对 adminList，提取姓名，逗号分隔
+        return value.map((item) => item.name).join(', ');
+      } else {
+        return value
+          .map((item) => {
+            if (typeof item === 'object') {
+              const itemDetails = Object.keys(item)
+                .filter(
+                  (key) =>
+                    key !== 'itemType' &&
+                    key !== 'contractCostType' &&
+                    key !== 'id'
+                )
+                .map((key) => {
+                  const fieldLabel = fieldNameMap[key]?.label || key;
+                  const fieldValue = formatValue(item[key], key);
+                  return `${fieldLabel}: ${fieldValue}`;
+                })
+                .join(', ');
+              return `{ ${itemDetails} }`;
+            } else {
+              return String(item);
+            }
+          })
+          .join('; ');
+      }
+    } else if (typeof value === 'object') {
+      if (fieldKey === 'adminList') {
+        // 单个对象，提取姓名
+        return value.name;
+      } else {
+        const objectDetails = Object.keys(value)
+          .filter(
+            (key) =>
+              key !== 'itemType' &&
+              key !== 'contractCostType' &&
+              key !== 'id'
+          )
+          .map((key) => {
+            const fieldLabel = fieldNameMap[key]?.label || key;
+            const fieldValue = formatValue(value[key], key);
+            return `${fieldLabel}: ${fieldValue}`;
+          })
+          .join(', ');
+        return `{ ${objectDetails} }`;
+      }
     } else if (
       fieldKey &&
       fieldNameMap[fieldKey] &&
       fieldNameMap[fieldKey].isDate &&
       typeof value === 'number'
     ) {
-      // 如果是时间字段，且值是数字，则格式化为日期
       return moment(value).format('YYYY-MM-DD HH:mm:ss');
     } else {
       return String(value);
     }
   };
 
+
+
 // 解析操作日志记录的函数
-  const parseOperationRecord = (record: OperationLogVO) => {
+  const safeJSONParse = (value) => {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return value;
+    }
+  };
+
+  const parseOperationRecord = (record) => {
     try {
       const operationFieldArray = JSON.parse(record.operationField);
       const operationFieldOriginalValueArray = JSON.parse(record.operationFieldOriginalValue);
       const operationFieldNewValueArray = JSON.parse(record.operationFieldNewValue);
 
-      const parsedOriginalValues = operationFieldOriginalValueArray.map((value) =>
-        JSON.parse(value)
-      );
-      const parsedNewValues = operationFieldNewValueArray.map((value) =>
-        JSON.parse(value)
-      );
+      const changes = operationFieldArray.map((field, index) => {
+        let originalValue = operationFieldOriginalValueArray[index];
+        let newValue = operationFieldNewValueArray[index];
 
-      const changes = operationFieldArray.map((field: string, index: number) => ({
-        field,
-        originalValue: parsedOriginalValues[index],
-        newValue: parsedNewValues[index],
-      }));
+        originalValue = safeJSONParse(originalValue);
+        newValue = safeJSONParse(newValue);
+
+        return {
+          field,
+          originalValue,
+          newValue,
+        };
+      });
 
       return changes;
     } catch (error) {
       console.error('解析操作记录失败:', error);
       return [];
     }
+  };
+
+  // 提取文件名的函数
+  const extractFileName = (fileUrl) => {
+    // 根据您的逻辑提取文件名
+    // 例如：
+    const prefix = 'http://rohana-erp.oss-cn-beijing.aliyuncs.com/files/';
+    let fileName = '未知文件';
+    if (fileUrl && fileUrl.startsWith(prefix)) {
+      const rawFileName = fileUrl.replace(prefix, '');
+      const decodedFileName = decodeURIComponent(rawFileName.replace(/^[a-zA-Z0-9-]+_/, ''));
+      fileName = decodedFileName;
+    }
+    return fileName;
+  };
+
+  const downloadFromOSS = async (fileUrl: string) => {
+    try {
+      // 使用 fetch 获取文件
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const fileName = extractFileName(fileUrl);
+
+      // 创建下载链接
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+
+      // 触发下载
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      message.error('文件下载失败');
+    }
+  };
+
+// 渲染附件列表列的函数
+  const renderApprovalFilesInTable = (_, record) => {
+    // 过滤掉 null 或 undefined 的文件 URL
+    const validFileUrls = (record.attachmentList || []).filter((url) => url);
+
+    // 统一的容器样式
+    const containerStyle = {
+      display: 'flex',
+      alignItems: 'center',
+    };
+
+    // 有文件的情况
+    return (
+      <div style={containerStyle}>
+        <Popover
+          content={
+            <div style={{ maxWidth: '400px' }}>
+              <List
+                itemLayout="horizontal"
+                dataSource={validFileUrls}
+                renderItem={(fileUrl) => {
+                  const fileName = extractFileName(fileUrl);
+                  return (
+                    <List.Item
+                      key={fileUrl}
+                      actions={[
+                        <Button
+                          type="link"
+                          onClick={async () => {
+                            await downloadFromOSS(fileUrl);
+                          }}
+                        >
+                          下载
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={<FileOutlined style={{ fontSize: '24px' }} />}
+                        title={
+                          <Typography.Text
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80%',
+                              display: 'block',
+                            }}
+                            title={fileName}
+                          >
+                            {fileName}
+                          </Typography.Text>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </div>
+          }
+          title="文件列表"
+          trigger="hover"
+          overlayStyle={{ width: '400px' }}
+        >
+          <Button type="link">
+            查看文件 ({validFileUrls.length})
+          </Button>
+        </Popover>
+      </div>
+    );
   };
 
   const operationLogColumns: ProColumns<OperationLogVO>[] = [
@@ -290,50 +413,7 @@ const PeriodInfoTable: React.FC = () => {
       title: '附件列表',
       dataIndex: 'attachmentList',
       valueType: 'text',
-      render: (_, record) =>
-        <Popover
-          content={
-            record.attachmentList && record.attachmentList.length > 0 ? (
-              record.attachmentList.map((url: string, index: number) => {
-                if (!url) {
-                  return null; // 或者返回一个占位符
-                }
-
-                // 提取并解码文件名
-                const decodedFileName = decodeURIComponent(url.substring(url.lastIndexOf('/') + 1));
-
-                return (
-                  <div key={index}>
-                    <a
-                      href="#"
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        await downloadFromOSS(url); // 调用下载函数
-                      }}
-                      style={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: 'inline-block',
-                        maxWidth: '100%',
-                      }}
-                    >
-                      {decodedFileName}
-                    </a>
-                  </div>
-                );
-              })
-            ) : (
-              '-'
-            )
-          }
-          title="附件列表"
-          trigger="hover"
-        >
-          <Button type="link">
-            查看附件 ({record.attachmentList ? record.attachmentList.length : 0})
-          </Button>
-        </Popover>,
+      render: renderApprovalFilesInTable,
       width: 200,
       ellipsis: true,
     },
@@ -359,7 +439,7 @@ const PeriodInfoTable: React.FC = () => {
         <Space>
           {/* 更新操作 */}
           {!record.isArchived && (
-            <a onClick={() => handleModalOpen(true, record)}>更新</a>
+            <a onClick={() => handleModalOpen(true, record)}>编辑</a>
           )}
           {/* 删除操作 */}
           <Popconfirm
@@ -432,7 +512,7 @@ const PeriodInfoTable: React.FC = () => {
         }}
         style={{ marginBottom: 16 }}
       >
-        <Form.Item label="查询" name="generalQueryCondition" style={{ width: 500 }}>
+        <Form.Item label="模糊查询" name="generalQueryCondition" style={{ width: 500 }}>
           <Input placeholder="请输入周期名称等信息" />
         </Form.Item>
       </Form>
@@ -504,7 +584,9 @@ const PeriodInfoTable: React.FC = () => {
               handleAddOrUpdatePeriod({
                 ...currentPeriod,
                 ...values,
-                attachmentList: values.attachmentList ? values.attachmentList.map((attachment) => attachment.response) : [],
+                attachmentList: values.attachmentList
+                  ? values.attachmentList.map((file) => file.url || file.response.url)
+                  : [],
                 startDate: values.startDate
                   ? values.startDate.format('YYYY-MM-DD')
                   : undefined,
