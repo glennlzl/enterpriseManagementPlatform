@@ -931,6 +931,7 @@ const MeasurementDetailTable: React.FC = () => {
               }
               visible={modalOpen}
               onCancel={() => handleModalOpen(false)}
+              maskClosable={false}
               onOk={() => {
                 form
                   .validateFields()

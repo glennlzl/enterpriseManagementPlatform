@@ -444,7 +444,7 @@ const PeriodInfoTable: React.FC = () => {
           {/* 删除操作 */}
           <Popconfirm
             title="确定要删除这个周期信息吗？"
-            onConfirm={() => handleDeletePeriod(record.id!)}
+            onConfirm={() => handleDeletePeriod(record.id!, record.relatedProjectId, record.relatedContractId)}
           >
             <a>删除</a>
           </Popconfirm>
@@ -508,7 +508,7 @@ const PeriodInfoTable: React.FC = () => {
         layout="vertical"
         onValuesChange={(changedValues) => {
           const { generalQueryCondition } = changedValues;
-          fetchPeriodList(generalQueryCondition);
+          fetchPeriodList(selectedProjectId, selectedContractId, generalQueryCondition);
         }}
         style={{ marginBottom: 16 }}
       >
@@ -535,16 +535,16 @@ const PeriodInfoTable: React.FC = () => {
                 >
                   批量归档
                 </Button>
-                <Button
-                  onClick={() => {
-                    selectedRowKeys.forEach((id) => {
-                      handleDeletePeriod(id);
-                    });
-                  }}
-                  style={{ marginLeft: 16 }}
-                >
-                  批量删除
-                </Button>
+                {/*<Button*/}
+                {/*  onClick={() => {*/}
+                {/*    selectedRowKeys.forEach((id) => {*/}
+                {/*      handleDeletePeriod(id);*/}
+                {/*    });*/}
+                {/*  }}*/}
+                {/*  style={{ marginLeft: 16 }}*/}
+                {/*>*/}
+                {/*  批量删除*/}
+                {/*</Button>*/}
               </>
             )}
           </div>
@@ -576,6 +576,7 @@ const PeriodInfoTable: React.FC = () => {
       <Modal
         title={currentPeriod ? '更新周期信息' : '新增周期信息'}
         visible={modalOpen}
+        maskClosable={false}
         onCancel={() => handleModalOpen(false)}
         onOk={() => {
           form

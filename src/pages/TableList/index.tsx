@@ -123,7 +123,7 @@ const TableList: React.FC = () => {
       dataIndex: 'option',
       valueType: 'option',
       render: (_, record) => [
-        <a
+        typeof record.role !== 'undefined' && record.role >= 1 ? (<a
           key="config"
           onClick={() => {
             handleModalOpen('updateModalOpen', true);
@@ -134,7 +134,7 @@ const TableList: React.FC = () => {
           }}
         >
           <FormattedMessage id="编辑" />
-        </a>,
+        </a>) : null,
         record.isUpdated && typeof record.role !== 'undefined' && record.role >= 1 && record.userId !== null ? (
           <Tooltip
             title={

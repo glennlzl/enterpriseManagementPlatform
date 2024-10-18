@@ -673,7 +673,7 @@ const ContractInfoTable: React.FC = () => {
           </a>
           <Popconfirm
             title="确定要删除这个合同吗？"
-            onConfirm={() => handleDeleteContract(record.id!)}
+            onConfirm={() => handleDeleteContract(record.id!, selectedProjectId!)}
           >
             <a>删除</a>
           </Popconfirm>
@@ -727,9 +727,9 @@ const ContractInfoTable: React.FC = () => {
                 <Button onClick={handleBatchExport} style={{ marginLeft: 16 }}>
                   批量导出
                 </Button>
-                <Button onClick={handleBatchDelete} style={{ marginLeft: 16 }}>
-                  批量删除
-                </Button>
+                {/*<Button onClick={handleBatchDelete} style={{ marginLeft: 16 }}>*/}
+                {/*  批量删除*/}
+                {/*</Button>*/}
               </>
             )}
           </div>

@@ -106,7 +106,7 @@ export function usePeriodInfo() {
         setSelectedContractId(newContractId);
 
         // 在这里调用 fetchPeriodList，传递最新的 contractId
-        fetchPeriodList(projectId, newContractId);
+        await fetchPeriodList(projectId, newContractId);
       } else {
         setSelectedContractId(undefined);
         setPeriodList([]);
@@ -185,18 +185,18 @@ export function usePeriodInfo() {
         message.success('添加周期信息成功');
       }
       setModalOpen(false);
-      fetchPeriodList(selectedProjectId, selectedContractId);
+      await fetchPeriodList(selectedProjectId, selectedContractId);
     } catch (error) {
       message.error(error);
     }
   };
 
   // 删除周期信息
-  const handleDeletePeriod = async (id: number) => {
+  const handleDeletePeriod = async (id: number, projectId: number, contractId: numebr) => {
     try {
       await deletePeriodInfo(id);
       message.success('删除周期信息成功');
-      fetchPeriodList(selectedProjectId, selectedContractId);
+      await fetchPeriodList(projectId, contractId);
     } catch (error) {
       message.error(error);
     }

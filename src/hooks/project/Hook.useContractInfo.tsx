@@ -60,11 +60,11 @@ export function useContractInfo() {
   };
 
   // 删除合同
-  const handleDeleteContract = async (id: number) => {
+  const handleDeleteContract = async (id: number, selectedProjectId: number) => {
     try {
       await deleteContractInfo(id);
       message.success('删除合同成功');
-      await fetchContractList();
+      await fetchContractList(selectedProjectId);
     } catch (error) {
       message.error('删除合同失败');
     }
