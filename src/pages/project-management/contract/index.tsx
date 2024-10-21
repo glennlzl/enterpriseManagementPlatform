@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   ProTable,
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import {Button, Popconfirm, Form, Input, Space, Modal, Select, Table, message, Popover, List, Typography} from 'antd';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, Table, message, Popover, List, Typography, DatePicker} from 'antd';
 import {FileOutlined, PlusOutlined} from '@ant-design/icons';
 import moment from 'moment';
 import { useContractInfo } from '@/hooks/project/Hook.useContractInfo';
@@ -471,216 +471,649 @@ const ContractInfoTable: React.FC = () => {
     );
   };
 
+  // 生成过滤选项
+  const generateFilters = (dataSource, key) => {
+    const uniqueValues = Array.from(
+      new Set(dataSource.map((item) => item[key]).filter(Boolean)),
+    );
+    return uniqueValues.map((value) => ({ text: String(value), value }));
+  };
 
-  const columns: ProColumns<ContractInfoVO>[] = [
-    {
-      title: '序号',
-      dataIndex: 'id',
-      valueType: 'text',
-      fixed: 'left',
-      width: 80,
-      sorter: (a, b) => (a.id || 0) - (b.id || 0),
-    },
-    {
-      title: '合同名称',
-      dataIndex: 'name',
-      valueType: 'text',
-      fixed: 'left',
-      width: 150,
-      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
-    },
-    {
-      title: '合同成本',
-      dataIndex: 'contractCost',
-      valueType: 'text',
-      width: 150,
-      render: (_, record) => (
-        <a
-          onClick={() =>
-            showDetailModal('合同成本详情', record.contractCost || [], 'contractCost')
-          }
-        >
-          查看详情
-        </a>
-      ),
-    },
-    {
-      title: '工程清单',
-      dataIndex: 'projectSchedule',
-      valueType: 'text',
-      width: 150,
-      render: (_, record) => (
-        <a
-          onClick={() =>
-            showDetailModal('工程清单详情', record.projectSchedule || [], 'projectSchedule')
-          }
-        >
-          查看详情
-        </a>
-      ),
-    },
-    {
-      title: '合同编号',
-      dataIndex: 'contractSerialNumber',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '合同类型',
-      dataIndex: 'type',
-      valueType: 'text',
-      width: 100,
-    },
-    {
-      title: '乙方单位',
-      dataIndex: 'contractor',
-      valueType: 'text',
-      width: 120,
-    },
-    {
-      title: '合同金额(元)',
-      dataIndex: 'contractAmount',
-      valueType: 'text',
-      width: 120,
-    },
-    {
-      title: '开始日期',
-      dataIndex: 'startDate',
-      valueType: 'date',
-      width: 120,
-    },
-    {
-      title: '完工日期',
-      dataIndex: 'endDate',
-      valueType: 'date',
-      width: 120,
-    },
-    {
-      title: '合同排序',
-      dataIndex: 'contractOrder',
-      valueType: 'digit',
-      width: 100,
-    },
-    {
-      title: '暂估价',
-      dataIndex: 'contractProvisionalPrice',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '合同期限类型',
-      dataIndex: 'contractTermType',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '总监单位',
-      dataIndex: 'supervisingOrganization',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '监理单位',
-      dataIndex: 'monitoringOrganization',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '咨询单位',
-      dataIndex: 'consultingOrganization',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '账户名称',
-      dataIndex: 'accountName',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '开户行',
-      dataIndex: 'accountBank',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '账号',
-      dataIndex: 'accountNumber',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '财务负责人',
-      dataIndex: 'financialResponsiblePerson',
-      valueType: 'text',
-      width: 150,
-    },
-    {
-      title: '负责人列表',
-      dataIndex: 'adminList',
-      valueType: 'text',
-      render: (_, record) => record.adminList?.map((admin) => admin.name).join(', ') || '-',
-      width: 150,
-    },
-    {
-      title: '附件列表',
-      dataIndex: 'attachmentList',
-      valueType: 'text',
-      render: renderApprovalFilesInTable,
-      width: 200,
-      ellipsis: true,
-    },
-    {
-      title: '更新时间',
-      dataIndex: 'updateTime',
-      valueType: 'dateTime',
-      width: 150,
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      valueType: 'dateTime',
-      width: 150,
-    },
-    {
-      title: '操作',
-      dataIndex: 'option',
-      valueType: 'option',
-      fixed: 'right',
-      width: 250,
-      render: (_, record) => (
-        <Space>
-          <a
-            onClick={() => {
-              handleModalOpen('editModalOpen', true, record);
-            }}
-          >
-            编辑
-          </a>
-          <a
-            onClick={() => {
-              handleOpenOperationLogModal(record);
-            }}
-          >
-            日志
-          </a>
-          <a
-            onClick={() => {
-              handleModalOpen('authorizeModalOpen', true, record);
-            }}
-          >
-            授权
-          </a>
-          <Popconfirm
-            title="确定要删除这个合同吗？"
-            onConfirm={() => handleDeleteContract(record.id!, selectedProjectId!)}
-          >
-            <a>删除</a>
-          </Popconfirm>
-        </Space>
-      ),
-    },
+  // 手动定义布尔值的过滤选项（如果需要）
+  const isArchivedFilters = [
+    { text: '是', value: true },
+    { text: '否', value: false },
   ];
+
+  // 定义日期过滤器的下拉菜单
+  const dateFilterDropdown = ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+    <div style={{ padding: 8 }}>
+      <DatePicker.RangePicker
+        value={selectedKeys[0] ? [moment(selectedKeys[0][0]), moment(selectedKeys[0][1])] : []}
+        onChange={(dates) => {
+          setSelectedKeys(dates ? [[dates[0].startOf('day'), dates[1].endOf('day')]] : []);
+        }}
+        style={{ marginBottom: 8, display: 'block' }}
+      />
+      <Space>
+        <Button type="primary" onClick={() => confirm()} size="small">
+          筛选
+        </Button>
+        <Button
+          onClick={() => {
+            clearFilters && clearFilters();
+            confirm();
+          }}
+          size="small"
+        >
+          重置
+        </Button>
+      </Space>
+    </div>
+  );
+
+  // 定义日期筛选的逻辑
+  const dateOnFilter = (value, record, dataIndex) => {
+    const [start, end] = value;
+    const recordDate = moment(record[dataIndex]);
+    return recordDate.isBetween(start, end, null, '[]');
+  };
+
+
+
+  const columns: ProColumns<ContractInfoVO>[] = useMemo(
+    () => [
+      {
+        title: '序号',
+        dataIndex: 'id',
+        valueType: 'text',
+        fixed: 'left',
+        width: 80,
+        sorter: (a, b) => (a.id || 0) - (b.id || 0),
+        filters: generateFilters(contractList, 'id'),
+        onFilter: (value, record) => record.id === value,
+        search: true,
+      },
+      {
+        title: '合同名称',
+        dataIndex: 'name',
+        valueType: 'text',
+        fixed: 'left',
+        width: 150,
+        sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入合同名称"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) => record.name?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '合同成本',
+        dataIndex: 'contractCost',
+        valueType: 'text',
+        width: 150,
+        render: (_, record) => (
+          <a
+            onClick={() =>
+              showDetailModal('合同成本详情', record.contractCost || [], 'contractCost')
+            }
+          >
+            查看详情
+          </a>
+        ),
+        search: false,
+      },
+      {
+        title: '工程清单',
+        dataIndex: 'projectSchedule',
+        valueType: 'text',
+        width: 150,
+        render: (_, record) => (
+          <a
+            onClick={() =>
+              showDetailModal('工程清单详情', record.projectSchedule || [], 'projectSchedule')
+            }
+          >
+            查看详情
+          </a>
+        ),
+        search: false,
+      },
+      {
+        title: '合同编号',
+        dataIndex: 'contractSerialNumber',
+        valueType: 'text',
+        width: 150,
+        filters: generateFilters(contractList, 'contractSerialNumber'),
+        onFilter: (value, record) => record.contractSerialNumber === value,
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '合同类型',
+        dataIndex: 'type',
+        valueType: 'text',
+        width: 100,
+        filters: generateFilters(contractList, 'type'),
+        onFilter: (value, record) => record.type === value,
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '乙方单位',
+        dataIndex: 'contractor',
+        valueType: 'text',
+        width: 120,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入乙方单位"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) => record.contractor?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '合同金额(元)',
+        dataIndex: 'contractAmount',
+        valueType: 'text',
+        width: 120,
+        sorter: (a, b) =>
+          parseFloat(a.contractAmount || '0') - parseFloat(b.contractAmount || '0'),
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入合同金额"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) => record.contractAmount?.includes(value),
+        search: true,
+      },
+      {
+        title: '开始日期',
+        dataIndex: 'startDate',
+        valueType: 'date',
+        width: 120,
+        filterDropdown: dateFilterDropdown,
+        onFilter: (value, record) => dateOnFilter(value, record, 'startDate'),
+        search: true,
+      },
+      {
+        title: '完工日期',
+        dataIndex: 'endDate',
+        valueType: 'date',
+        width: 120,
+        filterDropdown: dateFilterDropdown,
+        onFilter: (value, record) => dateOnFilter(value, record, 'endDate'),
+        search: true,
+      },
+      {
+        title: '合同排序',
+        dataIndex: 'contractOrder',
+        valueType: 'digit',
+        width: 100,
+        sorter: (a, b) => (a.contractOrder || 0) - (b.contractOrder || 0),
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入合同排序"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) =>
+          record.contractOrder?.toString().includes(value),
+        search: true,
+      },
+      {
+        title: '暂估价',
+        dataIndex: 'contractProvisionalPrice',
+        valueType: 'text',
+        width: 150,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入暂估价"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) => record.contractProvisionalPrice?.includes(value),
+        search: true,
+      },
+      {
+        title: '合同期限类型',
+        dataIndex: 'contractTermType',
+        valueType: 'text',
+        width: 150,
+        filters: generateFilters(contractList, 'contractTermType'),
+        onFilter: (value, record) => record.contractTermType === value,
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '总监单位',
+        dataIndex: 'supervisingOrganization',
+        valueType: 'text',
+        width: 150,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入总监单位"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) =>
+          record.supervisingOrganization?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '监理单位',
+        dataIndex: 'monitoringOrganization',
+        valueType: 'text',
+        width: 150,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入监理单位"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) =>
+          record.monitoringOrganization?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '咨询单位',
+        dataIndex: 'consultingOrganization',
+        valueType: 'text',
+        width: 150,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入咨询单位"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) =>
+          record.consultingOrganization?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '账户名称',
+        dataIndex: 'accountName',
+        valueType: 'text',
+        width: 150,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入账户名称"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) => record.accountName?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '开户行',
+        dataIndex: 'accountBank',
+        valueType: 'text',
+        width: 150,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入开户行"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) => record.accountBank?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '账号',
+        dataIndex: 'accountNumber',
+        valueType: 'text',
+        width: 150,
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder="请输入账号"
+              value={selectedKeys[0]}
+              onChange={(e) =>
+                setSelectedKeys(e.target.value ? [e.target.value] : [])
+              }
+              onPressEnter={() => confirm()}
+              style={{ marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button type="primary" onClick={() => confirm()} size="small">
+                筛选
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters && clearFilters();
+                  confirm();
+                }}
+                size="small"
+              >
+                重置
+              </Button>
+            </Space>
+          </div>
+        ),
+        onFilter: (value, record) => record.accountNumber?.includes(value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '财务负责人',
+        dataIndex: 'financialResponsiblePerson',
+        valueType: 'text',
+        width: 150,
+        filters: generateFilters(contractList, 'financialResponsiblePerson'),
+        onFilter: (value, record) =>
+          record.financialResponsiblePerson === value,
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '负责人列表',
+        dataIndex: 'adminList',
+        valueType: 'text',
+        render: (_, record) =>
+          record.adminList?.map((admin) => admin.name).join(', ') || '-',
+        width: 150,
+        filters: generateFilters(
+          contractList.flatMap((item) => item.adminList?.map((admin) => admin.name)),
+          '',
+        ),
+        onFilter: (value, record) =>
+          record.adminList?.some((admin) => admin.name === value),
+        filterSearch: true,
+        search: true,
+      },
+      {
+        title: '附件列表',
+        dataIndex: 'attachmentList',
+        valueType: 'text',
+        render: renderApprovalFilesInTable,
+        width: 200,
+        ellipsis: true,
+        search: false,
+      },
+      {
+        title: '更新时间',
+        dataIndex: 'updateTime',
+        valueType: 'dateTime',
+        width: 150,
+        filterDropdown: dateFilterDropdown,
+        onFilter: (value, record) => dateOnFilter(value, record, 'updateTime'),
+        search: true,
+      },
+      {
+        title: '创建时间',
+        dataIndex: 'createTime',
+        valueType: 'dateTime',
+        width: 150,
+        filterDropdown: dateFilterDropdown,
+        onFilter: (value, record) => dateOnFilter(value, record, 'createTime'),
+        search: true,
+      },
+      {
+        title: '操作',
+        dataIndex: 'option',
+        valueType: 'option',
+        fixed: 'right',
+        width: 250,
+        render: (_, record) => (
+          <Space>
+            <a
+              onClick={() => {
+                handleModalOpen('editModalOpen', true, record);
+              }}
+            >
+              编辑
+            </a>
+            <a
+              onClick={() => {
+                handleOpenOperationLogModal(record);
+              }}
+            >
+              日志
+            </a>
+            <a
+              onClick={() => {
+                handleModalOpen('authorizeModalOpen', true, record);
+              }}
+            >
+              授权
+            </a>
+            <Popconfirm
+              title="确定要删除这个合同吗？"
+              onConfirm={() => handleDeleteContract(record.id!, selectedProjectId!)}
+            >
+              <a>删除</a>
+            </Popconfirm>
+          </Space>
+        ),
+        search: false,
+        filters: false,
+      },
+    ],
+    [contractList],
+  );
+
 
   return (
     <PageContainer breadcrumbRender={false}>

@@ -4,7 +4,7 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import {Button, Popconfirm, Form, Input, Space, Modal, Select, message, Table, List, Popover, Typography} from 'antd';
+import {Button, Popconfirm, Form, Input, Space, Modal, Select, message, Table, List, Popover, Typography, DatePicker} from 'antd';
 import {FileOutlined, PlusOutlined} from '@ant-design/icons';
 import moment from 'moment';
 import { PeriodInfoVO } from '@/model/project/Model.period';
@@ -349,6 +349,59 @@ const PeriodInfoTable: React.FC = () => {
     },
   ];
 
+  // 生成过滤选项
+  const generateFilters = (dataSource, key) => {
+    const uniqueValues = Array.from(new Set(dataSource.map(item => item[key]).filter(Boolean)));
+    return uniqueValues.map(value => ({ text: String(value), value }));
+  };
+
+  // 手动定义布尔值的过滤选项
+  const isArchivedFilters = [
+    { text: '是', value: true },
+    { text: '否', value: false },
+  ];
+
+  // 定义日期过滤器的下拉菜单
+  const dateFilterDropdown = ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+    <div style={{ padding: 8 }}>
+      {/* eslint-disable-next-line react/jsx-no-undef */}
+      <DatePicker.RangePicker
+        value={selectedKeys[0] ? [moment(selectedKeys[0][0]), moment(selectedKeys[0][1])] : []}
+        onChange={(dates) => {
+          setSelectedKeys(dates ? [[dates[0].startOf('day'), dates[1].endOf('day')]] : []);
+        }}
+        style={{ marginBottom: 8, display: 'block' }}
+      />
+      <Space>
+        <Button
+          type="primary"
+          onClick={() => confirm()}
+          size="small"
+        >
+          筛选
+        </Button>
+        <Button
+          onClick={() => {
+            if (clearFilters) {
+              clearFilters();
+            }
+            confirm();
+          }}
+          size="small"
+        >
+          重置
+        </Button>
+      </Space>
+    </div>
+  );
+
+  // 定义日期筛选的逻辑
+  const dateOnFilter = (value, record, dataIndex) => {
+    const [start, end] = value;
+    const recordDate = moment(record[dataIndex]);
+    return recordDate.isBetween(start, end, null, '[]');
+  };
+
   // 定义表格的列
   const columns: ProColumns<PeriodInfoVO>[] = [
     {
@@ -358,6 +411,9 @@ const PeriodInfoTable: React.FC = () => {
       fixed: 'left',
       width: 80,
       sorter: (a, b) => (a.id || 0) - (b.id || 0),
+      filters: generateFilters(periodList, 'id'),
+      onFilter: (value, record) => record.id === value,
+      search: true,
     },
     {
       title: '周期名称',
@@ -366,48 +422,112 @@ const PeriodInfoTable: React.FC = () => {
       fixed: 'left',
       width: 150,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入周期名称"
+            value={selectedKeys[0]}
+            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              size="small"
+            >
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                if (clearFilters) {
+                  clearFilters();
+                }
+                confirm();
+              }}
+              size="small"
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) => record.name?.includes(value),
+      filterSearch: true,
+      search: true,
     },
     {
       title: '类型',
       dataIndex: 'type',
       valueType: 'text',
       width: 100,
+      filters: generateFilters(periodList, 'type'),
+      onFilter: (value, record) => record.type === value,
+      filterSearch: true,
+      search: true,
     },
     {
       title: '流水号',
       dataIndex: 'serialNumber',
       valueType: 'text',
       width: 100,
+      filters: generateFilters(periodList, 'serialNumber'),
+      onFilter: (value, record) => record.serialNumber === value,
+      filterSearch: true,
+      search: true,
     },
     {
       title: '开始日期',
       dataIndex: 'startDate',
       valueType: 'date',
       width: 120,
+      filterDropdown: dateFilterDropdown,
+      onFilter: (value, record) => dateOnFilter(value, record, 'startDate'),
+      search: true,
     },
     {
       title: '结束日期',
       dataIndex: 'endDate',
       valueType: 'date',
       width: 120,
+      filterDropdown: dateFilterDropdown,
+      onFilter: (value, record) => dateOnFilter(value, record, 'endDate'),
+      search: true,
     },
     {
       title: '计量月份',
       dataIndex: 'measurementMonth',
       valueType: 'text',
       width: 120,
+      filters: generateFilters(periodList, 'measurementMonth'),
+      onFilter: (value, record) => record.measurementMonth === value,
+      filterSearch: true,
+      search: true,
     },
     {
       title: '周期状态',
       dataIndex: 'periodStatus',
       valueType: 'text',
       width: 120,
+      filters: generateFilters(periodList, 'periodStatus'),
+      onFilter: (value, record) => record.periodStatus === value,
+      filterSearch: true,
+      search: true,
     },
     {
       title: '是否归档',
       dataIndex: 'isArchived',
       render: (_, record) => (record.isArchived ? '是' : '否'),
       width: 100,
+      filters: isArchivedFilters,
+      onFilter: (value, record) => record.isArchived === value,
+      search: true,
+      valueType: 'select',
+      valueEnum: {
+        true: { text: '是' },
+        false: { text: '否' },
+      },
     },
     {
       title: '附件列表',
@@ -416,18 +536,25 @@ const PeriodInfoTable: React.FC = () => {
       render: renderApprovalFilesInTable,
       width: 200,
       ellipsis: true,
+      search: false, // 一般不对附件列表进行搜索
     },
     {
       title: '创建时间',
       dataIndex: 'createTime',
       valueType: 'dateTime',
       width: 160,
+      filterDropdown: dateFilterDropdown,
+      onFilter: (value, record) => dateOnFilter(value, record, 'createTime'),
+      search: true,
     },
     {
       title: '更新时间',
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       width: 160,
+      filterDropdown: dateFilterDropdown,
+      onFilter: (value, record) => dateOnFilter(value, record, 'updateTime'),
+      search: true,
     },
     {
       title: '操作',
@@ -444,22 +571,35 @@ const PeriodInfoTable: React.FC = () => {
           {/* 删除操作 */}
           <Popconfirm
             title="确定要删除这个周期信息吗？"
-            onConfirm={() => handleDeletePeriod(record.id!, record.relatedProjectId!, record.relatedContractId!)}
+            onConfirm={() =>
+              handleDeletePeriod(
+                record.id!,
+                record.relatedProjectId!,
+                record.relatedContractId!,
+              )
+            }
           >
             <a>删除</a>
           </Popconfirm>
           <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
-          {/* 归档操作，仅在未归档时显示 */}
           {!record.isArchived && (
             <Popconfirm
               title="确定要归档这个周期信息吗？"
-              onConfirm={() => handleArchivePeriod(record.id!, record.relatedProjectId!, record.relatedContractId!)}
+              onConfirm={() =>
+                handleArchivePeriod(
+                  record.id!,
+                  record.relatedProjectId!,
+                  record.relatedContractId!,
+                )
+              }
             >
               <a>归档</a>
             </Popconfirm>
           )}
         </Space>
       ),
+      search: false,
+      filters: false,
     },
   ];
 
