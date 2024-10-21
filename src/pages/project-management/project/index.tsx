@@ -800,7 +800,7 @@ const ProjectInfoTable: React.FC = () => {
               }
             >
               {employeeList.map((admin) => (
-                <Option key={admin.id} value={admin.id} label={admin.name}>
+                <Option key={admin.id} value={admin.id} label={admin.name + ' ' + admin.mobile}>
                   {admin.name}
                 </Option>
               ))}

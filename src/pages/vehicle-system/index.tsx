@@ -170,7 +170,7 @@ const VehicleManagement: React.FC = () => {
       try {
         const response = await queryAllEmployeeSimpleInfo();
         const options = response.map((employee) => ({
-          label: employee.name, // 显示的名字
+          label: employee.name + ' ' + employee.mobile, // 显示的名字
           value: employee.id, // 实际选择的ID
           name: employee.name, // 保存的名字
           mobile: employee.mobile // 保存电话
