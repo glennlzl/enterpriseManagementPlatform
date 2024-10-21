@@ -1,6 +1,6 @@
-import React, {useState} from 'react';
+import React, {ReactDOM, useState} from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import {Button, Popconfirm, Tooltip} from 'antd';
+import {Button, Popconfirm, Tooltip, Spin} from 'antd';
 import {
   FooterToolbar,
   PageContainer,
@@ -21,6 +21,8 @@ const TableList: React.FC = () => {
   const { state, setState, actionRef, handleModalOpen, handleAdd, handleUpdate, fetchUsers, handleSyncSingle, handleSyncAll } = useEmployeeManagement(
     initialState.currentUser?.id || ''
   );
+
+  const [spinning, setSpinning] = useState(false);
 
   const intl = useIntl();
 
@@ -174,8 +176,12 @@ const TableList: React.FC = () => {
         toolBarRender={() => [
           <Popconfirm
             title="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击确认按钮"
+            type="primary"
+            key="primary"
             onConfirm={async () => {
+              setSpinning(true); // 开始加载
               await handleSyncAll(initialState.currentUser?.id || 0);
+              setSpinning(false); // 结束加载
             }}
           >
             <a>同步钉钉</a>
@@ -301,6 +307,12 @@ const TableList: React.FC = () => {
         employeeList={state.employeeList} // 传递 employeeList
         type={'update'} // 传递 type 为 update
       />
+
+
+      <Spin spinning={spinning} fullscreen>
+        同步全量钉钉用户信息，大概需要2-3分钟，请耐心等待
+      </Spin>
+
     </PageContainer>
   );
 };
