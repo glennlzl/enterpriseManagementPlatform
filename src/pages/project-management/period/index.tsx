@@ -13,6 +13,7 @@ import PeriodInfoForm from '@/pages/project-management/period/component/PeriodIn
 import {isLogin} from "@/api/usermanagement";
 import {history} from "@@/core/history";
 import {OperationLogVO} from "@/model/project/Model.operation";
+import { DateTime } from 'luxon';
 
 const { Option } = Select;
 
@@ -361,45 +362,65 @@ const PeriodInfoTable: React.FC = () => {
     { text: '否', value: false },
   ];
 
-  // 定义日期过滤器的下拉菜单
-  const dateFilterDropdown = ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-    <div style={{ padding: 8 }}>
-      {/* eslint-disable-next-line react/jsx-no-undef */}
-      <DatePicker.RangePicker
-        value={selectedKeys[0] ? [moment(selectedKeys[0][0]), moment(selectedKeys[0][1])] : []}
-        onChange={(dates) => {
-          setSelectedKeys(dates ? [[dates[0].startOf('day'), dates[1].endOf('day')]] : []);
-        }}
-        style={{ marginBottom: 8, display: 'block' }}
-      />
-      <Space>
-        <Button
-          type="primary"
-          onClick={() => confirm()}
-          size="small"
-        >
-          筛选
-        </Button>
-        <Button
-          onClick={() => {
-            if (clearFilters) {
-              clearFilters();
+  const dateFilterDropdown = (dataIndex) => ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+    const [startDate, endDate] = selectedKeys[0] || [];
+    return (
+      <div style={{ padding: 8 }}>
+        <DatePicker.RangePicker
+          value={[
+            startDate ? moment(startDate) : null,
+            endDate ? moment(endDate) : null,
+          ]}
+          onChange={(dates) => {
+            if (dates) {
+              setSelectedKeys([
+                dates.map((date) => date.format('YYYY-MM-DD')),
+              ]);
+            } else {
+              setSelectedKeys([]);
             }
-            confirm();
           }}
-          size="small"
-        >
-          重置
-        </Button>
-      </Space>
-    </div>
-  );
+          format="YYYY-MM-DD"
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            size="small"
+          >
+            筛选
+          </Button>
+          <Button
+            onClick={() => {
+              if (clearFilters) {
+                clearFilters();
+              }
+              confirm();
+            }}
+            size="small"
+          >
+            重置
+          </Button>
+        </Space>
+      </div>
+    );
+  };
 
-  // 定义日期筛选的逻辑
-  const dateOnFilter = (value, record, dataIndex) => {
+  const dateOnFilter = (dataIndex) => (value, record) => {
+    if (!value || value.length === 0) return true;
     const [start, end] = value;
-    const recordDate = moment(record[dataIndex]);
-    return recordDate.isBetween(start, end, null, '[]');
+
+    const recordDate = DateTime.fromISO(record[dataIndex]);
+    const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+    const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+    if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+      return false;
+    }
+
+    // 比较日期范围，忽略时间部分
+    return recordDate >= startDate && recordDate <= endDate;
   };
 
   // 定义表格的列
@@ -465,17 +486,39 @@ const PeriodInfoTable: React.FC = () => {
       filters: generateFilters(periodList, 'type'),
       onFilter: (value, record) => record.type === value,
       filterSearch: true,
-      search: true,
     },
     {
       title: '流水号',
       dataIndex: 'serialNumber',
       valueType: 'text',
       width: 100,
-      filters: generateFilters(periodList, 'serialNumber'),
-      onFilter: (value, record) => record.serialNumber === value,
+      filterDropdown: ({setSelectedKeys, selectedKeys, confirm, clearFilters}) => (
+        <div style={{padding: 8}}>
+          <Input
+            placeholder="请输入流水号"
+            value={selectedKeys[0]}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{marginBottom: 8, display: 'block'}}
+          />
+          <Space>
+            <Button type="primary" onClick={() => confirm()} size="small">
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) => record.serialNumber?.includes(value),
       filterSearch: true,
-      search: true,
     },
     {
       title: '开始日期',
@@ -503,7 +546,6 @@ const PeriodInfoTable: React.FC = () => {
       filters: generateFilters(periodList, 'measurementMonth'),
       onFilter: (value, record) => record.measurementMonth === value,
       filterSearch: true,
-      search: true,
     },
     {
       title: '周期状态',
@@ -513,7 +555,6 @@ const PeriodInfoTable: React.FC = () => {
       filters: generateFilters(periodList, 'periodStatus'),
       onFilter: (value, record) => record.periodStatus === value,
       filterSearch: true,
-      search: true,
     },
     {
       title: '是否归档',

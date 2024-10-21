@@ -16,6 +16,7 @@ import { ProjectInfoVO } from '@/model/project/Modal.project';
 import {EmployeeSimpleInfoResponse, isLogin, queryAllEmployeeSimpleInfo} from '@/api/usermanagement';
 import {OperationLogVO} from "@/model/project/Model.operation";
 import _ from 'lodash';
+import { DateTime } from 'luxon';
 
 const { Option } = Select;
 
@@ -479,44 +480,66 @@ const ContractInfoTable: React.FC = () => {
     return uniqueValues.map((value) => ({ text: String(value), value }));
   };
 
-  // 手动定义布尔值的过滤选项（如果需要）
-  const isArchivedFilters = [
-    { text: '是', value: true },
-    { text: '否', value: false },
-  ];
-
   // 定义日期过滤器的下拉菜单
-  const dateFilterDropdown = ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-    <div style={{ padding: 8 }}>
-      <DatePicker.RangePicker
-        value={selectedKeys[0] ? [moment(selectedKeys[0][0]), moment(selectedKeys[0][1])] : []}
-        onChange={(dates) => {
-          setSelectedKeys(dates ? [[dates[0].startOf('day'), dates[1].endOf('day')]] : []);
-        }}
-        style={{ marginBottom: 8, display: 'block' }}
-      />
-      <Space>
-        <Button type="primary" onClick={() => confirm()} size="small">
-          筛选
-        </Button>
-        <Button
-          onClick={() => {
-            clearFilters && clearFilters();
-            confirm();
+  const dateFilterDropdown = (dataIndex) => ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
+    const [startDate, endDate] = selectedKeys[0] || [];
+    return (
+      <div style={{ padding: 8 }}>
+        <DatePicker.RangePicker
+          value={[
+            startDate ? moment(startDate) : null,
+            endDate ? moment(endDate) : null,
+          ]}
+          onChange={(dates) => {
+            if (dates) {
+              setSelectedKeys([
+                dates.map((date) => date.format('YYYY-MM-DD')),
+              ]);
+            } else {
+              setSelectedKeys([]);
+            }
           }}
-          size="small"
-        >
-          重置
-        </Button>
-      </Space>
-    </div>
-  );
+          format="YYYY-MM-DD"
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            size="small"
+          >
+            筛选
+          </Button>
+          <Button
+            onClick={() => {
+              if (clearFilters) {
+                clearFilters();
+              }
+              confirm();
+            }}
+            size="small"
+          >
+            重置
+          </Button>
+        </Space>
+      </div>
+    );
+  };
 
-  // 定义日期筛选的逻辑
-  const dateOnFilter = (value, record, dataIndex) => {
+  const dateOnFilter = (dataIndex) => (value, record) => {
+    if (!value || value.length === 0) return true;
     const [start, end] = value;
-    const recordDate = moment(record[dataIndex]);
-    return recordDate.isBetween(start, end, null, '[]');
+
+    const recordDate = DateTime.fromISO(record[dataIndex]);
+    const startDate = DateTime.fromFormat(start, 'yyyy-MM-dd').startOf('day');
+    const endDate = DateTime.fromFormat(end, 'yyyy-MM-dd').endOf('day');
+
+    if (!recordDate.isValid || !startDate.isValid || !endDate.isValid) {
+      return false;
+    }
+
+    // 比较日期范围，忽略时间部分
+    return recordDate >= startDate && recordDate <= endDate;
   };
 
 
@@ -664,7 +687,7 @@ const ContractInfoTable: React.FC = () => {
         title: '合同金额(元)',
         dataIndex: 'contractAmount',
         valueType: 'text',
-        width: 120,
+        width: 150,
         sorter: (a, b) =>
           parseFloat(a.contractAmount || '0') - parseFloat(b.contractAmount || '0'),
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
@@ -719,7 +742,7 @@ const ContractInfoTable: React.FC = () => {
         title: '合同排序',
         dataIndex: 'contractOrder',
         valueType: 'digit',
-        width: 100,
+        width: 150,
         sorter: (a, b) => (a.contractOrder || 0) - (b.contractOrder || 0),
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
           <div style={{ padding: 8 }}>
