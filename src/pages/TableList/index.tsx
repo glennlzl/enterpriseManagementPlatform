@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Tooltip } from 'antd';
+import {Button, Popconfirm, Tooltip} from 'antd';
 import {
   FooterToolbar,
   PageContainer,
@@ -172,17 +172,25 @@ const TableList: React.FC = () => {
         search={false}
         cardBordered
         toolBarRender={() => [
-          <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击按钮" />}>
-            <Button
-              type="primary"
-              key="primary"
-              onClick={async () => {
-                await handleSyncAll(initialState.currentUser?.id || 0);
-              }}
-            >
-              <FormattedMessage id='同步钉钉' defaultMessage="同步钉钉" />
-            </Button>
-          </ Tooltip>,
+          <Popconfirm
+            title="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击确认按钮"
+            onConfirm={async () => {
+              await handleSyncAll(initialState.currentUser?.id || 0);
+            }}
+          >
+            <a>同步钉钉</a>
+          </Popconfirm>,
+          // <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击按钮" />}>
+          //   <Button
+          //     type="primary"
+          //     key="primary"
+          //     onClick={async () => {
+          //       await handleSyncAll(initialState.currentUser?.id || 0);
+          //     }}
+          //   >
+          //     <FormattedMessage id='同步钉钉' defaultMessage="同步钉钉" />
+          //   </Button>
+          // </ Tooltip>,
           <Button
             type="primary"
             key="primary"
