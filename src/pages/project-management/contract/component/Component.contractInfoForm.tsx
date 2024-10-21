@@ -504,7 +504,7 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
               }
             >
               {employeeList.map((emp) => (
-                <Option key={emp.id} value={emp.id} label={emp.name}>
+                <Option key={emp.id} value={emp.id} label={emp.name + ' ' + emp.mobile}>
                   {emp.name}
                 </Option>
               ))}

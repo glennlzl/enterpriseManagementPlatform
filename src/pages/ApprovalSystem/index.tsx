@@ -1389,7 +1389,7 @@ const ApprovalSystem: React.FC = () => {
             (emp) => emp.name === values.approvalInitiatorName,
           );
           const receiver = state.employeeList.find(
-            (emp) => emp.name === values.approvalReceiverName,
+            (emp) => (emp.name + emp.mobile) === values.approvalReceiverName,
           );
 
           const uploadedUrls = fileList.map((file) => file.url);
@@ -1397,6 +1397,8 @@ const ApprovalSystem: React.FC = () => {
           const data: AddApprovalInfoRequest = {
             ...values,
             approvalStatus: 3,
+            approvalInitiatorName: initiator?.name || '',
+            approvalReceiverName: receiver?.name || '',
             approvalInitiatorId: initiator?.id || 0,
             approvalReceiverId: receiver?.id || 0,
             approvalFileUrl: uploadedUrls,
@@ -1414,9 +1416,10 @@ const ApprovalSystem: React.FC = () => {
           name="approvalReceiverName"
           label="审批接收人"
           options={state.employeeList.map((emp) => ({
-            label: emp.name,
-            value: emp.name,
+            label: emp.name + ' ' + emp.mobile,
+            value: emp.name + emp.mobile,
           }))}
+          showSearch
           rules={[{ required: true, message: '请选择审批接收人' }]}
         />
         <ProFormSelect

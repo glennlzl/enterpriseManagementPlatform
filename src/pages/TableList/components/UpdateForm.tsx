@@ -1,4 +1,4 @@
-import { EmployeeSimpleInfoVO } from '@/api/usermanagement';
+import { EmployeeSimpleInfoResponse } from '@/api/usermanagement';
 import { ProFormSelect, ProFormText, StepsForm } from '@ant-design/pro-components';
 import { FormattedMessage, useIntl } from '@umijs/max';
 import { Modal } from 'antd';
@@ -18,7 +18,7 @@ export type UpdateFormProps = {
   onSubmit: (values: FormValueType) => Promise<void>;
   updateModalOpen: boolean;
   values: Partial<API.EmployeeList>;
-  employeeList: EmployeeSimpleInfoVO[]; // 传入 employeeList
+  employeeList: EmployeeSimpleInfoResponse[]; // 传入 employeeList
   type: 'create' | 'update';
 };
 

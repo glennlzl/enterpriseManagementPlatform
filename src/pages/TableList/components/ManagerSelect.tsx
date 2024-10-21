@@ -15,6 +15,7 @@ const ManagerSelect: React.FC<ManagerSelectProps> = ({ employeeList, name, label
     <ProFormSelect
       name={name}
       label={label}
+      showSearch
       rules={[
         {
           required: required,
@@ -22,7 +23,7 @@ const ManagerSelect: React.FC<ManagerSelectProps> = ({ employeeList, name, label
         },
       ]}
       options={employeeList.map((employee) => ({
-        label: employee.name,
+        label: employee.name + ' ' + employee.mobile,
         value: employee.id,
       }))}
       onChange={(value, option) => {

@@ -131,9 +131,7 @@ export function useMeasurementDetail() {
         localStorage.setItem(storageKeys.projectId, firstProjectId.toString());
       }
     } catch (error: any) {
-      console.error('Error fetching project list:', error);
       setProjectList([]);
-      message.error('获取项目列表失败');
     } finally {
       setLoading(false);
     }
