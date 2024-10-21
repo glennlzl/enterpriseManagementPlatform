@@ -444,7 +444,7 @@ const PeriodInfoTable: React.FC = () => {
           {/* 删除操作 */}
           <Popconfirm
             title="确定要删除这个周期信息吗？"
-            onConfirm={() => handleDeletePeriod(record.id!, record.relatedProjectId, record.relatedContractId)}
+            onConfirm={() => handleDeletePeriod(record.id!, record.relatedProjectId!, record.relatedContractId!)}
           >
             <a>删除</a>
           </Popconfirm>
@@ -453,7 +453,7 @@ const PeriodInfoTable: React.FC = () => {
           {!record.isArchived && (
             <Popconfirm
               title="确定要归档这个周期信息吗？"
-              onConfirm={() => handleArchivePeriod(record.id!)}
+              onConfirm={() => handleArchivePeriod(record.id!, record.relatedProjectId!, record.relatedContractId!)}
             >
               <a>归档</a>
             </Popconfirm>
@@ -472,10 +472,15 @@ const PeriodInfoTable: React.FC = () => {
       <Form layout="inline" style={{ marginBottom: 16 }}>
         <Form.Item label="选择项目">
           <Select
+            showSearch
             value={selectedProjectId}
             onChange={handleProjectChange}
             style={{ width: 200 }}
             placeholder="请选择项目"
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
             disabled={projectList.length === 0}
           >
             {projectList.map((project) => (
@@ -486,12 +491,18 @@ const PeriodInfoTable: React.FC = () => {
           </Select>
         </Form.Item>
 
+        {/* 选择合同下拉框 */}
         <Form.Item label="选择合同">
           <Select
+            showSearch
             value={selectedContractId}
             onChange={handleContractChange}
             style={{ width: 200 }}
             placeholder="请选择合同"
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
             disabled={!selectedProjectId || contractList.length === 0}
           >
             {contractList.map((contract) => (
@@ -525,16 +536,16 @@ const PeriodInfoTable: React.FC = () => {
             {selectedRowKeys.length > 0 && (
               <>
                 {/* 批量归档和删除操作 */}
-                <Button
-                  onClick={() => {
-                    selectedRowKeys.forEach((id) => {
-                      handleArchivePeriod(id);
-                    });
-                  }}
-                  style={{ marginLeft: 16 }}
-                >
-                  批量归档
-                </Button>
+                {/*<Button*/}
+                {/*  onClick={() => {*/}
+                {/*    selectedRowKeys.forEach((id) => {*/}
+                {/*      handleArchivePeriod(id, selectedProjectId!, selectedContractId!);*/}
+                {/*    });*/}
+                {/*  }}*/}
+                {/*  style={{ marginLeft: 16 }}*/}
+                {/*>*/}
+                {/*  批量归档*/}
+                {/*</Button>*/}
                 {/*<Button*/}
                 {/*  onClick={() => {*/}
                 {/*    selectedRowKeys.forEach((id) => {*/}

@@ -686,19 +686,24 @@ const ContractInfoTable: React.FC = () => {
     <PageContainer breadcrumbRender={false}>
       {/* 项目选择器 */}
       <Form layout="inline" style={{ marginBottom: 16 }}>
-        <Form.Item label="选择项目">
-          <Select
-            value={selectedProjectId}
-            onChange={(value) => setSelectedProjectId(value)}
-            style={{ width: 200 }}
-          >
-            {projectList.map((project) => (
-              <Option key={project.id} value={project.id}>
-                {project.name}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
+        <Form layout="inline" style={{ marginBottom: 16 }}>
+          <Form.Item label="选择项目">
+            <Select
+              showSearch
+              value={selectedProjectId}
+              onChange={(value) => setSelectedProjectId(value)}
+              style={{ width: 200 }}
+              optionFilterProp="children"
+              placeholder="请输入搜索关键词"
+            >
+              {projectList.map((project) => (
+                <Option key={project.id} value={project.id}>
+                  {project.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
       </Form>
 
       {/* 查询表单 */}

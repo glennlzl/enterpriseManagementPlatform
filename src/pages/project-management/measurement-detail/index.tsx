@@ -807,9 +807,16 @@ const MeasurementDetailTable: React.FC = () => {
             <Form layout="inline" style={{ marginBottom: 16 }}>
               <Form.Item label="选择项目">
                 <Select
+                  showSearch
                   value={selectedProjectId}
                   onChange={handleProjectChange}
                   style={{ width: 200 }}
+                  placeholder="请选择项目"
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
+                  disabled={projectList.length === 0}
                 >
                   {projectList.map((project) => (
                     <Option key={project.id} value={project.id}>
@@ -818,11 +825,19 @@ const MeasurementDetailTable: React.FC = () => {
                   ))}
                 </Select>
               </Form.Item>
+
+              {/* 选择合同下拉框 */}
               <Form.Item label="选择合同">
                 <Select
+                  showSearch
                   value={selectedContractId}
                   onChange={handleContractChange}
                   style={{ width: 200 }}
+                  placeholder="请选择合同"
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
                   disabled={!selectedProjectId || contractList.length === 0}
                 >
                   {contractList.map((contract) => (
@@ -832,11 +847,19 @@ const MeasurementDetailTable: React.FC = () => {
                   ))}
                 </Select>
               </Form.Item>
+
+              {/* 选择周期下拉框 */}
               <Form.Item label="选择周期">
                 <Select
+                  showSearch
                   value={selectedPeriodId}
                   onChange={handlePeriodChange}
                   style={{ width: 200 }}
+                  placeholder="请选择周期"
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
                   disabled={!selectedContractId || periodList.length === 0}
                 >
                   {periodList.map((period) => (

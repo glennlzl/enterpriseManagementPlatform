@@ -192,7 +192,7 @@ export function usePeriodInfo() {
   };
 
   // 删除周期信息
-  const handleDeletePeriod = async (id: number, projectId: number, contractId: numebr) => {
+  const handleDeletePeriod = async (id: number, projectId: number, contractId: number) => {
     try {
       await deletePeriodInfo(id);
       message.success('删除周期信息成功');
@@ -209,12 +209,12 @@ export function usePeriodInfo() {
 
 
 // 修改 handleArchivePeriod 函数
-  const handleArchivePeriod = async (id: number) => {
+  const handleArchivePeriod = async (id: number, projectId: number, contractId: number) => {
     try {
       await archivePeriodInfo(id);
       message.success('归档周期信息成功');
 
-      await fetchPeriodList(selectedProjectId, selectedContractId);
+      await fetchPeriodList(projectId, contractId);
     } catch (error) {
       message.error(error);
     }
