@@ -1721,9 +1721,8 @@ const VehicleManagement: React.FC = () => {
                   options={employeeOptions}
                   placeholder="请选择负责人"
                   showSearch
-                  filterOption={(input, option) =>
-                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
+                  optionFilterProp="label"
+                  optionLabelProp="label"
                 />
               </Form.Item>
             </Col>
@@ -1734,9 +1733,8 @@ const VehicleManagement: React.FC = () => {
                   options={employeeOptions}
                   placeholder="请选择司机"
                   showSearch
-                  filterOption={(input, option) =>
-                    option?.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                  }
+                  optionFilterProp="label"
+                  optionLabelProp="label"
                 />
               </Form.Item>
             </Col>
