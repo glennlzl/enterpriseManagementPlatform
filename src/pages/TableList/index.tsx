@@ -244,6 +244,7 @@ const TableList: React.FC = () => {
           const fullData: EmployeeInfoAddOrUpdateRequest = {
             ...value, // 这里没有 state.currentRow，因为是创建操作
             managerName: selectedManager?.name || '',
+            managerUserId: selectedManager?.userId || '',
           } as EmployeeInfoAddOrUpdateRequest;
           const success = await handleAdd(fullData);
           if (success) {
@@ -267,6 +268,7 @@ const TableList: React.FC = () => {
           const fullData: EmployeeInfoAddOrUpdateRequest = {
             ...state.currentRow,
             ...value,
+            managerUserId: selectedManager?.userId || '',
             managerName: selectedManager?.name || '',
           } as EmployeeInfoAddOrUpdateRequest;
           const success = await handleUpdate(fullData);
