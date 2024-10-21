@@ -725,8 +725,8 @@ const ContractInfoTable: React.FC = () => {
         dataIndex: 'startDate',
         valueType: 'date',
         width: 120,
-        filterDropdown: dateFilterDropdown,
-        onFilter: (value, record) => dateOnFilter(value, record, 'startDate'),
+        filterDropdown: dateFilterDropdown('startDate'),
+        onFilter: dateOnFilter('startDate'),
         search: true,
       },
       {
@@ -734,8 +734,8 @@ const ContractInfoTable: React.FC = () => {
         dataIndex: 'endDate',
         valueType: 'date',
         width: 120,
-        filterDropdown: dateFilterDropdown,
-        onFilter: (value, record) => dateOnFilter(value, record, 'endDate'),
+        filterDropdown: dateFilterDropdown('endDate'),
+        onFilter: dateOnFilter('endDate'),
         search: true,
       },
       {
@@ -1080,8 +1080,8 @@ const ContractInfoTable: React.FC = () => {
         dataIndex: 'updateTime',
         valueType: 'dateTime',
         width: 150,
-        filterDropdown: dateFilterDropdown,
-        onFilter: (value, record) => dateOnFilter(value, record, 'updateTime'),
+        filterDropdown: dateFilterDropdown('updateTime'),
+        onFilter: dateOnFilter('updateTime'),
         search: true,
       },
       {
@@ -1089,8 +1089,8 @@ const ContractInfoTable: React.FC = () => {
         dataIndex: 'createTime',
         valueType: 'dateTime',
         width: 150,
-        filterDropdown: dateFilterDropdown,
-        onFilter: (value, record) => dateOnFilter(value, record, 'createTime'),
+        filterDropdown: dateFilterDropdown('createTime'),
+        onFilter: dateOnFilter('createTime'),
         search: true,
       },
       {

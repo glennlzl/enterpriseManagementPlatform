@@ -362,6 +362,11 @@ const PeriodInfoTable: React.FC = () => {
     { text: '否', value: false },
   ];
 
+  const periodStatusFilters = [
+    { text: '进行中', value: '进行中' },
+    { text: '已归档', value: '已归档' },
+  ];
+
   const dateFilterDropdown = (dataIndex) => ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
     const [startDate, endDate] = selectedKeys[0] || [];
     return (
@@ -525,8 +530,8 @@ const PeriodInfoTable: React.FC = () => {
       dataIndex: 'startDate',
       valueType: 'date',
       width: 120,
-      filterDropdown: dateFilterDropdown,
-      onFilter: (value, record) => dateOnFilter(value, record, 'startDate'),
+      filterDropdown: dateFilterDropdown('startDate'),
+      onFilter: dateOnFilter('startDate'),
       search: true,
     },
     {
@@ -534,8 +539,8 @@ const PeriodInfoTable: React.FC = () => {
       dataIndex: 'endDate',
       valueType: 'date',
       width: 120,
-      filterDropdown: dateFilterDropdown,
-      onFilter: (value, record) => dateOnFilter(value, record, 'endDate'),
+      filterDropdown: dateFilterDropdown('endDate'),
+      onFilter:  dateOnFilter('endDate'),
       search: true,
     },
     {
@@ -543,18 +548,46 @@ const PeriodInfoTable: React.FC = () => {
       dataIndex: 'measurementMonth',
       valueType: 'text',
       width: 120,
-      filters: generateFilters(periodList, 'measurementMonth'),
-      onFilter: (value, record) => record.measurementMonth === value,
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="请输入计量月份"
+            value={selectedKeys[0]}
+            onChange={(e) =>
+              setSelectedKeys(e.target.value ? [e.target.value] : [])
+            }
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button type="primary" onClick={() => confirm()} size="small">
+              筛选
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value, record) => record.measurementMonth?.includes(value),
       filterSearch: true,
+      search: true,
     },
     {
       title: '周期状态',
       dataIndex: 'periodStatus',
       valueType: 'text',
       width: 120,
-      filters: generateFilters(periodList, 'periodStatus'),
+      filters: periodStatusFilters,
       onFilter: (value, record) => record.periodStatus === value,
       filterSearch: true,
+      search: true,
     },
     {
       title: '是否归档',
@@ -584,8 +617,8 @@ const PeriodInfoTable: React.FC = () => {
       dataIndex: 'createTime',
       valueType: 'dateTime',
       width: 160,
-      filterDropdown: dateFilterDropdown,
-      onFilter: (value, record) => dateOnFilter(value, record, 'createTime'),
+      filterDropdown: dateFilterDropdown('createTime'),
+      onFilter: dateOnFilter('createTime'),
       search: true,
     },
     {
@@ -593,8 +626,8 @@ const PeriodInfoTable: React.FC = () => {
       dataIndex: 'updateTime',
       valueType: 'dateTime',
       width: 160,
-      filterDropdown: dateFilterDropdown,
-      onFilter: (value, record) => dateOnFilter(value, record, 'updateTime'),
+      filterDropdown: dateFilterDropdown('updateTime'),
+      onFilter: dateOnFilter('updateTime'),
       search: true,
     },
     {
