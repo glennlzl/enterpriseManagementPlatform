@@ -29,7 +29,7 @@ const TableList: React.FC = () => {
   const getColumns = (dataSource) => {
     const nameFilters = _.uniqBy(dataSource.map(item => ({ text: item.name, value: item.name })), 'value');
     const phoneFilters = _.uniqBy(dataSource.map(item => ({ text: item.mobile, value: item.mobile })), 'value');
-    const managerNameFilters = _.uniqBy(dataSource.map(item => ({ text: item.managerName, value: item.managerName })), 'value');
+    const managerNameFilters = _.uniqBy(dataSource.filter(item => !_.isUndefined(item.managerName) && !_.isEmpty(item.managerName)).map(item => ({ text: item.managerName, value: item.managerName })), 'value');
     const jobNumberFilters = _.uniqBy(dataSource.map(item => ({ text: item.jobNumber, value: item.jobNumber })), 'value');
     const titleFilters = _.uniqBy(dataSource.map(item => ({ text: item.title, value: item.title })), 'value');
     const emailFilters = _.uniqBy(dataSource.map(item => ({ text: item.email, value: item.email })), 'value');
