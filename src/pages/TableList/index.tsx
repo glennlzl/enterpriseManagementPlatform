@@ -1,6 +1,6 @@
 import React, {ReactDOM, useState} from 'react';
-import { PlusOutlined } from '@ant-design/icons';
-import {Button, Popconfirm, Tooltip, Spin} from 'antd';
+import {PlusOutlined, SyncOutlined} from '@ant-design/icons';
+import {Button, Popconfirm, Tooltip, Spin, Space} from 'antd';
 import {
   FooterToolbar,
   PageContainer,
@@ -174,38 +174,34 @@ const TableList: React.FC = () => {
         search={false}
         cardBordered
         toolBarRender={() => [
-          <Popconfirm
-            title="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击确认按钮"
-            type="primary"
-            key="primary"
-            onConfirm={async () => {
-              setSpinning(true); // 开始加载
-              await handleSyncAll(initialState.currentUser?.id || 0);
-              setSpinning(false); // 结束加载
-            }}
-          >
-            <a>同步钉钉</a>
-          </Popconfirm>,
-          // <Tooltip title={<FormattedMessage id="点击同步钉钉" defaultMessage="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击按钮" />}>
-          //   <Button
-          //     type="primary"
-          //     key="primary"
-          //     onClick={async () => {
-          //       await handleSyncAll(initialState.currentUser?.id || 0);
-          //     }}
-          //   >
-          //     <FormattedMessage id='同步钉钉' defaultMessage="同步钉钉" />
-          //   </Button>
-          // </ Tooltip>,
-          <Button
-            type="primary"
-            key="primary"
-            onClick={() => {
-              handleModalOpen('createModalOpen', true);
-            }}
-          >
-            <PlusOutlined /> <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
-          </Button>,
+          <Space key="toolbar-buttons">
+            <Popconfirm
+              title="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击确认按钮"
+              onConfirm={async () => {
+                setSpinning(true); // 开始加载
+                await handleSyncAll(initialState.currentUser?.id || 0);
+                setSpinning(false); // 结束加载
+              }}
+            >
+              <Button
+                type="default"
+                icon={<SyncOutlined />}
+                key="sync-button"
+              >
+                同步钉钉
+              </Button>
+            </Popconfirm>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              key="create-button"
+              onClick={() => {
+                handleModalOpen('createModalOpen', true);
+              }}
+            >
+              <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
+            </Button>
+          </Space>
         ]}
         request={async () => {
           const data = await fetchUsers();
@@ -309,9 +305,7 @@ const TableList: React.FC = () => {
       />
 
 
-      <Spin spinning={spinning} fullscreen>
-        同步全量钉钉用户信息，大概需要2-3分钟，请耐心等待
-      </Spin>
+      <Spin spinning={spinning} fullscreen tip={'同步全量钉钉用户信息，大概需要2-3分钟，请耐心等待'} />
 
     </PageContainer>
   );
