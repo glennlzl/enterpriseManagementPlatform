@@ -86,9 +86,6 @@ const VehicleManagement: React.FC = () => {
 
   const intl = useIntl();
 
-  const [queryParams, setQueryParams] = useState({});
-
-
   const [employeeOptions, setEmployeeOptions] = useState<
     { label: string; value: number; name: string, mobile: string }[]
   >([]);
