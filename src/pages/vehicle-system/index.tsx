@@ -1134,8 +1134,10 @@ const VehicleManagement: React.FC = () => {
   }, [columns, isWarning]);
 
 
+  const [vehicleData, setVehicleData] = useState<VehicleInfo[]>([]);
+
   const handleBatchExport = () => {
-    const selectedData = vehicleList.filter((item) =>
+    const selectedData = vehicleData.filter((item) =>
       selectedRowKeys.includes(item.id),
     );
     if (selectedData.length > 0) {
@@ -1143,21 +1145,22 @@ const VehicleManagement: React.FC = () => {
         selectedData,
         '车辆信息导出',
         columns,
-        columnsStateMap, // 传入 columnsStateMap
+        columnsStateMap,
       );
     } else {
       message.warning('请先选择要导出的车辆信息');
     }
   };
+
   return (
     <PageContainer breadcrumbRender={false}>
       <Form
-        layout="vertical"  // 设置表单为垂直布局
-        onValuesChange={(changedValues) => {
-          const { generalQueryCondition, project, name } = changedValues;
-          fetchVehicleList(isWarning, generalQueryCondition, project, name);
+        layout="vertical"
+        onValuesChange={(changedValues, allValues) => {
+          setQueryParams(allValues);
+          actionRef.current?.reload(); // 触发表格重新加载
         }}
-        style={{ marginBottom: 16 }}  // 调整表单的下边距，确保与表格有足够的间距
+        style={{ marginBottom: 16 }}
       >
         <Row gutter={16}>
           <Col span={8}>
@@ -1177,6 +1180,7 @@ const VehicleManagement: React.FC = () => {
           </Col>
         </Row>
       </Form>
+
       <ProTable<VehicleInfo, API.PageParams>
         headerTitle={
           <div>
@@ -1195,11 +1199,6 @@ const VehicleManagement: React.FC = () => {
                 批量导出
               </Button>
             )}
-            {/*{selectedRowKeys.length > 0 && (*/}
-            {/*  <Button onClick={handleBatchDelete} style={{ marginLeft: 16 }}>*/}
-            {/*    批量删除*/}
-            {/*  </Button>*/}
-            {/*)}*/}
           </div>
         }
         columnsState={{
@@ -1225,9 +1224,11 @@ const VehicleManagement: React.FC = () => {
             <PlusOutlined /> <FormattedMessage id="新增车辆信息" defaultMessage="新增车辆信息" />
           </Button>,
         ]}
-        loading={loading}
-        dataSource={vehicleList}
+        request={fetchVehicleList}
         columns={memoizedColumns}
+        onLoad={(data) => {
+          setVehicleData(data); // 将数据存储到状态中
+        }}
       />
 
       {/* Drawer 和 Modals */}
@@ -1248,7 +1249,7 @@ const VehicleManagement: React.FC = () => {
         form={form}
         employeeOptions={employeeOptions}
         setVehicleInfo={setCurrentVehicle}
-        fetchVehicleList={fetchVehicleList}
+        actionRef={actionRef} // Pass actionRef here
       />
 
       {/* 新增车辆 Modal */}

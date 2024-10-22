@@ -32,7 +32,7 @@ import moment, { Moment } from 'moment';
 import React, { useEffect, useState } from 'react';
 import { useModel } from '@@/exports';
 import { DateTime } from 'luxon';
-import { ProFormSelect } from '@ant-design/pro-components';
+import {ActionType, ProFormSelect} from '@ant-design/pro-components';
 import { isNull } from 'lodash';
 
 const { RangePicker } = DatePicker;
@@ -56,7 +56,7 @@ interface VehicleDrawerProps {
   setShowMore: (value: boolean) => void;
   employeeOptions: { value: number; name: string }[];
   setVehicleInfo: (info: VehicleInfo) => void;
-  fetchVehicleList: () => void;
+  actionRef: React.RefObject<ActionType>; // Add this line
 }
 
 const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
@@ -75,7 +75,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
                                                        setShowMore,
                                                        employeeOptions,
                                                        setVehicleInfo,
-                                                       fetchVehicleList,
+                                                       actionRef
                                                      }) => {
   const { initialState } = useModel('@@initialState');
   const [filteredUsageList, setFilteredUsageList] = useState<VehicleUsageInfo[]>(usageInfoList);
@@ -129,7 +129,7 @@ const VehicleDrawer: React.FC<VehicleDrawerProps> = ({
   const refreshUsageInfoList = async () => {
     const updateVehicleInfo = await getVehicleInfo(vehicleInfo?.id || 0);
     setVehicleInfo(updateVehicleInfo);
-    fetchVehicleList();
+    actionRef.current?.reload(); // Trigger ProTable to reload data
     if (vehicleInfo) {
       try {
         const updatedUsageList = await queryVehicleUsageInfoList(vehicleInfo.id);

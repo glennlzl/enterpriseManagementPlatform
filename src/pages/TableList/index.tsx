@@ -162,6 +162,15 @@ const TableList: React.FC = () => {
     }
   ];};
 
+  const [popConfirmVisible, setPopConfirmVisible] = useState(false);
+
+  const handleConfirm = async () => {
+    setSpinning(true); // 开始加载
+    await handleSyncAll(initialState.currentUser?.id || 0);
+    setSpinning(false); // 结束加载
+    setPopConfirmVisible(false); // 手动关闭 Popconfirm
+  };
+
   return (
     <PageContainer>
       <ProTable
@@ -176,17 +185,17 @@ const TableList: React.FC = () => {
         toolBarRender={() => [
           <Space key="toolbar-buttons">
             <Popconfirm
-              title="当前部分人员信息已被管理员编辑过，如需同步最新钉钉信息，请点击确认按钮"
-              onConfirm={async () => {
-                setSpinning(true); // 开始加载
-                await handleSyncAll(initialState.currentUser?.id || 0);
-                setSpinning(false); // 结束加载
-              }}
+              title="同步全量钉钉用户信息，大概需要2-3分钟，请耐心等待"
+              visible={popConfirmVisible}
+              onVisibleChange={setPopConfirmVisible}
+              onConfirm={handleConfirm}
+              okButtonProps={{ loading: spinning }} // 在加载时禁用确认按钮
             >
               <Button
                 type="default"
                 icon={<SyncOutlined />}
                 key="sync-button"
+                onClick={() => setPopConfirmVisible(true)}
               >
                 同步钉钉
               </Button>

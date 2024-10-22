@@ -42,34 +42,67 @@ export const useVehicleSystem = (userId: number) => {
   }
 
   const fetchVehicleList = async (
-    isWarning: boolean = false,
-    generalQueryCondition?: string,
-    project?: string,
-    name?: string
+    params: {
+      pageSize?: number;
+      current?: number;
+      [key: string]: any;
+    },
+    sort: {
+      [key: string]: any;
+    },
+    filter: {
+      [key: string]: any;
+    },
   ) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
       message.error('请重新登录');
       history.push('/user/login');
+      return {
+        data: [],
+        success: false,
+      };
     }
     setLoading(true);
     try {
-      // 检查 generalQueryCondition 是否为空
-      const generalQueryConditionV2 = _.isEmpty(generalQueryCondition) ? undefined : generalQueryCondition;
+      const sortParams = {};
+      if (sort) {
+        Object.keys(sort).forEach((key) => {
+          sortParams.sortField = key;
+          sortParams.sortOrder = sort[key] === 'ascend' ? 'asc' : 'desc';
+        });
+      }
+
+      const filterParams = {};
+      if (filter) {
+        Object.keys(filter).forEach((key) => {
+          filterParams[key] = filter[key];
+        });
+      }
 
       const response = await queryVehicleInfoList({
         userId,
-        pageSize: 100,
-        pageNum: 1,
+        pageSize: params.pageSize,
+        pageNum: params.current,
         isWarning: isWarning,
-        generalQueryCondition: generalQueryConditionV2, // 只在不为空时传递
-        project,
-        name,
+        generalQueryCondition: params.generalQueryCondition,
+        project: params.project,
+        name: params.name,
+        ...filterParams,
+        ...sortParams,
       });
 
-      setVehicleList(response);
+      return {
+        data: response.records,
+        total: response.total,
+        success: true,
+      };
     } catch (error) {
       message.error('加载车辆信息失败，请重试');
+      return {
+        data: [],
+        success: false,
+      };
     } finally {
       setLoading(false);
     }
