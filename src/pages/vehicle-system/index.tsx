@@ -80,7 +80,8 @@ const VehicleManagement: React.FC = () => {
     setCreateModalOpen,
     setEditModalOpen,
     filters,
-    setCurrentVehicle
+    setCurrentVehicle,
+    setQueryParams
   } = useVehicleSystem(initialState.currentUser?.id || '');
 
   const intl = useIntl();

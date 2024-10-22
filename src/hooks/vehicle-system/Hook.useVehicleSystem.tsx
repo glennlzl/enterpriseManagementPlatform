@@ -37,6 +37,12 @@ export const useVehicleSystem = (userId: number) => {
   });
 
 
+  const [queryParams, setQueryParams] = useState({
+    generalQueryCondition: '',
+    project: '',
+    name: '',
+  });
+
   const handleOnChangeColumn = (map: any) => {
     setColumnsStateMap(map);
   }
@@ -46,13 +52,13 @@ export const useVehicleSystem = (userId: number) => {
       pageSize?: number;
       current?: number;
       [key: string]: any;
-    },
+    } = { pageSize: 10, current: 1 },
     sort: {
       [key: string]: any;
-    },
+    } = {},
     filter: {
       [key: string]: any;
-    },
+    } = {},
   ) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
@@ -65,7 +71,7 @@ export const useVehicleSystem = (userId: number) => {
     }
     setLoading(true);
     try {
-      const sortParams = {};
+      const sortParams: any = {};
       if (sort) {
         Object.keys(sort).forEach((key) => {
           sortParams.sortField = key;
@@ -73,24 +79,28 @@ export const useVehicleSystem = (userId: number) => {
         });
       }
 
-      const filterParams = {};
+      const filterParams: any = {};
       if (filter) {
         Object.keys(filter).forEach((key) => {
           filterParams[key] = filter[key];
         });
       }
 
+      const { generalQueryCondition, project, name } = queryParams;
+
       const response = await queryVehicleInfoList({
         userId,
-        pageSize: params.pageSize ?? 20,
-        pageNum: params.current ?? 1,
+        pageSize: params.pageSize || 10,
+        pageNum: params.current || 1,
         isWarning: isWarning,
-        generalQueryCondition: params.generalQueryCondition,
-        project: params.project,
-        name: params.name,
+        generalQueryCondition,
+        project,
+        name,
         ...filterParams,
         ...sortParams,
       });
+
+      setVehicleList(response.records);
 
       return {
         data: response.records,
@@ -98,7 +108,7 @@ export const useVehicleSystem = (userId: number) => {
         success: true,
       };
     } catch (error) {
-      message.error('加载车辆信息失败，请重试');
+      message.error(error);
       return {
         data: [],
         success: false,
@@ -427,6 +437,7 @@ export const useVehicleSystem = (userId: number) => {
     fetchVehicleList,
     setCreateModalOpen,
     setEditModalOpen,
-    setCurrentVehicle
+    setCurrentVehicle,
+    setQueryParams
   };
 };
