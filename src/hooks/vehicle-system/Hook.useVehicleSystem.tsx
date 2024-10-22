@@ -48,17 +48,9 @@ export const useVehicleSystem = (userId: number) => {
   }
 
   const fetchVehicleList = async (
-    params: {
-      pageSize?: number;
-      current?: number;
-      [key: string]: any;
-    } = { pageSize: 10, current: 1 },
-    sort: {
-      [key: string]: any;
-    } = {},
-    filter: {
-      [key: string]: any;
-    } = {},
+    params = { pageSize: 10, current: 1 },
+    sort = {},
+    filter = {},
   ) => {
     const loginCheck = await isLogin();
     if (!loginCheck) {
@@ -100,11 +92,14 @@ export const useVehicleSystem = (userId: number) => {
         ...sortParams,
       });
 
-      setVehicleList(response.records);
+      console.log('API Response:', response);
+
+      // 假设 response 是数组
+      setVehicleList(response);
 
       return {
-        data: response.records,
-        total: response.total,
+        data: response,
+        total: response.length,
         success: true,
       };
     } catch (error) {
@@ -117,6 +112,7 @@ export const useVehicleSystem = (userId: number) => {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     const loginCheck = isLogin();
