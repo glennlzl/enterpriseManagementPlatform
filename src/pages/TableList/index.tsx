@@ -167,8 +167,8 @@ const TableList: React.FC = () => {
   const handleConfirm = async () => {
     setSpinning(true); // 开始加载
     await handleSyncAll(initialState.currentUser?.id || 0);
+    setPopConfirmVisible(false); // 手动关闭 Popconfirm
     setSpinning(false); // 结束加载
-    // setPopConfirmVisible(false); // 手动关闭 Popconfirm
   };
 
   return (
@@ -189,7 +189,7 @@ const TableList: React.FC = () => {
               visible={popConfirmVisible}
               onVisibleChange={setPopConfirmVisible}
               onConfirm={handleConfirm}
-              okButtonProps={{ loading: spinning }} // 在加载时禁用确认按钮
+              // okButtonProps={{ loading: spinning }} // 在加载时禁用确认按钮
             >
               <Button
                 type="default"
