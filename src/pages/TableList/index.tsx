@@ -168,7 +168,7 @@ const TableList: React.FC = () => {
     setSpinning(true); // 开始加载
     await handleSyncAll(initialState.currentUser?.id || 0);
     setSpinning(false); // 结束加载
-    setPopConfirmVisible(false); // 手动关闭 Popconfirm
+    // setPopConfirmVisible(false); // 手动关闭 Popconfirm
   };
 
   return (

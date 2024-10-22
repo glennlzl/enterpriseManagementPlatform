@@ -82,8 +82,8 @@ export const useVehicleSystem = (userId: number) => {
 
       const response = await queryVehicleInfoList({
         userId,
-        pageSize: params.pageSize,
-        pageNum: params.current,
+        pageSize: params.pageSize ?? 20,
+        pageNum: params.current ?? 1,
         isWarning: isWarning,
         generalQueryCondition: params.generalQueryCondition,
         project: params.project,
