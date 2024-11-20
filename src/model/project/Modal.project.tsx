@@ -5,7 +5,7 @@ export interface ProjectInfoVO {
   name?: string;
   type?: string;
   constructionOrganization?: string;
-  serialNumber?: number;
+  serialNumber?: string;
   region?: string;
   projectAddress?: string;
   totalInvestment?: string;
@@ -32,7 +32,7 @@ export interface AddOrUpdateProjectInfoRequest {
   name: string;
   type?: string;
   constructionOrganization?: string;
-  serialNumber?: number;
+  serialNumber?: string;
   region?: string;
   projectAddress?: string;
   totalInvestment?: string;

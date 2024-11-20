@@ -52,6 +52,7 @@ export function useProjectInfo() {
   // 更新项目
   const handleUpdateProject = async (projectData: AddOrUpdateProjectInfoRequest) => {
     try {
+      console.log(projectData)
       await updateProjectInfo(projectData);
       message.success('更新项目成功');
       await fetchProjectList();
@@ -121,7 +122,7 @@ export function useProjectInfo() {
         { label: '开始日期', value: 'startDate' },
         { label: '结束日期', value: 'endDate' },
         { label: '项目描述', value: 'projectDescription' },
-        { label: '合同日期', value: 'contractDate' },
+        // { label: ‘合同日期', value: 'contractDate' },
         { label: '工商注册地址', value: 'businessRegistrationAddress' },
         { label: '项目状态', value: 'projectStatus' },
         { label: '监管级别', value: 'regulatoryLevel' },

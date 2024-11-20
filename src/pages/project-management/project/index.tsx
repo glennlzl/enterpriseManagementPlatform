@@ -355,14 +355,14 @@ const ProjectInfoTable: React.FC = () => {
       onFilter: (value, record) => record.projectStatus === value,
       filterSearch: true,
     },
-    {
-      title: '合同日期',
-      dataIndex: 'contractDate',
-      valueType: 'date',
-      width: 120,
-      filterDropdown: dateFilterDropdown('contractDate'),
-      onFilter: dateOnFilter('contractDate'),
-    },
+    // {
+    //   title: '合同日期',
+    //   dataIndex: 'contractDate',
+    //   valueType: 'date',
+    //   width: 120,
+    //   filterDropdown: dateFilterDropdown('contractDate'),
+    //   onFilter: dateOnFilter('contractDate'),
+    // },
     {
       title: '项目名称',
       dataIndex: 'name',
@@ -404,11 +404,11 @@ const ProjectInfoTable: React.FC = () => {
       onFilter: (value, record) => record.name?.includes(value),
     },
     {
-      title: '流水号',
+      title: '项目编号',
       dataIndex: 'serialNumber',
-      valueType: 'digit',
+      valueType: 'text',
       width: 100,
-      sorter: (a, b) => (a.serialNumber || 0) - (b.serialNumber || 0),
+      sorter: (a, b) => (a.serialNumber || '').localeCompare(b.serialNumber || ''),
     },
     {
       title: '地区',

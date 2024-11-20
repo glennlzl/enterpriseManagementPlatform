@@ -161,9 +161,8 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
           </Form.Item>
         </Col>
         <Col span={12}>
-          <Form.Item label="项目编号" name="serialNumber"  rules={[{ required: true, message: '请输入项目编号' }]}
-          >
-            <InputNumber style={{ width: '100%' }} placeholder="请输入流水号" />
+          <Form.Item label="项目编号" name="serialNumber" rules={[{ required: true, message: '请输入项目编号' }]}>
+            <Input style={{ width: '100%' }} placeholder="请输入项目编号" />
           </Form.Item>
         </Col>
       </Row>
@@ -241,13 +240,13 @@ const ProjectInfoForm: React.FC<ProjectInfoFormProps> = ({ form, employeeList })
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Col>
-        <Col span={12}>
-          <Form.Item label="合同日期" name="contractDate">
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-        </Col>
+        {/*<Col span={12}>*/}
+        {/*  <Form.Item label="合同日期" name="contractDate">*/}
+        {/*    <DatePicker style={{ width: '100%' }} />*/}
+        {/*  </Form.Item>*/}
+        {/*</Col>*/}
       </Row>
-
+h
       <Divider orientation="left">其他信息</Divider>
       <Row gutter={16}>
         <Col span={12}>

@@ -536,45 +536,45 @@ const ContractInfoForm: React.FC<ContractInfoFormProps> = ({
 
       {/* 测量项管理部分 - 合同成本 */}
       <Divider orientation="left">合同成本</Divider>
-      <Button
-        type="dashed"
-        onClick={() => {
-          setMeasurementType('contractCost');
-          setCurrentMeasurementItem(null);
-          measurementForm.resetFields();
-          setMeasurementModalVisible(true);
-        }}
-        style={{ width: '100%', marginBottom: 16 }}
-      >
-        添加合同成本项
-      </Button>
       <Table
         dataSource={contractCostItems}
         columns={contractCostColumns}
         rowKey="id"
         pagination={false}
       />
-
-      {/* 测量项管理部分 - 项目进度 */}
-      <Divider orientation="left">工程清单</Divider>
       <Button
-        type="dashed"
+        type="primary"
+        style={{ width: 200, margin: '16px auto', display: 'block' }}
         onClick={() => {
-          setMeasurementType('projectSchedule');
+          setMeasurementType('contractCost');
           setCurrentMeasurementItem(null);
           measurementForm.resetFields();
           setMeasurementModalVisible(true);
         }}
-        style={{ width: '100%', marginBottom: 16 }}
       >
-        添加工程清单项
+        添加合同成本项
       </Button>
+
+      {/* 工程清单部分 */}
+      <Divider orientation="left">工程清单</Divider>
       <Table
         dataSource={projectScheduleItems}
         columns={projectScheduleColumns}
         rowKey="id"
         pagination={false}
       />
+      <Button
+        type="primary"
+        style={{ width: 200, margin: '16px auto', display: 'block' }}
+        onClick={() => {
+          setMeasurementType('projectSchedule');
+          setCurrentMeasurementItem(null);
+          measurementForm.resetFields();
+          setMeasurementModalVisible(true);
+        }}
+      >
+        添加工程清单项
+      </Button>
 
       {/* 添加或编辑计量项的模态框 */}
       <Modal

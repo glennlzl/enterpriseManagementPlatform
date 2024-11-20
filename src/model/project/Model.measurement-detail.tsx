@@ -45,3 +45,32 @@ export interface ReviewRequest {
   comment?: string;
   isPass: boolean;
 }
+
+export interface MeasurementExcelSubItemVO {
+  measurementItemId: number;
+  subItemNumber: string;
+  measurementBillNumber: string;
+  name: string;
+  position: string;
+  lastCount: number;
+  currentCount: number;
+  totalCount: number;
+  lastAmount: number;
+  currentAmount: number;
+  totalAmount: number;
+  measurementComment: string;
+}
+
+export interface MeasurementExcelVO {
+  name: string;
+  price: number;
+  unit: string;
+  lastCount: number;
+  currentCount: number;
+  totalCount: number;
+  lastAmount: number;
+  currentAmount: number;
+  totalAmount: number;
+  measurementComment: string;
+  subItems: MeasurementExcelSubItemVO[];
+}

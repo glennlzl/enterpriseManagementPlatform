@@ -1,7 +1,7 @@
 import { message } from 'antd';
 import {
   AddOrUpdateMeasurementDetailRequest,
-  MeasurementDetailVO,
+  MeasurementDetailVO, MeasurementExcelVO,
   ReviewRequest
 } from "@/model/project/Model.measurement-detail";
 import {request} from "@umijs/max";
@@ -142,3 +142,34 @@ export async function queryMeasurementDetailList(
       throw error;
     });
 }
+
+/** 查询生成 Excel 所需的数据 GET /api/business/measurement-detail/queryMeasurementDetailExcelDataList */
+export async function queryMeasurementDetailExcelDataList(
+  projectId: number,
+  contractId: number,
+  periodId: number,
+  options?: { [key: string]: any },
+) {
+  return request<ApiResponse<MeasurementExcelVO[]>>(
+    `${API_BASE_URL}/queryMeasurementDetailExcelDataList`,
+    {
+      method: 'GET',
+      params: { projectId, contractId, periodId },
+      ...(options || {}),
+      withCredentials: true,
+    },
+  )
+    .then((response) => {
+      if (response.isSuccess) {
+        return response.data;
+      } else {
+        return Promise.reject(response.msg);
+      }
+    })
+    .catch((error) => {
+      message.error(`获取 Excel 数据列表失败：${error}`);
+      throw error;
+    });
+}
+
+
