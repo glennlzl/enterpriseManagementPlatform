@@ -562,7 +562,7 @@ const MeasurementDetailTable: React.FC = () => {
           sorter: (a, b) => (a.totalCount || 0) - (b.totalCount || 0),
         },
         {
-          title: '本期末剩余量',
+          title: '本期末累积量',
           dataIndex: 'totalCount',
           valueType: 'text',
           width: 150,
