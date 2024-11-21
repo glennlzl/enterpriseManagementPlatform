@@ -591,6 +591,11 @@ const MeasurementDetailTable: React.FC = () => {
           valueType: 'text',
           width: 150,
         },
+      );
+    }
+
+    if (selectedItem?.id && selectedItem?.type !== 'cost') {
+      cols.push(
         {
           title: '分项 （桩号）',
           dataIndex: 'subItemNumber',
@@ -603,7 +608,7 @@ const MeasurementDetailTable: React.FC = () => {
           valueType: 'text',
           width: 150,
         },
-      );
+      )
     }
 
     // 「附件列表」列，只有在选中子节点时才添加
