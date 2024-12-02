@@ -775,14 +775,14 @@ export function useMeasurementDetail() {
 
     const signatureRows = [
       [
-        { label: '承包人项目总工：', startCol: 'A', endCol: 'B' },
-        { label: '承包人项目经理：', startCol: 'C', endCol: 'D' },
-        { label: '总监办计量工程师：', startCol: 'E', endCol: 'K' },
+        { label: '承包人项目总工：', startCol: 'A', endCol: 'C' },
+        { label: '承包人项目经理：', startCol: 'D', endCol: 'F' },
+        { label: '总监办计量工程师：', startCol: 'G', endCol: 'I' },
       ],
       [
-        { label: '建设办计量工程师：', startCol: 'A', endCol: 'B' },
-        { label: '建设办计划合同部：', startCol: 'C', endCol: 'D' },
-        { label: '建设办质量安全部：', startCol: 'E', endCol: 'K' },
+        { label: '建设办计量工程师：', startCol: 'A', endCol: 'C' },
+        { label: '建设办计划合同部：', startCol: 'D', endCol: 'F' },
+        { label: '建设办质量安全部：', startCol: 'G', endCol: 'I' },
       ],
     ];
 
@@ -794,7 +794,7 @@ export function useMeasurementDetail() {
         cell.font = { name: '微软雅黑', size: 10 }; // 调小字体
         cell.alignment = { vertical: 'middle', horizontal: 'left' };
       });
-      sheet.getRow(rowNumber).height = 30; // 设置行高为30
+      sheet.getRow(rowNumber).height = 40; // 设置行高为30
       rowNumber++;
     });
 

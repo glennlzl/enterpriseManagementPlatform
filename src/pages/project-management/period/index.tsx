@@ -4,7 +4,22 @@ import {
   ProColumns,
   PageContainer,
 } from '@ant-design/pro-components';
-import {Button, Popconfirm, Form, Input, Space, Modal, Select, message, Table, List, Popover, Typography, DatePicker} from 'antd';
+import {
+  Button,
+  Popconfirm,
+  Form,
+  Input,
+  Space,
+  Modal,
+  Select,
+  message,
+  Table,
+  List,
+  Popover,
+  Typography,
+  DatePicker,
+  Tooltip
+} from 'antd';
 import {FileOutlined, PlusOutlined} from '@ant-design/icons';
 import moment from 'moment';
 import { PeriodInfoVO } from '@/model/project/Model.period';
@@ -79,10 +94,9 @@ const PeriodInfoTable: React.FC = () => {
 
   // 定义字段名到中文列名的映射
   const fieldNameMap: { [key: string]: { label: string; isDate?: boolean } } = {
-    id: { label: '编号' },
     name: { label: '周期名称' },
     type: { label: '类型' },
-    serialNumber: { label: '流水号' },
+    serialNumber: { label: '周期编号' },
     startDate: { label: '开始日期', isDate: true },
     endDate: { label: '结束日期', isDate: true },
     measurementMonth: { label: '计量月份' },
@@ -430,17 +444,17 @@ const PeriodInfoTable: React.FC = () => {
 
   // 定义表格的列
   const columns: ProColumns<PeriodInfoVO>[] = [
-    {
-      title: '编号',
-      dataIndex: 'id',
-      valueType: 'text',
-      fixed: 'left',
-      width: 80,
-      sorter: (a, b) => (a.id || 0) - (b.id || 0),
-      filters: generateFilters(periodList, 'id'),
-      onFilter: (value, record) => record.id === value,
-      search: true,
-    },
+    // {
+    //   title: '编号',
+    //   dataIndex: 'id',
+    //   valueType: 'text',
+    //   fixed: 'left',
+    //   width: 80,
+    //   sorter: (a, b) => (a.id || 0) - (b.id || 0),
+    //   filters: generateFilters(periodList, 'id'),
+    //   onFilter: (value, record) => record.id === value,
+    //   search: true,
+    // },
     {
       title: '周期名称',
       dataIndex: 'name',
@@ -493,14 +507,18 @@ const PeriodInfoTable: React.FC = () => {
       filterSearch: true,
     },
     {
-      title: '流水号',
+      title: (
+        <Tooltip title="周期的先后顺序以周期编号为准">
+          周期编号
+        </Tooltip>
+      ),
       dataIndex: 'serialNumber',
       valueType: 'text',
       width: 100,
       filterDropdown: ({setSelectedKeys, selectedKeys, confirm, clearFilters}) => (
         <div style={{padding: 8}}>
           <Input
-            placeholder="请输入流水号"
+            placeholder="请输入周期编号"
             value={selectedKeys[0]}
             onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
             onPressEnter={() => confirm()}
@@ -643,18 +661,22 @@ const PeriodInfoTable: React.FC = () => {
             <a onClick={() => handleModalOpen(true, record)}>编辑</a>
           )}
           {/* 删除操作 */}
-          <Popconfirm
-            title="确定要删除这个周期信息吗？"
-            onConfirm={() =>
-              handleDeletePeriod(
-                record.id!,
-                record.relatedProjectId!,
-                record.relatedContractId!,
-              )
-            }
-          >
-            <a>删除</a>
-          </Popconfirm>
+          {
+            !record.isArchived && (
+              <Popconfirm
+                title="确定要删除这个周期信息吗？"
+                onConfirm={() =>
+                  handleDeletePeriod(
+                    record.id!,
+                    record.relatedProjectId!,
+                    record.relatedContractId!,
+                  )
+                }
+              >
+                <a>删除</a>
+              </Popconfirm>
+            )
+          }
           <a onClick={() => handleOpenOperationLogModal(record)}>日志</a>
           {!record.isArchived && (
             <Popconfirm

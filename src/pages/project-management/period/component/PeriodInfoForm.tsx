@@ -135,7 +135,7 @@ const PeriodInfoForm: React.FC<PeriodInfoFormProps> = ({ form }) => {
         name="serialNumber"
         rules={[{ required: true, message: '请输入周期编号' }]}
       >
-        <Input placeholder="请输入流水号" />
+        <Input placeholder="请输入周期编号" />
       </Form.Item>
 
       {/* 开始日期 */}

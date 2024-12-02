@@ -869,7 +869,7 @@ const MeasurementDetailTable: React.FC = () => {
                 >
                   {periodList.map((period) => (
                     <Option key={period.id} value={period.id}>
-                      {period.name}
+                      {period.name}({period.serialNumber})
                     </Option>
                   ))}
                 </Select>

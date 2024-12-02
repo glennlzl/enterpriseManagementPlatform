@@ -112,7 +112,7 @@ export function useProjectInfo() {
         { label: '项目名称', value: 'name' },
         { label: '类型', value: 'type' },
         { label: '施工单位', value: 'constructionOrganization' },
-        { label: '流水号', value: 'serialNumber' },
+        { label: '项目编号', value: 'serialNumber' },
         { label: '地区', value: 'region' },
         { label: '项目地址', value: 'projectAddress' },
         { label: '总投资', value: 'totalInvestment' },
