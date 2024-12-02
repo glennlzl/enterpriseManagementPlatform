@@ -507,11 +507,8 @@ const PeriodInfoTable: React.FC = () => {
       filterSearch: true,
     },
     {
-      title: (
-        <Tooltip title="周期的先后顺序以周期编号为准">
-          周期编号
-        </Tooltip>
-      ),
+      title: '周期编号',
+      tip: '周期的先后顺序以周期编号为准',
       dataIndex: 'serialNumber',
       valueType: 'text',
       width: 100,

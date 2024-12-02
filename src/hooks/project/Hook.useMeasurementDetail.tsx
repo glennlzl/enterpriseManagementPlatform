@@ -775,14 +775,14 @@ export function useMeasurementDetail() {
 
     const signatureRows = [
       [
-        { label: '承包人项目总工：', startCol: 'A', endCol: 'C' },
-        { label: '承包人项目经理：', startCol: 'D', endCol: 'F' },
-        { label: '总监办计量工程师：', startCol: 'G', endCol: 'I' },
+        { label: '承包人项目总工：', startCol: 'A', endCol: 'E' },
+        { label: '承包人项目经理：', startCol: 'F', endCol: 'J' },
+        { label: '总监办计量工程师：', startCol: 'K', endCol: 'O' },
       ],
       [
-        { label: '建设办计量工程师：', startCol: 'A', endCol: 'C' },
-        { label: '建设办计划合同部：', startCol: 'D', endCol: 'F' },
-        { label: '建设办质量安全部：', startCol: 'G', endCol: 'I' },
+        { label: '建设办计量工程师：', startCol: 'A', endCol: 'E' },
+        { label: '建设办计划合同部：', startCol: 'F', endCol: 'J' },
+        { label: '建设办质量安全部：', startCol: 'K', endCol: 'O' },
       ],
     ];
 
